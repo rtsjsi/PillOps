@@ -45,9 +45,18 @@ export default function ReviewExtraction() {
   }, []);
 
   const handleConfirm = () => {
+    if (!data) return;
+
     // 1. Create the purchase invoice record
     const invoice: PurchaseInvoice = {
-      ...data,
+      distributorName: data.distributorName || 'Unknown Distributor',
+      invoiceNumber: data.invoiceNumber || 'N/A',
+      invoiceDate: data.invoiceDate || new Date().toISOString().split('T')[0],
+      items: data.items,
+      subtotal: data.subtotal || 0,
+      discountAmount: data.discountAmount || 0,
+      gstAmount: data.gstAmount || 0,
+      total: data.total || 0,
       id: generateId(),
       createdAt: new Date().toISOString()
     };
