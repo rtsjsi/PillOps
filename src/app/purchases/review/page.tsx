@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { addPurchaseInvoice } from '@/lib/store';
+import { addPurchaseInvoice, loadStore } from '@/lib/store';
 import { PurchaseInvoice, Medicine } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { formatCurrency, generateId } from '@/lib/utils';
