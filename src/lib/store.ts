@@ -108,12 +108,35 @@ export function addPurchaseInvoice(invoice: import('./types').PurchaseInvoice, u
   if (!store.purchases) store.purchases = [];
   store.purchases.unshift(invoice); // Newest first
 
-  // Update existing medicines or add new ones
+  // Update existing medicines or add new ones by merging batches
   for (const med of updatedMedicines) {
     const idx = store.medicines.findIndex(m => m.id === med.id);
     if (idx !== -1) {
-      store.medicines[idx] = med;
+      // Merge batches and master data deltas (like HSN/Mfr)
+      const existingMed = store.medicines[idx];
+      const newBatches = [...existingMed.batches];
+      
+      for (const incomingBatch of med.batches) {
+        const batchIdx = newBatches.findIndex(b => b.batchNumber === incomingBatch.batchNumber);
+        if (batchIdx !== -1) {
+          newBatches[batchIdx] = {
+            ...newBatches[batchIdx],
+            quantity: newBatches[batchIdx].quantity + incomingBatch.quantity
+          };
+        } else {
+          newBatches.push(incomingBatch);
+        }
+      }
+      
+      store.medicines[idx] = { 
+        ...existingMed,
+        hsnCode: existingMed.hsnCode || med.hsnCode,
+        manufacturer: existingMed.manufacturer || med.manufacturer,
+        batches: newBatches,
+        updatedAt: new Date().toISOString()
+      };
     } else {
+      // Completely new medicine
       store.medicines.push(med);
     }
   }

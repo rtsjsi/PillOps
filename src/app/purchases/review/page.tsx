@@ -28,12 +28,21 @@ export default function ReviewExtraction() {
     if (rawData) {
       try {
         const parsed = JSON.parse(rawData);
-        // Ensure all items have generated IDs internally for the UI
+        const store = loadStore();
+        
+        // --- Smart Matching Logic ---
+        // Instead of generating new IDs blindly, try to match by name against existing inventory
         if (parsed.items) {
-           parsed.items = parsed.items.map((item: any) => ({
-             ...item,
-             medicineId: item.medicineId || generateId()
-           }));
+           parsed.items = parsed.items.map((item: any) => {
+             const existingMed = store.medicines.find(m => 
+               m.name.toLowerCase() === item.medicineName.toLowerCase()
+             );
+             
+             return {
+               ...item,
+               medicineId: existingMed ? existingMed.id : generateId()
+             };
+           });
         }
         setData(parsed);
       } catch (e) {
@@ -47,7 +56,19 @@ export default function ReviewExtraction() {
   const handleConfirm = () => {
     if (!data) return;
 
-    // 1. Create the purchase invoice record
+    // 1. Check for Duplicate Invoice Entry
+    const store = loadStore();
+    const isDuplicate = store.purchases?.some(p => 
+      p.invoiceNumber === data.invoiceNumber && 
+      p.distributorName === data.distributorName
+    );
+
+    if (isDuplicate) {
+        setError(`Warning: Invoice #${data.invoiceNumber} from ${data.distributorName} has already been recorded in the past. To prevent inventory errors, you cannot scan the same invoice twice.`);
+        return;
+    }
+
+    // 2. Create the purchase invoice record
     const invoice: PurchaseInvoice = {
       distributorName: data.distributorName || 'Unknown Distributor',
       invoiceNumber: data.invoiceNumber || 'N/A',
