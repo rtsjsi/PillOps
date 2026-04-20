@@ -1,0 +1,10 @@
+{
+  "name": "PillOps Pharmacy POC",
+  "short_name": "PillOps",
+  "description": "Next-generation mobile-first pharmacy operations",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0D9488",
+  "orientation": "portrait"
+}
