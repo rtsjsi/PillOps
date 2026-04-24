@@ -29,6 +29,19 @@ async function getStoreId() {
   return profile.storeId;
 }
 
+export async function getUserProfile() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  return await db.query.userProfiles.findFirst({
+    where: eq(schema.userProfiles.id, user.id),
+    with: {
+        store: true
+    }
+  });
+}
+
 
 
 async function checkSuperAdmin() {
