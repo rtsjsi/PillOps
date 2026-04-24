@@ -1,10 +1,10 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Pill } from 'lucide-react';
+export default function Home() {
+  redirect('/login');
+  return null;
+}
 
-export default function SplashScreen() {
   const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
 
