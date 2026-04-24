@@ -13,37 +13,15 @@ async function getStoreId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  let profile = await db.query.userProfiles.findFirst({
+  const profile = await db.query.userProfiles.findFirst({
     where: eq(schema.userProfiles.id, user.id),
   });
 
-  if (!profile) {
-    // Lazy Onboarding: Create a default store if none exists, or use the first one
-    let store = await db.query.stores.findFirst();
-    
-    if (!store) {
-      const [newStore] = await db.insert(schema.stores).values({
-        name: 'Angel Pharmacy (Demo)',
-        address: '123 Medical Square',
-        phone: '9876543210',
-        gstin: '27AAAAA0000A1Z5',
-        subscriptionTier: 'pro',
-      }).returning();
-      store = newStore;
-    }
-
-    const [newProfile] = await db.insert(schema.userProfiles).values({
-      id: user.id,
-      storeId: store.id,
-      role: 'owner',
-      fullName: user.email?.split('@')[0] || 'Pharmacist',
-    }).returning();
-    
-    profile = newProfile;
-  }
+  if (!profile) throw new Error('Store profile not found. Please contact administrator.');
   
   return profile.storeId;
 }
+
 
 
 async function checkSuperAdmin() {
