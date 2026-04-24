@@ -21,7 +21,8 @@ export default async function ProfilePage() {
               <User size={32} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', marginBottom: '2px' }}>{profile?.fullName || 'Pharmacist'}</h2>
+              <h2 style={{ fontSize: '1.25rem', marginBottom: '2px' }}>{profile?.fullName || 'Staff Member'}</h2>
+
               <p className="text-muted">{profile?.role?.toUpperCase()} • {user.email}</p>
             </div>
           </div>

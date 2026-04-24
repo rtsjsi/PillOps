@@ -25,7 +25,8 @@ export const stores = pgTable('stores', {
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey(), // Links to auth.users.id
   storeId: uuid('store_id').references(() => stores.id, { onDelete: 'cascade' }).notNull(),
-  role: varchar('role', { length: 50 }).default('pharmacist'), // 'admin', 'pharmacist', 'owner'
+  role: varchar('role', { length: 50 }).default('staff'), // 'super_admin', 'owner', 'staff'
+
   fullName: varchar('full_name', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

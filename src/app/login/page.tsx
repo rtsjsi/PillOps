@@ -54,7 +54,8 @@ export default function LoginPage() {
             </div>
             <div style={{ textAlign: 'center' }}>
               <h1 style={{ fontSize: '1.8rem', fontWeight: '800' }}>PillOps</h1>
-              <p className="text-muted" style={{ fontSize: '0.9rem' }}>Secure Pharmacist Access</p>
+              <p className="text-muted" style={{ fontSize: '0.9rem' }}>Secure Staff Access</p>
+
             </div>
         </div>
 
