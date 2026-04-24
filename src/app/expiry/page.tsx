@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getMedicines } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getDaysUntilExpiry, getExpiryUrgency, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
+import { getDaysUntilExpiry, getExpiryStatus, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
 import { Clock, AlertTriangle, Trash2, RotateCcw, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
@@ -47,7 +47,7 @@ export default function ExpiryTracker() {
               medicine: med,
               batch: batch,
               daysLeft,
-              urgency: getExpiryUrgency(daysLeft),
+              urgency: getExpiryStatus(daysLeft),
               valueAtRisk: batch.quantity * (batch.purchasePrice || 0)
            });
         }
@@ -64,7 +64,7 @@ export default function ExpiryTracker() {
         <p className="text-muted-foreground font-medium">Predict and prevent losses from expiring stock.</p>
       </header>
 
-      <Card className="bg-primary/5 border-primary/20">
+      <Card className="bg-primary/5 border-primary/20 shadow-xl shadow-primary/5">
          <CardContent className="p-6 flex items-center gap-6">
             <div className="bg-primary text-white p-5 rounded-2xl shadow-lg shadow-primary/20">
                <TrendingDown size={32} />
@@ -86,61 +86,72 @@ export default function ExpiryTracker() {
             
             return (
                <Card key={item.batch.id} className={cn(
-                 "border-l-4 transition-all hover:shadow-md",
-                 urgency === 'critical' ? "border-l-red-500" : urgency === 'warning' ? "border-l-amber-500" : "border-l-blue-500"
+                 "border-l-4 transition-all hover:shadow-md relative overflow-hidden",
+                 urgency === 'expired' ? "border-l-red-600 bg-red-500/5" : 
+                 urgency === 'critical' ? "border-l-orange-500 bg-orange-500/5" : 
+                 urgency === 'warning' ? "border-l-amber-500 bg-amber-500/5" : 
+                 "border-l-emerald-500"
                )}>
+                  {urgency === 'expired' && (
+                    <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-lg">
+                      Loss
+                    </div>
+                  )}
+
                   <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0">
-                     <CardTitle className="text-lg font-bold">{item.medicine.name}</CardTitle>
-                     <Badge variant={urgency === 'critical' ? 'destructive' : 'outline'} className={cn(
-                       urgency === 'warning' && "bg-amber-500/10 text-amber-600 border-amber-500/20",
-                       urgency === 'safe' && "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                     <div className="grid gap-1">
+                        <CardTitle className="text-lg font-bold">{item.medicine.name}</CardTitle>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Section: {item.medicine.rack || 'Main'}</p>
+                     </div>
+                     <Badge variant={urgency === 'expired' || urgency === 'critical' ? 'destructive' : 'outline'} className={cn(
+                        urgency === 'warning' && "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                        urgency === 'ok' && "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                      )}>
-                        {item.daysLeft <= 0 ? 'Expired' : `${item.daysLeft} days`}
+                        {item.daysLeft <= 0 ? 'Expired' : `${item.daysLeft} days left`}
                      </Badge>
                   </CardHeader>
                   
                   <CardContent className="p-4 pt-0">
                     <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm font-medium mb-4">
                        <div className="flex flex-col">
-                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Batch</span>
-                         <span>{item.batch.batchNumber}</span>
+                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Batch Number</span>
+                         <span className="font-bold">{item.batch.batchNumber}</span>
                        </div>
                        <div className="flex flex-col">
-                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Expiry</span>
-                         <span>{formatExpiryDate(item.batch.expiryDate)}</span>
+                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Expiry Date</span>
+                         <span className="font-bold">{formatExpiryDate(item.batch.expiryDate)}</span>
                        </div>
                        <div className="flex flex-col">
-                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Quantity</span>
-                         <span>{item.batch.quantity}</span>
+                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Stock Quantity</span>
+                         <span className="font-bold">{item.batch.quantity} Units</span>
                        </div>
                        <div className="flex flex-col">
-                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Loss Value</span>
-                         <span className="text-red-500">{formatCurrency(item.valueAtRisk)}</span>
+                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Est. Loss Value</span>
+                         <span className="text-red-500 font-bold">{formatCurrency(item.valueAtRisk)}</span>
                        </div>
                     </div>
 
                     <div className="flex gap-2 pt-4 border-t border-border">
-                       <Button variant="outline" size="sm" className="flex-1 font-bold">
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl">
                          <RotateCcw size={14} className="mr-2" />
-                         Return
+                         Return to Vendor
                        </Button>
-                       <Button variant="outline" size="sm" className="flex-1 font-bold text-red-500 hover:bg-red-500/10 hover:text-red-600">
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100">
                          <Trash2 size={14} className="mr-2" />
-                         Dispose
+                         Dispose Stock
                        </Button>
                     </div>
                   </CardContent>
                </Card>
             );
-         })}
-         {items.length === 0 && (
-           <Card className="p-16 text-center text-muted-foreground bg-muted/20 border-dashed border-2 flex flex-col items-center gap-4">
-             <Clock size={48} className="opacity-20" />
-             <p className="font-medium">No batches expiring within 180 days. Your stock is healthy!</p>
-           </Card>
-         )}
+          })}
+          {items.length === 0 && (
+            <Card className="p-16 text-center text-muted-foreground bg-muted/20 border-dashed border-2 flex flex-col items-center gap-4 rounded-[2rem]">
+              <Clock size={48} className="opacity-20" />
+              <p className="font-bold">No batches expiring within 180 days. Your stock is healthy!</p>
+            </Card>
+          )}
       </div>
     </div>
   );
 }
-
