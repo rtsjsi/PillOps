@@ -11,3 +11,25 @@ if (!process.env.DATABASE_URL) {
 const client = postgres(connectionString, { prepare: false });
 
 export const db = drizzle(client, { schema });
+
+// --- Environment Validation ---
+const requiredEnv = [
+  'DATABASE_URL',
+  'GEMINI_API_KEY',
+  'GROQ_API_KEY',
+  // GITHUB_TOKEN is used for OpenAI fallback in this app
+  'GITHUB_TOKEN', 
+];
+
+// We only throw in production or dev, not during build time (Next.js build phase)
+if (process.env.NODE_ENV !== 'test' && !process.env.NEXT_PHASE) {
+  for (const env of requiredEnv) {
+    if (!process.env[env]) {
+      console.error(`❌ Critical Error: Missing environment variable: ${env}`);
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(`Missing environment variable: ${env}`);
+      }
+    }
+  }
+}
+
