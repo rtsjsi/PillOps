@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Button } from './button';
+import { Button } from '@/components/ui/button';
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -51,3 +51,4 @@ export default function Header() {
     </header>
   );
 }
+

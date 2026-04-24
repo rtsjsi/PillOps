@@ -1,51 +1,59 @@
 import { getPurchases } from '@/app/actions';
-import { Card } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { FileScan, Box } from 'lucide-react';
+import { FileScan, Box, History } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function Purchases() {
   const purchases = await getPurchases();
 
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '1.5rem' }}>Purchase History</h1>
+    <div className="container py-8 flex flex-col gap-8 pb-24">
+      <header className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Purchases</h1>
       </header>
 
       {/* Hero Action */}
-      <Card className="flex-center" style={{ flexDirection: 'column', gap: '16px', padding: '32px 16px', background: 'linear-gradient(135deg, var(--color-bg-card) 0%, rgba(13, 148, 136, 0.05) 100%)', border: '1px solid var(--color-primary-glow)' }}>
-         <div style={{ background: 'var(--color-primary)', color: 'white', padding: '16px', borderRadius: '50%', boxShadow: '0 8px 24px var(--color-primary-glow)' }}>
-            <FileScan size={32} />
+      <Card className="flex flex-col items-center gap-6 p-8 bg-gradient-to-br from-primary/10 to-transparent border-primary/20 shadow-xl shadow-primary/5">
+         <div className="bg-primary text-white p-5 rounded-3xl shadow-lg shadow-primary/30 ring-8 ring-primary/5 animate-pulse">
+            <FileScan size={36} />
          </div>
-         <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>AI Invoice Scanner</h2>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '16px' }}>Instantly digitize distributor bills</p>
-            <Link href="/purchases/scan" className="btn btn-primary" style={{ width: '100%' }}>
-               Scan New Invoice
-            </Link>
+         <div className="text-center max-w-sm">
+            <h2 className="text-2xl font-extrabold mb-1 tracking-tight">AI Invoice Scanner</h2>
+            <p className="text-muted-foreground text-sm font-medium mb-6 leading-relaxed">Instantly digitize distributor bills and update your inventory automatically.</p>
+            <Button asChild size="lg" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20">
+              <Link href="/purchases/scan">
+                Scan New Invoice
+              </Link>
+            </Button>
          </div>
       </Card>
 
       <section>
-         <h2 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Recent Inwards</h2>
-         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+         <div className="flex items-center gap-2 mb-4">
+           <History size={20} className="text-muted-foreground" />
+           <h2 className="text-xl font-bold tracking-tight">Recent Inwards</h2>
+         </div>
+         <div className="flex flex-col gap-4">
             {purchases.length === 0 ? (
-               <div className="flex-center" style={{ flexDirection: 'column', gap: '16px', opacity: 0.5, paddingTop: '32px' }}>
-                  <Box size={40} />
-                  <p>No purchase records yet.</p>
-               </div>
+               <Card className="flex flex-col items-center justify-center gap-4 p-12 text-muted-foreground bg-muted/10 border-dashed border-2">
+                  <Box size={48} className="opacity-20" />
+                  <p className="font-medium text-sm">No purchase records yet.</p>
+               </Card>
             ) : (
                purchases.map((inv: any) => (
-                  <Card key={inv.id}>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 'bold' }}>{inv.distributorName}</div>
-                        <div style={{ color: 'var(--color-success)', fontWeight: 'bold' }}>{formatCurrency(inv.total)}</div>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                        <div>Inv: {inv.invoiceNumber}</div>
-                        <div>{formatDate(inv.invoiceDate)}</div>
-                     </div>
+                  <Card key={inv.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                         <div className="font-bold text-lg leading-tight">{inv.distributorName}</div>
+                         <div className="text-emerald-600 dark:text-emerald-400 font-extrabold">{formatCurrency(inv.total)}</div>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest pt-2 border-t border-border/50">
+                         <div className="bg-muted px-2 py-0.5 rounded"># {inv.invoiceNumber}</div>
+                         <div>{formatDate(inv.invoiceDate)}</div>
+                      </div>
+                    </CardContent>
                   </Card>
                ))
             )}
@@ -54,3 +62,4 @@ export default async function Purchases() {
     </div>
   );
 }
+

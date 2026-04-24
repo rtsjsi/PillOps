@@ -101,3 +101,4 @@ export default async function Dashboard() {
     return <DashboardError isProfileError={!!isProfileError} />;
   }
 }
+

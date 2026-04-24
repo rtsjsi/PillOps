@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { getMedicines, createInvoice, getStoreSettings } from '@/app/actions';
-import { CartItem, Medicine, Batch } from '@/lib/types';
+import { CartItem, Batch } from '@/lib/types';
 import { SearchBar } from '@/components/ui/SearchBar';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { fuzzyMatch, formatCurrency, generateInvoiceNumber } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, Search, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { fuzzyMatch, formatCurrency, generateInvoiceNumber, cn } from '@/lib/utils';
+import { ShoppingCart, Plus, Minus, Trash2, Search, CheckCircle2, Loader2, Printer, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import GenericTableLoading from '@/components/ui/tableLoading';
 
 export default function POS() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -52,7 +56,7 @@ export default function POS() {
   };
 
   const searchedMedicines = searchQuery 
-    ? medicines.filter(m => fuzzyMatch(m.name, searchQuery) || fuzzyMatch(m.genericName, searchQuery)).slice(0, 5)
+    ? medicines.filter(m => fuzzyMatch(searchQuery, m.name) || fuzzyMatch(searchQuery, m.genericName)).slice(0, 5)
     : [];
 
   const handleAddToCart = (medicine: any) => {
@@ -126,7 +130,7 @@ export default function POS() {
 
     try {
         const invoiceData = {
-            invoiceNumber: generateInvoiceNumber(storeSettings?.lastInvoiceNumber || 0),
+            invoiceNumber: generateInvoiceNumber(),
             customerName: customerName.trim() || 'Walk-in Customer',
             customerPhone: customerPhone.trim(),
             subtotal,
@@ -158,52 +162,44 @@ export default function POS() {
     }
   };
 
-  if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
+  if (loading) return <GenericTableLoading />;
 
   if (isSuccess) {
       return (
-          <div className="flex-center" style={{ height: 'calc(100vh - 120px)', flexDirection: 'column', gap: '24px', padding: '20px', textAlign: 'center' }}>
-              <div style={{ color: 'var(--color-success)' }}><CheckCircle2 size={80} /></div>
-              <div>
-                <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>Sale Completed!</h2>
-                <p className="text-muted">Inventory updated and invoice generated.</p>
+          <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-8 text-center p-6">
+              <div className="text-emerald-500 bg-emerald-500/10 p-6 rounded-full ring-8 ring-emerald-500/5 animate-bounce">
+                <CheckCircle2 size={64} />
+              </div>
+              <div className="grid gap-2">
+                <h2 className="text-3xl font-extrabold tracking-tight">Sale Completed!</h2>
+                <p className="text-muted-foreground font-medium">Inventory updated and invoice generated successfully.</p>
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '300px' }}>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', padding: '16px' }}
-                    onClick={() => {
-                        window.open(`/invoice/${lastInvoiceId}`, '_blank');
-                    }}
-                  >
+              <div className="flex flex-col gap-3 w-full max-w-sm">
+                  <Button size="lg" className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" onClick={() => window.open(`/invoice/${lastInvoiceId}`, '_blank')}>
+                    <Printer className="mr-2" size={20} />
                     View & Print Invoice
-                  </button>
-                  <button 
-                    className="btn btn-outline" 
-                    style={{ width: '100%', padding: '12px' }}
-                    onClick={() => {
-                        setIsSuccess(false);
-                        setLastInvoiceId(null);
-                    }}
-                  >
+                  </Button>
+                  <Button variant="outline" size="lg" className="w-full h-12" onClick={() => { setIsSuccess(false); setLastInvoiceId(null); }}>
                     New Sale
-                  </button>
+                  </Button>
               </div>
           </div>
       );
   }
 
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '1.5rem' }}>New Sale</h1>
+    <div className="container py-8 flex flex-col gap-6 pb-32">
+      <header className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">New Sale</h1>
         {cart.length > 0 && (
-            <button className="text-muted" onClick={() => setCart([])} style={{ fontSize: '0.9rem' }}>Clear Cart</button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground font-bold hover:text-red-500" onClick={() => setCart([])}>
+              Clear Cart
+            </Button>
         )}
       </header>
 
-      <div style={{ position: 'relative' }}>
+      <div className="relative">
           <SearchBar 
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
@@ -212,59 +208,64 @@ export default function POS() {
           />
           
           {searchQuery && (
-              <Card className="absolute" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, marginTop: '8px', padding: '8px 0', border: '1px solid rgba(107,114,128,0.2)' }}>
+              <Card className="absolute top-full left-0 right-0 z-50 mt-2 shadow-2xl border-primary/20 overflow-hidden bg-card/95 backdrop-blur-xl">
                   {searchedMedicines.length === 0 ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>No medicines found.</div>
+                      <div className="p-8 text-center text-muted-foreground font-medium">No medicines found.</div>
                   ) : (
-                      searchedMedicines.map(med => {
-                          const totalStock = med.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
-                          return (
-                              <div 
-                                  key={med.id} 
-                                  onClick={() => totalStock > 0 && handleAddToCart(med)}
-                                  style={{ padding: '12px 16px', borderBottom: '1px solid rgba(107, 114, 128, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: totalStock > 0 ? 'pointer' : 'not-allowed', opacity: totalStock === 0 ? 0.5 : 1 }}
-                              >
-                                  <div>
-                                      <div style={{ fontWeight: '500' }}>{med.name}</div>
-                                      <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                          {totalStock} in stock • MRP: ₹{med.batches[0]?.mrp || 0}
-                                      </div>
-                                  </div>
-                                  <Plus size={20} color="var(--color-primary)" />
-                              </div>
-                          );
-                      })
+                      <div className="divide-y divide-border">
+                        {searchedMedicines.map(med => {
+                            const totalStock = med.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+                            return (
+                                <div 
+                                    key={med.id} 
+                                    onClick={() => totalStock > 0 && handleAddToCart(med)}
+                                    className={cn(
+                                      "p-4 flex justify-between items-center transition-colors",
+                                      totalStock > 0 ? "cursor-pointer hover:bg-muted/50" : "opacity-50 cursor-not-allowed"
+                                    )}
+                                >
+                                    <div>
+                                        <p className="font-bold">{med.name}</p>
+                                        <p className="text-xs text-muted-foreground font-medium">
+                                            {totalStock} in stock • MRP: ₹{med.batches[0]?.mrp || 0}
+                                        </p>
+                                    </div>
+                                    <PlusCircle size={24} className="text-primary" />
+                                </div>
+                            );
+                        })}
+                      </div>
                   )}
               </Card>
           )}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <div className="flex flex-col gap-3">
           {cart.length === 0 ? (
-              <div className="flex-center" style={{ flexDirection: 'column', gap: '16px', marginTop: '40px', color: 'var(--color-text-muted)' }}>
-                  <ShoppingCart size={48} opacity={0.5} />
-                  <p>Cart is empty. Search to add items.</p>
+              <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground bg-muted/10 rounded-3xl border-2 border-dashed">
+                  <ShoppingCart size={48} className="opacity-20" />
+                  <p className="font-medium">Cart is empty. Search to add items.</p>
               </div>
           ) : (
               cart.map((item, i) => (
-                  <Card key={`${item.batchId}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
-                      <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: '500' }}>{item.medicineName}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Batch: {item.batchNumber} • ₹{item.mrp}</div>
+                  <Card key={`${item.batchId}-${i}`} className="p-4 flex justify-between items-center border-none shadow-sm">
+                      <div className="flex-1">
+                          <p className="font-bold text-sm">{item.medicineName}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Batch: {item.batchNumber} • MRP: ₹{item.mrp}</p>
                       </div>
                       
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-bg-primary)', borderRadius: '100px', border: '1px solid rgba(107, 114, 128, 0.2)' }}>
-                              <button onClick={() => updateQuantity(i, -1)} style={{ padding: '8px' }} aria-label="Decrease">
+                      <div className="flex items-center gap-6">
+                          <div className="flex items-center bg-muted/50 rounded-full border border-border">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQuantity(i, -1)}>
                                   <Minus size={14} />
-                              </button>
-                              <span style={{ fontSize: '0.9rem', width: '20px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</span>
-                              <button onClick={() => updateQuantity(i, 1)} style={{ padding: '8px' }} aria-label="Increase">
+                              </Button>
+                              <span className="text-xs font-bold w-6 text-center">{item.quantity}</span>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => updateQuantity(i, 1)}>
                                   <Plus size={14} />
-                              </button>
+                              </Button>
                           </div>
-                          <div style={{ fontWeight: 'bold', width: '60px', textAlign: 'right' }}>
-                              ₹{(item.quantity * item.mrp).toFixed(2)}
+                          <div className="font-bold text-sm w-20 text-right">
+                              {formatCurrency(item.quantity * item.mrp)}
                           </div>
                       </div>
                   </Card>
@@ -273,52 +274,56 @@ export default function POS() {
       </div>
 
       {cart.length > 0 && (
-          <Card style={{ marginBottom: '8px' }}>
-              <h3 style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--color-text-muted)' }}>Customer Details (Optional)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <input 
-                    className="input" 
-                    placeholder="Customer Name" 
+          <Card className="bg-muted/30 border-none">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer Details (Optional)</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 grid grid-cols-2 gap-3">
+                  <Input 
+                    placeholder="Name" 
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    className="bg-background h-10 text-sm"
                   />
-                  <input 
-                    className="input" 
-                    placeholder="Phone Number" 
+                  <Input 
+                    placeholder="Phone" 
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                    className="bg-background h-10 text-sm"
                   />
-              </div>
+              </CardContent>
           </Card>
       )}
 
       {cart.length > 0 && (
-          <Card style={{ marginTop: 'auto', background: 'var(--color-bg-card)', border: '1px solid var(--color-primary)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-                  <span className="text-muted">Subtotal ({cart.reduce((sum, c)=>sum+c.quantity, 0)} items)</span>
-                  <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', borderTop: '1px dashed rgba(107, 114, 128, 0.2)', paddingTop: '8px' }}>
-                  <span className="text-muted">Discount %</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {[0, 5, 10, 15].map(d => (
-                          <button key={d} className={discountPercent === d ? 'btn btn-primary' : 'btn btn-outline'} style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setDiscountPercent(d)}>{d}%</button>
-                      ))}
+          <div className="fixed bottom-24 left-4 right-4 z-40 lg:left-auto lg:right-4 lg:w-96">
+            <Card className="bg-card/80 backdrop-blur-2xl border-primary/20 shadow-2xl shadow-primary/20">
+                <CardContent className="p-6">
+                  <div className="flex justify-between mb-2 text-sm font-medium">
+                      <span className="text-muted-foreground">Subtotal ({cart.reduce((sum, c)=>sum+c.quantity, 0)} items)</span>
+                      <span>{formatCurrency(subtotal)}</span>
                   </div>
-              </div>
-              <button 
-                  className="btn btn-primary" 
-                  disabled={isCheckingOut}
-                  style={{ width: '100%', padding: '16px', fontSize: '1.2rem', display: 'flex', justifyContent: 'space-between' }}
-                  onClick={handleCheckout}
-              >
-                  <span>{isCheckingOut ? 'Processing...' : 'Checkout'}</span>
-                  <strong>{formatCurrency(total)}</strong>
-              </button>
-          </Card>
+                  <div className="flex flex-col gap-3 mb-6 pt-3 border-t border-dashed border-border">
+                      <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Apply Discount</span>
+                      <div className="flex justify-between gap-2">
+                          {[0, 5, 10, 15].map(d => (
+                              <Button key={d} variant={discountPercent === d ? 'default' : 'outline'} size="sm" className="flex-1 rounded-lg" onClick={() => setDiscountPercent(d)}>{d}%</Button>
+                          ))}
+                      </div>
+                  </div>
+                  <Button 
+                      className="w-full h-14 text-xl font-bold rounded-2xl flex justify-between px-6 shadow-xl shadow-primary/30"
+                      disabled={isCheckingOut}
+                      onClick={handleCheckout}
+                  >
+                      <span>{isCheckingOut ? 'Wait...' : 'Checkout'}</span>
+                      <strong>{formatCurrency(total)}</strong>
+                  </Button>
+                </CardContent>
+            </Card>
+          </div>
       )}
     </div>
   );
 }
+

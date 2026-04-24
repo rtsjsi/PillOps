@@ -3,10 +3,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getMedicines } from '@/app/actions';
 import { SearchBar } from '@/components/ui/SearchBar';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { fuzzyMatch, getTotalStock, getStockStatus } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { fuzzyMatch, getTotalStock, getStockStatus, cn } from '@/lib/utils';
 import { PackageSearch, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import TableLoading from '@/components/ui/tableLoading';
 
 export default function Inventory() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -30,74 +32,84 @@ export default function Inventory() {
 
   const filteredMedicines = useMemo(() => {
     return medicines.filter(med => {
-      const matchesSearch = fuzzyMatch(med.name, searchQuery) || fuzzyMatch(med.genericName, searchQuery);
+      const matchesSearch = fuzzyMatch(searchQuery, med.name) || fuzzyMatch(searchQuery, med.genericName);
       const matchesCategory = selectedCategory === 'All' || med.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [medicines, searchQuery, selectedCategory]);
 
-  if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
+  if (loading) return <TableLoading />;
 
   const categories = ['All', ...Array.from(new Set(medicines.map(m => m.category)))];
 
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+    <div className="container py-8 flex flex-col gap-6 pb-24">
       <header>
-        <h1 style={{ fontSize: '1.5rem' }}>Inventory</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+        <p className="text-muted-foreground">Monitor and manage your medicine stock levels.</p>
       </header>
 
-      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-        <SearchBar 
-          value={searchQuery} 
-          onChange={(e) => setSearchQuery(e.target.value)} 
-          onClear={() => setSearchQuery('')}
-          placeholder="Search medicines..."
-        />
-        <button className="btn btn-outline" style={{ padding: '0 12px' }}>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <SearchBar 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            onClear={() => setSearchQuery('')}
+            placeholder="Search medicines..."
+          />
+        </div>
+        <Button variant="outline" size="icon" className="h-11 w-11">
            <Filter size={18} />
-        </button>
+        </Button>
       </div>
 
-      <div style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
          {categories.map(cat => (
-            <button 
+            <Button 
                key={cat}
-               className={selectedCategory === cat ? 'btn btn-primary' : 'btn btn-outline'}
-               style={{ whiteSpace: 'nowrap', borderRadius: '100px', padding: '4px 16px', fontSize: '0.8rem' }}
+               variant={selectedCategory === cat ? 'default' : 'outline'}
+               size="sm"
+               className="rounded-full whitespace-nowrap px-6"
                onClick={() => setSelectedCategory(cat)}
             >
                {cat}
-            </button>
+            </Button>
          ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <div className="flex flex-col gap-4">
          {filteredMedicines.length === 0 ? (
-            <div className="flex-center" style={{ flexDirection: 'column', gap: '16px', padding: '40px 0', opacity: 0.6 }}>
-               <PackageSearch size={48} />
-               <p>No medicines found.</p>
-            </div>
+            <Card className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/20 border-dashed">
+               <PackageSearch size={48} className="opacity-20" />
+               <p>No medicines found matching your criteria.</p>
+            </Card>
          ) : (
             filteredMedicines.map(med => {
                const totalQty = getTotalStock(med.batches);
                const status = getStockStatus(totalQty, med.reorderLevel);
                
                return (
-                 <Card key={med.id}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                     <div>
-                       <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{med.name}</div>
-                       <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{med.genericName}</div>
-                     </div>
-                     <Badge variant={status === 'in-stock' ? 'success' : status === 'low' ? 'warning' : 'danger'}>
-                        {totalQty} in stock
-                     </Badge>
-                   </div>
-                   
-                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(107, 114, 128, 0.1)' }}>
-                      <div className="text-muted">Rack: {med.rack}</div>
-                      <div className="text-muted">{med.batches.length} batch(es)</div>
-                   </div>
+                 <Card key={med.id} className="hover:shadow-md transition-shadow">
+                   <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
+                      <div className="grid gap-1">
+                        <CardTitle className="text-lg font-bold">{med.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{med.genericName}</p>
+                      </div>
+                      <Badge variant={status === 'ok' ? 'default' : status === 'low' ? 'outline' : 'destructive'} className={cn(
+                        status === 'ok' && "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20",
+                        status === 'low' && "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
+                      )}>
+                         {totalQty} in stock
+                      </Badge>
+                   </CardHeader>
+                   <CardContent className="p-4 pt-0">
+                    <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground pt-4 border-t border-border">
+                       <div className="flex items-center gap-2">
+                         <span className="bg-muted px-2 py-0.5 rounded">Rack: {med.rack}</span>
+                       </div>
+                       <div>{med.batches.length} batch(es)</div>
+                    </div>
+                   </CardContent>
                  </Card>
                );
             })
@@ -106,3 +118,4 @@ export default function Inventory() {
     </div>
   );
 }
+

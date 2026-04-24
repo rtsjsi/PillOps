@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { createStore, getAllStores } from '@/app/actions';
-import { Card } from '@/components/ui/Card';
-import { Building2, Plus, Store, Users, CheckCircle2, Loader2, Search } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Plus, Store, Users, CheckCircle2, Loader2, Search, LayoutDashboard, UserPlus } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import GenericTableLoading from '@/components/ui/TableLoading';
 
 export default function AdminDashboard() {
   const [stores, setStores] = useState<any[]>([]);
@@ -51,112 +56,140 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading Admin Panel...</div>;
+  if (loading) return <GenericTableLoading />;
 
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+    <div className="container py-8 flex flex-col gap-8 pb-24">
       <header>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: '800' }}>Super Admin Console</h1>
-        <p className="text-muted">Manage pharmacies and onboarding</p>
+        <h1 className="text-3xl font-bold tracking-tight">Super Admin Console</h1>
+        <p className="text-muted-foreground font-medium">Global management and tenant onboarding center.</p>
       </header>
 
       {/* Stats Overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-         <Card className="flex-center" style={{ flexDirection: 'column', gap: '8px', padding: 'var(--space-4)' }}>
-            <div style={{ color: 'var(--color-primary)' }}><Building2 size={24} /></div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Total Stores</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{stores.length}</div>
+      <div className="grid grid-cols-2 gap-4">
+         <Card className="flex flex-col items-center justify-center p-6 text-center gap-2 border-none bg-primary/5">
+            <div className="text-primary bg-primary/10 p-3 rounded-2xl"><Building2 size={24} /></div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Stores</p>
+              <p className="text-2xl font-extrabold">{stores.length}</p>
+            </div>
          </Card>
-         <Card className="flex-center" style={{ flexDirection: 'column', gap: '8px', padding: 'var(--space-4)' }}>
-            <div style={{ color: 'var(--color-success)' }}><Users size={24} /></div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Active Subs</div>
-            <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{stores.filter(s => s.subscriptionTier === 'pro').length}</div>
+         <Card className="flex flex-col items-center justify-center p-6 text-center gap-2 border-none bg-emerald-500/5">
+            <div className="text-emerald-500 bg-emerald-500/10 p-3 rounded-2xl"><Users size={24} /></div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Pro</p>
+              <p className="text-2xl font-extrabold">{stores.filter(s => s.subscriptionTier === 'pro').length}</p>
+            </div>
          </Card>
       </div>
 
       {/* Onboarding Form */}
       <section>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={20} /> Onboard New Store
-        </h2>
-        <Card>
-          <form onSubmit={handleCreateStore} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <input 
-                    className="input" 
-                    placeholder="Pharmacy Name" 
-                    required
-                    value={newStore.name}
-                    onChange={e => setNewStore({...newStore, name: e.target.value})}
+        <div className="flex items-center gap-2 mb-4">
+          <UserPlus size={20} className="text-muted-foreground" />
+          <h2 className="text-xl font-bold tracking-tight">Onboard New Store</h2>
+        </div>
+        <Card className="border-primary/20 shadow-xl shadow-primary/5 overflow-hidden">
+          <CardContent className="p-6">
+            <form onSubmit={handleCreateStore} className="flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Pharmacy Name</Label>
+                    <Input 
+                        id="name"
+                        placeholder="e.g. Apollo Pharmacy" 
+                        required
+                        value={newStore.name}
+                        onChange={e => setNewStore({...newStore, name: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="gstin">GSTIN</Label>
+                    <Input 
+                        id="gstin"
+                        placeholder="15-digit GST Number" 
+                        value={newStore.gstin}
+                        onChange={e => setNewStore({...newStore, gstin: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input 
+                        id="phone"
+                        placeholder="+91 XXXXX XXXXX" 
+                        required
+                        value={newStore.phone}
+                        onChange={e => setNewStore({...newStore, phone: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Subscription Tier</Label>
+                    <Select 
+                      value={newStore.subscriptionTier}
+                      onValueChange={(v) => setNewStore({...newStore, subscriptionTier: v})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free Tier</SelectItem>
+                        <SelectItem value="pro">Pro Tier</SelectItem>
+                        <SelectItem value="enterprise">Enterprise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="address">Full Address</Label>
+                <Input 
+                    id="address"
+                    placeholder="Physical location of the store" 
+                    value={newStore.address}
+                    onChange={e => setNewStore({...newStore, address: e.target.value})}
                 />
-                <input 
-                    className="input" 
-                    placeholder="GSTIN" 
-                    value={newStore.gstin}
-                    onChange={e => setNewStore({...newStore, gstin: e.target.value})}
-                />
-                <input 
-                    className="input" 
-                    placeholder="Phone Number" 
-                    required
-                    value={newStore.phone}
-                    onChange={e => setNewStore({...newStore, phone: e.target.value})}
-                />
-                <select 
-                    className="input"
-                    value={newStore.subscriptionTier}
-                    onChange={e => setNewStore({...newStore, subscriptionTier: e.target.value})}
-                    style={{ appearance: 'none' }}
-                >
-                    <option value="free">Free Tier</option>
-                    <option value="pro">Pro Tier</option>
-                    <option value="enterprise">Enterprise</option>
-                </select>
-            </div>
-            <textarea 
-                className="input" 
-                placeholder="Full Address" 
-                rows={2}
-                value={newStore.address}
-                onChange={e => setNewStore({...newStore, address: e.target.value})}
-                style={{ resize: 'none' }}
-            />
-            
-            <button 
-                className="btn btn-primary" 
-                disabled={isCreating}
-                style={{ padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'center', gap: '8px' }}
-            >
-                {isCreating ? <Loader2 className="animate-spin" /> : success ? <CheckCircle2 /> : 'Register Pharmacy Store'}
-                {success && ' Success!'}
-            </button>
-          </form>
+              </div>
+              
+              <Button 
+                  type="submit"
+                  className="h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20"
+                  disabled={isCreating}
+              >
+                  {isCreating ? <Loader2 className="mr-2 animate-spin" /> : success ? <CheckCircle2 className="mr-2" /> : null}
+                  {success ? 'Store Registered Successfully!' : isCreating ? 'Registering...' : 'Complete Onboarding'}
+              </Button>
+            </form>
+          </CardContent>
         </Card>
       </section>
 
       {/* Stores List */}
       <section>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Existing Pharmacies</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <LayoutDashboard size={20} className="text-muted-foreground" />
+            <h2 className="text-xl font-bold tracking-tight">Existing Pharmacies</h2>
+          </div>
+          <div className="flex flex-col gap-3">
               {stores.map(store => (
-                  <Card key={store.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ padding: '10px', background: 'var(--color-bg-primary)', borderRadius: '10px', color: 'var(--color-primary)' }}>
-                              <Store size={20} />
+                  <Card key={store.id} className="hover:shadow-md transition-all border-none shadow-sm">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-primary/10 rounded-xl text-primary shadow-inner">
+                              <Store size={22} />
                           </div>
                           <div>
-                              <div style={{ fontWeight: 'bold' }}>{store.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Onboarded: {formatDate(store.createdAt)}</div>
+                              <p className="font-bold text-lg leading-tight">{store.name}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Joined: {formatDate(store.createdAt)}</p>
                           </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: store.subscriptionTier === 'pro' ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
-                              {store.subscriptionTier}
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
-                              ID: {store.id.slice(0, 8)}...
-                          </div>
+                      <div className="text-right">
+                          <Badge variant={store.subscriptionTier === 'pro' ? 'default' : 'outline'} className={store.subscriptionTier === 'pro' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}>
+                              {store.subscriptionTier.toUpperCase()}
+                          </Badge>
+                          <p className="text-[9px] font-mono text-muted-foreground mt-2 opacity-50">
+                              ID: {store.id.slice(0, 12)}
+                          </p>
                       </div>
+                    </CardContent>
                   </Card>
               ))}
           </div>

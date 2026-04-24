@@ -64,3 +64,4 @@ export function AIStreamer({ prompt }: AIStreamerProps) {
     </div>
   );
 }
+

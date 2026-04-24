@@ -3,10 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { savePurchaseInvoice } from '@/app/actions';
-import { Card } from '@/components/ui/Card';
-import { formatCurrency } from '@/lib/utils';
-import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency, cn } from '@/lib/utils';
+import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import GenericTableLoading from '@/components/ui/TableLoading';
 
 export default function ReviewExtraction() {
   const router = useRouter();
@@ -81,135 +85,139 @@ export default function ReviewExtraction() {
 
   if (error) {
      return (
-        <div className="flex-center" style={{ height: 'calc(100vh - 56px)', flexDirection: 'column', gap: '16px', padding: '20px', textAlign: 'center' }}>
-           <AlertTriangle size={64} color="var(--color-danger)" />
-           <h2 style={{ fontSize: '1.5rem' }}>Error</h2>
-           <p className="text-muted">{error}</p>
-           <Link href="/purchases/scan" className="btn btn-primary" style={{ marginTop: '16px' }}>Try Again</Link>
+        <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
+           <AlertTriangle size={64} className="text-red-500 bg-red-500/10 p-4 rounded-full" />
+           <div className="grid gap-2">
+             <h2 className="text-2xl font-bold">Extraction Error</h2>
+             <p className="text-muted-foreground">{error}</p>
+           </div>
+           <Button asChild size="lg" className="mt-4">
+             <Link href="/purchases/scan">Try Again</Link>
+           </Button>
         </div>
      );
   }
 
-  if (!data) {
-     return <div className="flex-center" style={{ height: '100vh' }}>Loading extracted data...</div>;
-  }
+  if (!data) return <GenericTableLoading />;
 
   if (isSuccess) {
       return (
-          <div className="flex-center" style={{ height: 'calc(100vh - 56px)', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ color: 'var(--color-success)' }}><CheckCircle2 size={64} /></div>
-              <h2 style={{ fontSize: '1.5rem' }}>Stock Added!</h2>
-              <p className="text-muted">Inventory updated successfully.</p>
+          <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
+              <CheckCircle2 size={80} className="text-emerald-500 animate-bounce" />
+              <div className="grid gap-2">
+                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Stock Added!</h2>
+                <p className="text-muted-foreground font-medium">Inventory updated successfully. Redirecting...</p>
+              </div>
           </div>
       );
   }
 
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Link href="/purchases/scan" className="btn btn-outline" style={{ padding: '8px', border: 'none' }}>
-           <ArrowLeft size={24} />
-        </Link>
-        <h1 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="container py-8 flex flex-col gap-6 pb-32">
+      <header className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild className="rounded-full">
+          <Link href="/purchases/scan">
+            <ArrowLeft size={24} />
+          </Link>
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
            Review Data
-           <Sparkles size={20} color="var(--color-primary)" />
+           <Sparkles size={24} className="text-primary animate-pulse" />
         </h1>
       </header>
 
-      <Card>
-         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div>
-               <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Distributor</div>
-               <div style={{ fontWeight: 'bold' }}>{data.distributorName}</div>
+      <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
+        <CardContent className="p-6 grid grid-cols-2 gap-y-6">
+            <div className="space-y-1">
+               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Distributor</Label>
+               <p className="text-lg font-bold text-slate-900">{data.distributorName}</p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-               <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Date</div>
-               <div style={{ fontWeight: 'bold' }}>{data.invoiceDate}</div>
+            <div className="space-y-1 text-right">
+               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Date</Label>
+               <p className="text-lg font-bold text-slate-900">{data.invoiceDate}</p>
             </div>
-         </div>
-         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(107,114,128,0.1)', paddingTop: '16px' }}>
-            <div>
-               <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Invoice No</div>
-               <div style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{data.invoiceNumber}</div>
+            <div className="space-y-1">
+               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Invoice Number</Label>
+               <p className="text-lg font-bold text-primary">{data.invoiceNumber}</p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-               <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Net Amount</div>
-               <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--color-success)' }}>{formatCurrency(data.total)}</div>
+            <div className="space-y-1 text-right">
+               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Net Amount</Label>
+               <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
             </div>
-         </div>
+        </CardContent>
       </Card>
 
       <div>
-         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-             <h2 style={{ fontSize: '1.1rem' }}>Extracted Items ({data.items.length})</h2>
-             <button 
+         <div className="flex justify-between items-center mb-4">
+             <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
+             <Button 
+                variant={isEditing ? 'default' : 'outline'}
+                size="sm"
+                className={cn("rounded-full font-bold", isEditing && "bg-emerald-500 hover:bg-emerald-600")}
                 onClick={() => setIsEditing(!isEditing)}
-                style={{ color: isEditing ? 'var(--color-success)' : 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', padding: '4px 8px', borderRadius: '4px', background: isEditing ? 'rgba(16, 185, 129, 0.1)' : 'transparent' }}
              >
-                 {isEditing ? <CheckCircle2 size={14} /> : <Edit2 size={14} />} 
-                 {isEditing ? 'Done' : 'Edit'}
-             </button>
+                 {isEditing ? <CheckCircle2 size={16} className="mr-2" /> : <Edit2 size={16} className="mr-2" />} 
+                 {isEditing ? 'Save Changes' : 'Edit Items'}
+             </Button>
          </div>
          
-         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+         <div className="flex flex-col gap-4">
             {data.items.map((item: any, idx: number) => (
-               <Card key={idx} noPadding style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                     <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                         <span style={{ background: 'var(--color-primary-glow)', color: 'var(--color-primary)', borderRadius: '100px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold flex-shrink-0' }}>{idx + 1}</span>
-                         {isEditing ? (
-                             <input className="input" value={item.medicineName} onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} style={{ padding: '4px', fontSize: '0.9rem', height: '30px', width: '100%' }} />
-                         ) : item.medicineName}
-                     </div>
-                  </div>
+               <Card key={idx} className={cn("transition-all", isEditing && "ring-2 ring-primary/20 border-primary/30")}>
+                  <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
+                    <span className="bg-primary text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
+                      {idx + 1}
+                    </span>
+                    {isEditing ? (
+                        <Input 
+                          value={item.medicineName} 
+                          onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
+                          className="h-10 font-bold bg-muted/50"
+                        />
+                    ) : (
+                        <CardTitle className="text-base font-bold text-slate-800">{item.medicineName}</CardTitle>
+                    )}
+                  </CardHeader>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
-                     {isEditing ? (
+                  <CardContent className="p-4 pt-0">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {isEditing ? (
                         <>
-                          <div><span className="text-muted" style={{ display: 'block', fontSize: '0.75rem' }}>Batch</span><input className="input" value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted" style={{ display: 'block', fontSize: '0.75rem' }}>Exp (YYYY-MM)</span><input className="input" value={item.expiryDate} onChange={e=>handleItemChange(idx, 'expiryDate', e.target.value)} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted" style={{ display: 'block', fontSize: '0.75rem' }}>Rate</span><input type="number" className="input" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>MRP</span><input type="number" className="input" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>Disc %</span><input type="number" className="input" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>Qty</span><input type="number" className="input" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>Free Qty</span><input type="number" className="input" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>Mfr</span><input className="input" value={item.manufacturer || ''} onChange={e=>handleItemChange(idx, 'manufacturer', e.target.value)} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
-                          <div><span className="text-muted block text-xs" style={{ display: 'block', fontSize: '0.75rem' }}>HSN</span><input className="input" value={item.hsnCode || ''} onChange={e=>handleItemChange(idx, 'hsnCode', e.target.value)} style={{ padding:'2px 4px', height:'24px', width: '100%' }}/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (YYYY-MM)</Label><Input value={item.expiryDate} onChange={e=>handleItemChange(idx, 'expiryDate', e.target.value)} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
+                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
                         </>
-                     ) : (
+                      ) : (
                         <>
-                          <div><span className="text-muted">Batch:</span> {item.batchNumber}</div>
-                          <div><span className="text-muted">Exp:</span> {item.expiryDate}</div>
-                          <div><span className="text-muted">Rate:</span> ₹{item.purchasePrice}</div>
-                          <div><span className="text-muted">Disc:</span> {item.discountPercent}%</div>
-                          <div><span className="text-muted">MRP:</span> ₹{item.mrp}</div>
-                          <div style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
-                              <span className="text-muted mr-1">Qty:</span>
-                              {item.quantity} {item.freeQuantity > 0 && <span style={{ color: 'var(--color-success)' }}>+{item.freeQuantity} Free</span>}
-                          </div>
-                          <div><span className="text-muted">Tax:</span> {item.gstPercent}%</div>
-                          {(item.manufacturer || item.hsnCode) && (
-                              <div style={{ gridColumn: '1 / -1', borderTop: '1px dashed rgba(107,114,128,0.2)', paddingTop: '4px', marginTop: '4px' }}>
-                                 <span className="text-muted">Mfr:</span> {item.manufacturer || 'N/A'} • <span className="text-muted">HSN:</span> {item.hsnCode || 'N/A'}
-                              </div>
-                          )}
+                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Batch</span><span className="text-sm font-bold">{item.batchNumber}</span></div>
+                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Expiry</span><span className="text-sm font-bold">{item.expiryDate}</span></div>
+                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Rate</span><span className="text-sm font-bold">₹{item.purchasePrice}</span></div>
+                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Quantity</span><span className="text-sm font-bold text-primary">{item.quantity} {item.freeQuantity > 0 && <span className="text-emerald-500 font-black">+{item.freeQuantity}</span>}</span></div>
                         </>
-                     )}
-                  </div>
+                      )}
+                    </div>
+                  </CardContent>
                </Card>
             ))}
          </div>
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px', background: 'var(--color-bg-card)', boxShadow: '0 -4px 12px rgba(0,0,0,0.05)', zIndex: 100 }}>
-         <button 
-            className="btn btn-primary" 
-            disabled={isSaving}
-            style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
-            onClick={handleConfirm}
-         >
-            {isSaving ? 'Saving to Database...' : 'Confirm & Add to Inventory'}
-         </button>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-2xl">
+         <div className="container max-w-4xl">
+           <Button 
+              className="w-full h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
+              disabled={isSaving}
+              onClick={handleConfirm}
+           >
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+              {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
+           </Button>
+         </div>
       </div>
     </div>
   );
