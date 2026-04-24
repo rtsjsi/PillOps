@@ -7,13 +7,14 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     const stored = localStorage.getItem('pillops_theme') as 'light' | 'dark' | null;
-    if (stored) {
+    if (stored && stored !== theme) {
       setTheme(stored);
-    } else {
+    } else if (!stored) {
       const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(prefersDark ? 'dark' : 'light');
+      const newTheme = prefersDark ? 'dark' : 'light';
+      if (newTheme !== theme) setTheme(newTheme);
     }
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

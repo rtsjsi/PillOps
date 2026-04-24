@@ -10,17 +10,40 @@ import Link from 'next/link';
 
 export default function ReviewExtraction() {
   const router = useRouter();
-  const [data, setData] = useState<any | null>(null);
+
+  interface InvoiceItem {
+    medicineName: string;
+    batchNumber: string;
+    expiryDate: string;
+    purchasePrice: number;
+    mrp: number;
+    discountPercent: number;
+    quantity: number;
+    freeQuantity: number;
+    manufacturer?: string;
+    hsnCode?: string;
+    gstPercent?: number;
+  }
+
+  interface InvoiceData {
+    distributorName: string;
+    invoiceDate: string;
+    invoiceNumber: string;
+    total: number;
+    items: InvoiceItem[];
+  }
+
+  const [data, setData] = useState<InvoiceData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleItemChange = (idx: number, field: string, value: any) => {
-      if (!data) return;
-      const newItems = [...data.items];
-      newItems[idx] = { ...newItems[idx], [field]: value };
-      setData({ ...data, items: newItems });
+  const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any) => {
+    if (!data) return;
+    const newItems = [...data.items];
+    newItems[idx] = { ...newItems[idx], [field]: value } as InvoiceItem;
+    setData({ ...data, items: newItems });
   };
 
   useEffect(() => {
