@@ -115,11 +115,13 @@ export default async function InvoicePage({ params }: PageProps) {
                     <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>Gross Subtotal</span>
                     <span style={{ fontWeight: '500' }}>{formatCurrency(invoice.subtotal)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
-                    <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>Estimated GST (Included)</span>
-                    <span style={{ fontWeight: '500' }}>{formatCurrency(invoice.gstAmount)}</span>
-                </div>
-                {invoice.discountAmount > 0 && (
+                {invoice.gstAmount !== null && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+                      <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>Estimated GST (Included)</span>
+                      <span style={{ fontWeight: '500' }}>{formatCurrency(invoice.gstAmount)}</span>
+                  </div>
+                )}
+                {invoice.discountAmount !== null && invoice.discountAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6', color: '#10b981' }}>
                         <span style={{ fontSize: '0.9rem' }}>Discount ({invoice.discountPercent}%)</span>
                         <span style={{ fontWeight: '500' }}>-{formatCurrency(invoice.discountAmount)}</span>
@@ -141,7 +143,7 @@ export default async function InvoicePage({ params }: PageProps) {
                 3. Keep all medicines out of reach of children.
             </div>
             <div style={{ textAlign: 'right' }}>
-                For <strong>{storeInfo?.name}</strong><br /><br /><br /><br />
+                For <strong>{storeInfo?.name || 'Authorized Pharmacy'}</strong><br /><br /><br /><br />
                 Authorized Signatory
             </div>
         </div>
