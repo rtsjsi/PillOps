@@ -91,8 +91,8 @@ export default function ReviewExtraction() {
              <h2 className="text-2xl font-bold">Extraction Error</h2>
              <p className="text-muted-foreground">{error}</p>
            </div>
-           <Button asChild size="lg" className="mt-4">
-             <Link href="/purchases/scan">Try Again</Link>
+           <Button render={<Link href="/purchases/scan" />} size="lg" className="mt-4">
+             Try Again
            </Button>
         </div>
      );
@@ -115,10 +115,8 @@ export default function ReviewExtraction() {
   return (
     <div className="container py-8 flex flex-col gap-6 pb-32">
       <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild className="rounded-full">
-          <Link href="/purchases/scan">
+        <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
             <ArrowLeft size={24} />
-          </Link>
         </Button>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
            Review Data

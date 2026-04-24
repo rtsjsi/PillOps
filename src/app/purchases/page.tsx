@@ -22,10 +22,8 @@ export default async function Purchases() {
          <div className="text-center max-w-sm">
             <h2 className="text-2xl font-extrabold mb-1 tracking-tight">AI Invoice Scanner</h2>
             <p className="text-muted-foreground text-sm font-medium mb-6 leading-relaxed">Instantly digitize distributor bills and update your inventory automatically.</p>
-            <Button asChild size="lg" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20">
-              <Link href="/purchases/scan">
-                Scan New Invoice
-              </Link>
+            <Button render={<Link href="/purchases/scan" />} size="lg" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20">
+              Scan New Invoice
             </Button>
          </div>
       </Card>

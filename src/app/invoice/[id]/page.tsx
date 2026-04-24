@@ -21,8 +21,8 @@ export default async function InvoicePage({ params }: PageProps) {
     return (
         <div className="container min-h-screen flex flex-col items-center justify-center gap-6">
             <p className="text-muted-foreground font-medium">Invoice not found.</p>
-            <Button asChild variant="outline">
-              <Link href="/pos">Back to POS</Link>
+            <Button render={<Link href="/pos" />} variant="outline">
+              Back to POS
             </Button>
         </div>
     );
@@ -33,10 +33,8 @@ export default async function InvoicePage({ params }: PageProps) {
       
       {/* Action Bar - Hidden during print */}
       <div className="flex justify-between items-center bg-card border border-border p-4 rounded-2xl shadow-sm no-print">
-          <Button asChild variant="ghost" className="font-bold">
-            <Link href="/pos">
+          <Button render={<Link href="/pos" />} variant="ghost" className="font-bold">
               <ArrowLeft size={16} className="mr-2" /> Back to POS
-            </Link>
           </Button>
           <Button 
             className="font-bold shadow-lg shadow-primary/20"

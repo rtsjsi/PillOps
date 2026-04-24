@@ -37,10 +37,8 @@ export default function Header() {
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </Button>
           
-          <Button variant="ghost" size="icon" asChild className="rounded-full">
-            <Link href="/profile">
+          <Button variant="ghost" size="icon" render={<Link href="/profile" />} className="rounded-full">
               <User size={20} />
-            </Link>
           </Button>
 
           <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full text-red-500 hover:text-red-600 hover:bg-red-500/10">

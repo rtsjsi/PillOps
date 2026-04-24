@@ -48,17 +48,13 @@ export default async function Dashboard() {
         <section>
           <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Button asChild variant="default" className="h-24 flex flex-col gap-2 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-              <Link href="/pos">
+            <Button render={<Link href="/pos" />} variant="default" className="h-24 flex flex-col gap-2 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                 <ShoppingCart size={24} />
                 <span>New Sale</span>
-              </Link>
             </Button>
-            <Button asChild variant="outline" className="h-24 flex flex-col gap-2 rounded-2xl border-primary text-primary hover:bg-primary/10 transition-all">
-              <Link href="/purchases">
+            <Button render={<Link href="/purchases" />} variant="outline" className="h-24 flex flex-col gap-2 rounded-2xl border-primary text-primary hover:bg-primary/10 transition-all">
                 <Box size={24} />
                 <span>Inward Stock</span>
-              </Link>
             </Button>
           </div>
         </section>
