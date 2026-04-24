@@ -1,6 +1,4 @@
-'use client';
-
-import { motion } from 'framer-motion';
+import { cn } from "@/lib/utils";
 
 interface SkeletonProps {
   width?: string | number;
@@ -11,22 +9,12 @@ interface SkeletonProps {
 
 export function Skeleton({ width = '100%', height = '20px', borderRadius = '8px', className }: SkeletonProps) {
   return (
-    <motion.div
-      className={`skeleton-box ${className || ''}`}
+    <div
+      className={cn("animate-pulse bg-muted/20 border border-white/5", className)}
       style={{
         width,
         height,
         borderRadius,
-        background: 'var(--color-bg-glass)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-      }}
-      animate={{
-        opacity: [0.4, 0.7, 0.4],
-      }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: 'easeInOut',
       }}
     />
   );
@@ -34,7 +22,7 @@ export function Skeleton({ width = '100%', height = '20px', borderRadius = '8px'
 
 export function CardSkeleton() {
   return (
-    <div className="glass-card" style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div className="bg-card border border-border p-4 rounded-2xl flex flex-col gap-3 shadow-sm">
       <Skeleton width="40%" height="24px" />
       <Skeleton width="90%" height="16px" />
       <Skeleton width="70%" height="16px" />
@@ -44,9 +32,9 @@ export function CardSkeleton() {
 
 export function TableRowSkeleton() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+    <div className="flex items-center gap-4 py-3 border-b border-border/50">
       <Skeleton width="40px" height="40px" borderRadius="10px" />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div className="flex-1 flex flex-col gap-1.5">
         <Skeleton width="60%" height="16px" />
         <Skeleton width="30%" height="12px" />
       </div>
@@ -54,5 +42,3 @@ export function TableRowSkeleton() {
     </div>
   );
 }
-
-
