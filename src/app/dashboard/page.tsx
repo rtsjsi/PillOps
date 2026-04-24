@@ -10,27 +10,14 @@ import { redirect } from 'next/navigation';
 export default async function Dashboard() {
   const stats = await getDashboardStats();
 
-  async function logout() {
-    'use server';
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect('/login');
-  }
-
   return (
-    <div style={{ padding: 'var(--space-4)', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: 'var(--space-1)' }}>{getGreeting()} 👋</h1>
-            <p className="text-muted">{stats.storeName}</p>
-        </div>
-        <form action={logout}>
-            <button className="btn btn-outline" style={{ padding: '8px', borderRadius: '12px', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                <LogOut size={20} />
-            </button>
-        </form>
-      </header>
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', paddingBottom: '2rem' }}>
+      {/* Welcome Section */}
+      <section style={{ marginTop: 'var(--space-4)' }}>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: 'var(--space-1)', letterSpacing: '-0.5px' }}>{getGreeting()} 👋</h1>
+          <p className="text-muted" style={{ fontWeight: '500' }}>{stats.storeName}</p>
+      </section>
+
 
       {/* Metrics Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>

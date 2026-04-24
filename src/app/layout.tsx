@@ -2,7 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import BottomNav from '@/components/ui/BottomNav';
-import ThemeProvider from '@/components/ui/ThemeProvider';
+import Header from '@/components/ui/Header';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 
 // Load Google Fonts – Inter for UI, Space Grotesk for headings
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -22,14 +23,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
         <ThemeProvider>
-          {/* Main content */}
-          <main className="flex flex-col min-h-screen">
+          <Header />
+          <main className="main-content">
             {children}
           </main>
-          {/* Bottom navigation – visible on mobile */}
           <BottomNav />
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

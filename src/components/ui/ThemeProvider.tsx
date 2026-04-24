@@ -1,39 +1,50 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+type Theme = 'light' | 'dark';
+type ThemeContextType = {
+  theme: Theme;
+  toggleTheme: () => void;
+};
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('pillops_theme') as 'light' | 'dark' | null;
-    if (stored && stored !== theme) {
+    setMounted(true);
+    const stored = localStorage.getItem('pillops_theme') as Theme | null;
+    if (stored) {
       setTheme(stored);
-    } else if (!stored) {
-      const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const newTheme = prefersDark ? 'dark' : 'light';
-      if (newTheme !== theme) setTheme(newTheme);
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
     }
-  }, [theme]);
+  }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('pillops_theme', theme);
-  }, [theme]);
+    if (mounted) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('pillops_theme', theme);
+    }
+  }, [theme, mounted]);
 
-  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
   return (
-    <>
-      <button
-        onClick={toggleTheme}
-        className="btn btn-outline"
-        style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}
-        aria-label="Toggle light/dark mode"
-      >
-        {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-      </button>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
-    </>
+    </ThemeContext.Provider>
   );
 }
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};

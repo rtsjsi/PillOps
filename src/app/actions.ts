@@ -333,3 +333,22 @@ export async function savePurchaseInvoice(purchaseData: any, items: any[]) {
     return purchase;
   });
 }
+
+export async function getUserProfile() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const profile = await db.query.userProfiles.findFirst({
+    where: eq(schema.userProfiles.id, user.id),
+    with: {
+      store: true,
+    },
+  });
+
+  return {
+    user,
+    profile,
+  };
+}
+
