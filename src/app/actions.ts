@@ -122,6 +122,28 @@ export async function getDashboardStats() {
   };
 }
 
+export async function getSalesStats() {
+  const storeId = await getStoreId();
+  
+  // Aggregate sales by day for the last 30 days
+  const salesByDay = await db.select({
+    day: sql<string>`DATE(${schema.invoices.createdAt})`,
+    revenue: sql<number>`SUM(${schema.invoices.total})`
+  })
+  .from(schema.invoices)
+  .where(and(
+    eq(schema.invoices.storeId, storeId),
+    sql`${schema.invoices.createdAt} >= CURRENT_DATE - INTERVAL '30 days'`
+  ))
+  .groupBy(sql`DATE(${schema.invoices.createdAt})`)
+  .orderBy(sql`DATE(${schema.invoices.createdAt})`);
+
+  return salesByDay.map(s => ({
+    name: new Date(s.day).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    sales: Number(s.revenue)
+  }));
+}
+
 // ─── Medicines ─────────────────────────────────────────────
 
 export async function getMedicines() {

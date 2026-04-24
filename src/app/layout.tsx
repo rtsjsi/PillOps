@@ -26,20 +26,22 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={cn(inter.variable, geistMono.variable, spaceGrotesk.variable, "font-sans")} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/10">
+      <body className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/10 overflow-x-hidden">
         <ThemeProvider>
           <CommandPalette />
           <AIAssistant />
-          <div className="flex min-h-screen">
+          <div className="flex h-screen overflow-hidden">
             {/* Desktop Sidebar */}
             <Sidebar />
             
-            <div className="flex-1 flex flex-col min-w-0">
-              {/* Top Bar for Desktop & Mobile */}
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+              {/* Top Bar */}
               <TopBar />
               
-              <main className="flex-1 bg-slate-50/50 relative">
-                {children}
+              <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 lg:p-8 scroll-smooth pb-32 lg:pb-8">
+                <div className="max-w-7xl mx-auto w-full">
+                  {children}
+                </div>
               </main>
             </div>
           </div>

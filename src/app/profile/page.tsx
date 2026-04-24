@@ -1,84 +1,50 @@
-import { getUserProfile } from '@/app/actions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Store, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+'use client';
 
-export default async function ProfilePage() {
-  const { user, profile } = await getUserProfile();
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, Mail, Shield, Key } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+export default function ProfilePage() {
   return (
-    <div className="container py-8 flex flex-col gap-8">
-      <section>
-        <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
-        <p className="text-muted-foreground">Manage your account and store settings</p>
-      </section>
+    <div className="flex flex-col gap-8 animate-page-in">
+      <header>
+        <h1 className="text-3xl font-extrabold tracking-tight">Account Profile</h1>
+        <p className="text-muted-foreground font-medium">Manage your personal credentials and identity.</p>
+      </header>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* User Info */}
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary/10 p-4 rounded-2xl text-primary">
-              <User size={32} />
-            </div>
-            <div>
-              <CardTitle className="text-xl">{profile?.fullName || 'Staff Member'}</CardTitle>
-              <p className="text-sm text-muted-foreground">{profile?.role?.toUpperCase()} • {user.email}</p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Mail size={18} />
-              <span>{user.email}</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="max-w-2xl">
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+          <div className="h-32 bg-primary/10 w-full" />
+          <CardContent className="p-8 -mt-16 flex flex-col items-center gap-6">
+             <Avatar className="h-32 w-32 border-4 border-white shadow-xl">
+                <AvatarImage src="" />
+                <AvatarFallback className="bg-primary text-white text-3xl font-extrabold">JD</AvatarFallback>
+             </Avatar>
+             
+             <div className="text-center">
+                <h2 className="text-2xl font-black tracking-tight">John Pharmacist</h2>
+                <p className="text-xs font-black uppercase tracking-widest text-primary/60">Administrator</p>
+             </div>
 
-        {/* Store Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Store size={20} className="text-muted-foreground" />
-              Store Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold uppercase text-muted-foreground">Store Name</label>
-              <div className="font-semibold">{profile?.store?.name}</div>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm">
-              <MapPin size={18} className="text-muted-foreground" />
-              <span>{profile?.store?.address || 'Not specified'}</span>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm">
-              <Phone size={18} className="text-muted-foreground" />
-              <span>{profile?.store?.phone || 'Not specified'}</span>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm">
-              <CreditCard size={18} className="text-muted-foreground" />
-              <span>GSTIN: {profile?.store?.gstin || 'Not specified'}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscription */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-6 flex justify-between items-center">
-            <div>
-              <h3 className="font-bold text-lg">Subscription Plan</h3>
-              <p className="text-sm text-muted-foreground">Your current billing cycle</p>
-            </div>
-            <Badge variant="default" className="px-4 py-1 text-sm rounded-full">
-              {profile?.store?.subscriptionTier?.toUpperCase() || 'FREE'}
-            </Badge>
+             <div className="w-full grid grid-cols-1 gap-4 pt-6 border-t border-slate-100">
+                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                   <Mail className="text-primary/40" size={20} />
+                   <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email Address</p>
+                      <p className="text-sm font-bold">pharmacist@pillops.com</p>
+                   </div>
+                </div>
+                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
+                   <Shield className="text-primary/40" size={20} />
+                   <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Role</p>
+                      <p className="text-sm font-bold">Store Administrator</p>
+                   </div>
+                </div>
+             </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-

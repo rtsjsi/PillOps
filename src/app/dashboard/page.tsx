@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getDashboardStats, getMedicines } from '@/app/actions';
+import { getDashboardStats, getMedicines, getSalesStats } from '@/app/actions';
 import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,22 +31,25 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import TableLoading from '@/components/ui/tableLoading';
+import GlobalLoading from '@/app/loading';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any>(null);
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [salesTrends, setSalesTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsData, medicinesData] = await Promise.all([
+        const [statsData, medicinesData, salesData] = await Promise.all([
           getDashboardStats(),
-          getMedicines()
+          getMedicines(),
+          getSalesStats()
         ]);
         setStats(statsData);
         setMedicines(medicinesData);
+        setSalesTrends(salesData);
       } catch (err) {
         console.error('Dashboard load failed:', err);
       } finally {
@@ -55,13 +58,6 @@ export default function Dashboard() {
     }
     fetchData();
   }, []);
-
-  const chartData = [
-    { name: 'Week 1', sales: 400 },
-    { name: 'Week 2', sales: 600 },
-    { name: 'Week 3', sales: 500 },
-    { name: 'Week 4', sales: 900 },
-  ];
 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -93,14 +89,14 @@ export default function Dashboard() {
     return list.slice(0, 5);
   }, [medicines]);
 
-  if (loading) return <TableLoading />;
+  if (loading) return <GlobalLoading />;
 
   return (
-    <div className="container py-8 flex flex-col gap-8 animate-page-in">
+    <div className="flex flex-col gap-8 animate-page-in">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Clinical Overview</h1>
-          <p className="text-muted-foreground font-medium">{stats?.storeName} • Global Control Center</p>
+          <p className="text-muted-foreground font-medium">{stats?.storeName} • Control Center</p>
         </div>
         <div className="flex items-center gap-2">
             <Button render={<Link href="/pos" />} className="rounded-xl shadow-xl shadow-primary/20 h-11 px-6 font-bold">
@@ -148,12 +144,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Dispensing Trends (30D)</CardTitle>
-            <Badge variant="outline" className="text-[10px] font-bold">Revenue in INR</Badge>
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Revenue Trends (Past 30 Days)</CardTitle>
+            <Badge variant="outline" className="text-[10px] font-bold">Actual Sales Data</Badge>
           </CardHeader>
           <CardContent className="h-[300px] w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart data={salesTrends}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
                 <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
@@ -164,12 +160,17 @@ export default function Dashboard() {
                 <Line type="monotone" dataKey="sales" stroke="#0d4a38" strokeWidth={4} dot={{r: 4, fill: '#0d4a38', strokeWidth: 2, stroke: '#fff'}} activeDot={{ r: 6, strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
+            {salesTrends.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No sales data available for this period</p>
+                </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm bg-white">
           <CardHeader>
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Stock by Category</CardTitle>
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Live Stock Mix</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] flex flex-col items-center justify-center">
              <ResponsiveContainer width="100%" height="100%">
@@ -200,9 +201,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Bottom Section: Alerts & Recent Activity */}
+      {/* Alerts & Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-          {/* Critical Alerts Table */}
           <Card className="border-none shadow-sm bg-white overflow-hidden">
              <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-600 flex items-center gap-2">
@@ -243,12 +243,11 @@ export default function Dashboard() {
              </div>
           </Card>
 
-          {/* Recent Activity Feed */}
           <Card className="border-none shadow-sm bg-white overflow-hidden">
              <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Clock size={16} />
-                  Recent Sales Activity
+                  Verified Sales Activity
                 </CardTitle>
              </CardHeader>
              <div className="divide-y divide-slate-50">
@@ -266,7 +265,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-sm font-bold text-emerald-600">{formatCurrency(inv.total)}</p>
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Just now</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Confirmed</p>
                         </div>
                         <ChevronRight size={16} className="text-zinc-300 group-hover:text-primary transition-colors" />
                       </div>
