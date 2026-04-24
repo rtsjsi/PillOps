@@ -52,11 +52,11 @@ export default async function InvoicePage({ params }: PageProps) {
             <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                     <div style={{ width: '32px', height: '32px', background: 'var(--color-primary)', borderRadius: '8px' }}></div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>{storeInfo?.storeName}</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>{storeInfo?.name}</h1>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#4b5563', maxWidth: '280px', lineHeight: '1.5' }}>
-                    {storeInfo?.storeAddress}<br />
-                    Ph: {storeInfo?.storePhone}<br />
+                    {storeInfo?.address}<br />
+                    Ph: {storeInfo?.phone}<br />
                     GSTIN: {storeInfo?.gstin}
                 </div>
             </div>
@@ -141,7 +141,7 @@ export default async function InvoicePage({ params }: PageProps) {
                 3. Keep all medicines out of reach of children.
             </div>
             <div style={{ textAlign: 'right' }}>
-                For <strong>{storeInfo?.storeName}</strong><br /><br /><br /><br />
+                For <strong>{storeInfo?.name}</strong><br /><br /><br /><br />
                 Authorized Signatory
             </div>
         </div>
