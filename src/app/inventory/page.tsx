@@ -147,11 +147,11 @@ export default function Inventory() {
         </div>
         
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger render={
             <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
                <Download size={18} />
             </Button>
-          </DropdownMenuTrigger>
+          } />
           <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl">
              <DropdownMenuItem 
                onClick={() => csvExport(filteredMedicines.map(m => ({
