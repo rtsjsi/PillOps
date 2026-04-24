@@ -126,7 +126,7 @@ export default function AdminDashboard() {
                     <Label>Subscription Tier</Label>
                     <Select 
                       value={newStore.subscriptionTier}
-                      onValueChange={(v) => setNewStore({...newStore, subscriptionTier: v})}
+                      onValueChange={(v) => setNewStore({...newStore, subscriptionTier: v || 'pro'})}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Plan" />
