@@ -1,37 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGroq, runGemini, runGitHub } from '@/lib/ai-server';
-import { ratelimit } from '@/lib/redis';
-import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate and Rate Limit
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Use user ID as the rate limit key
-    const { success, limit, reset, remaining } = await ratelimit.limit(user.id);
-
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { 
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': limit.toString(),
-            'X-RateLimit-Remaining': remaining.toString(),
-            'X-RateLimit-Reset': reset.toString(),
-            'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
-          }
-        }
-      );
-    }
-
     const body = await req.json();
+
 
     const { imageBase64, mimeType } = body;
     if (!imageBase64 || !mimeType) {
