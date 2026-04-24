@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { getMedicines } from '@/app/actions';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { fuzzyMatch, getTotalStock, getStockStatus, cn } from '@/lib/utils';
@@ -118,4 +118,5 @@ export default function Inventory() {
     </div>
   );
 }
+
 

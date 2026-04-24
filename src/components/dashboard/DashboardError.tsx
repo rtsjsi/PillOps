@@ -41,3 +41,4 @@ export default function DashboardError({ isProfileError }: DashboardErrorProps) 
   );
 }
 
+

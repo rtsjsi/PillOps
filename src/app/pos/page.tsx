@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getMedicines, createInvoice, getStoreSettings } from '@/app/actions';
 import { CartItem, Batch } from '@/lib/types';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { fuzzyMatch, formatCurrency, generateInvoiceNumber, cn } from '@/lib/utils';
@@ -326,4 +326,5 @@ export default function POS() {
     </div>
   );
 }
+
 

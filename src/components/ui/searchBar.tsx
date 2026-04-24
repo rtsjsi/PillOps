@@ -68,3 +68,4 @@ export function SearchBar({ value, onChange, onClear, placeholder = 'Search...',
   );
 }
 
+

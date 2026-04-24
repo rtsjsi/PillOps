@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { getDaysUntilExpiry, getExpiryUrgency, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
 import { Clock, AlertTriangle, Trash2, RotateCcw, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TableLoading from '@/components/ui/TableLoading';
+import TableLoading from '@/components/ui/tableLoading';
 
 export default function ExpiryTracker() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -143,3 +143,4 @@ export default function ExpiryTracker() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { Skeleton, CardSkeleton, TableRowSkeleton } from '@/components/ui/Skeleton';
+import { Skeleton, CardSkeleton, TableRowSkeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLoading() {
   return (
@@ -40,4 +40,5 @@ export default function DashboardLoading() {
     </div>
   );
 }
+
 

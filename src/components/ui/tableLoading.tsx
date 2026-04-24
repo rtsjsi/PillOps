@@ -1,4 +1,4 @@
-import { Skeleton, TableRowSkeleton } from '@/components/ui/Skeleton';
+import { Skeleton, TableRowSkeleton } from '@/components/ui/skeleton';
 
 export default function GenericTableLoading() {
   return (
@@ -25,4 +25,5 @@ export default function GenericTableLoading() {
     </div>
   );
 }
+
 

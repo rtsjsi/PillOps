@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from './ThemeProvider';
+import { useTheme } from './themeProvider';
 import { Pill, Sun, Moon, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -51,4 +51,5 @@ export default function Header() {
     </header>
   );
 }
+
 

@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import GenericTableLoading from '@/components/ui/TableLoading';
+import GenericTableLoading from '@/components/ui/tableLoading';
 
 export default function ReviewExtraction() {
   const router = useRouter();
@@ -222,3 +222,4 @@ export default function ReviewExtraction() {
     </div>
   );
 }
+

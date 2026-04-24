@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import GenericTableLoading from '@/components/ui/TableLoading';
+import GenericTableLoading from '@/components/ui/tableLoading';
 
 export default function AdminDashboard() {
   const [stores, setStores] = useState<any[]>([]);
@@ -197,3 +197,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

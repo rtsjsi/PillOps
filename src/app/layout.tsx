@@ -1,9 +1,9 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Space_Grotesk, Geist } from 'next/font/google';
-import BottomNav from '@/components/ui/BottomNav';
-import Header from '@/components/ui/Header';
-import { ThemeProvider } from '@/components/ui/ThemeProvider';
+import BottomNav from '@/components/ui/bottomNav';
+import Header from '@/components/ui/header';
+import { ThemeProvider } from '@/components/ui/themeProvider';
 import { cn } from "@/lib/utils";
 
 // Load Google Fonts – Inter for UI, Space Grotesk for headings
@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
 
 
 
