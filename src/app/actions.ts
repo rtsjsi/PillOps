@@ -13,16 +13,38 @@ async function getStoreId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const profile = await db.query.userProfiles.findFirst({
+  let profile = await db.query.userProfiles.findFirst({
     where: eq(schema.userProfiles.id, user.id),
   });
 
-  if (!profile) throw new Error('Store profile not found');
+  if (!profile) {
+    // Lazy Onboarding: Create a default store if none exists, or use the first one
+    let store = await db.query.stores.findFirst();
+    
+    if (!store) {
+      const [newStore] = await db.insert(schema.stores).values({
+        name: 'Angel Pharmacy (Demo)',
+        address: '123 Medical Square',
+        phone: '9876543210',
+        gstin: '27AAAAA0000A1Z5',
+        subscriptionTier: 'pro',
+      }).returning();
+      store = newStore;
+    }
+
+    const [newProfile] = await db.insert(schema.userProfiles).values({
+      id: user.id,
+      storeId: store.id,
+      role: 'owner',
+      fullName: user.email?.split('@')[0] || 'Pharmacist',
+    }).returning();
+    
+    profile = newProfile;
+  }
   
-  // Super admin doesn't strictly belong to one store, but for regular actions, 
-  // they can be assigned to a "system" store or we handle them specially.
   return profile.storeId;
 }
+
 
 async function checkSuperAdmin() {
   const supabase = await createClient();
