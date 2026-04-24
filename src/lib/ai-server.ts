@@ -1,0 +1,78 @@
+'use server';
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
+
+// 1. The universal strict prompt string defined once
+export const PROMPT = `You are an expert pharmacy data extraction AI.
+Analyze this image of a distributor pharmaceutical invoice. Extract the tabular structured data perfectly.
+Pay close attention to table headers.
+Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date.
+
+Return ONLY a valid JSON object matching exactly this schema:
+{
+  "distributorName": string,
+  "invoiceNumber": string,
+  "invoiceDate": string (format YYYY-MM-DD, try to parse from the image),
+  "items": [
+    {
+      "medicineName": string,
+      "pack": string (e.g. "100G", "10T", "100 ml"),
+      "hsnCode": string (usually a 4 to 8 digit number),
+      "manufacturer": string (e.g. "WS", "ZDef", often under "Mfr"),
+      "batchNumber": string,
+      "quantity": number,
+      "freeQuantity": number (default to 0 if not present, often marked as "FQ" or "Scheme"),
+      "purchasePrice": number (the rate or price per unit, BEFORE tax/discount),
+      "discountPercent": number (default to 0),
+      "mrp": number (Maximum Retail Price),
+      "gstPercent": number (e.g. 5, 12, 18),
+      "expiryDate": string (format YYYY-MM. E.g if image says "07-27" convert to "2027-07". If "12/26" convert to "2026-12". This field is absolutely critical.),
+      "totalAmount": number (The final row amount for that item) 
+    }
+  ],
+  "subtotal": number (The taxable amount or gross total before GST),
+  "discountAmount": number,
+  "gstAmount": number (Total CGST+SGST or IGST combined),
+  "total": number (Net amount to pay)
+}`;
+
+// --- TIER EXECUTORS ---
+
+export async function runGroq(imageBase64: string) {
+  if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
+  const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
+  const chatCompletion = await client.chat.completions.create({
+    messages: [
+      { role: "user", content: [{ type: "text", text: PROMPT }, { type: "image_url", image_url: { url: imageBase64 } }] }
+    ],
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    temperature: 0.1,
+    response_format: { type: "json_object" },
+  });
+  return chatCompletion.choices[0]?.message?.content || '{}';
+}
+
+export async function runGemini(imageBase64: string, mimeType: string) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
+  const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest", generationConfig: { responseMimeType: "application/json", temperature: 0.1 } });
+  const result = await model.generateContent([PROMPT, { inlineData: { data: cleanBase64, mimeType: mimeType } }]);
+  const response = await result.response;
+  return response.text();
+}
+
+export async function runGitHub(imageBase64: string) {
+  if (!process.env.GITHUB_TOKEN) throw new Error("Missing GITHUB_TOKEN");
+  const client = new OpenAI({ baseURL: "https://models.inference.ai.azure.com", apiKey: process.env.GITHUB_TOKEN });
+  const chatCompletion = await client.chat.completions.create({
+    messages: [
+      { role: "user", content: [{ type: "text", text: PROMPT }, { type: "image_url", image_url: { url: imageBase64 } }] }
+    ],
+    model: "gpt-4o-mini",
+    temperature: 0.1,
+    response_format: { type: "json_object" },
+  });
+  return chatCompletion.choices[0]?.message?.content || '{}';
+}
