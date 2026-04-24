@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { addPurchaseInvoice, loadStore } from '@/lib/store';
-import { PurchaseInvoice, Medicine } from '@/lib/types';
+import { savePurchaseInvoice } from '@/app/actions';
 import { Card } from '@/components/ui/Card';
-import { formatCurrency, generateId } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ReviewExtraction() {
   const router = useRouter();
-  const [data, setData] = useState<Omit<PurchaseInvoice, 'id' | 'createdAt'> | null>(null);
+  const [data, setData] = useState<any | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleItemChange = (idx: number, field: string, value: any) => {
       if (!data) return;
@@ -28,22 +28,6 @@ export default function ReviewExtraction() {
     if (rawData) {
       try {
         const parsed = JSON.parse(rawData);
-        const store = loadStore();
-        
-        // --- Smart Matching Logic ---
-        // Instead of generating new IDs blindly, try to match by name against existing inventory
-        if (parsed.items) {
-           parsed.items = parsed.items.map((item: any) => {
-             const existingMed = store.medicines.find(m => 
-               m.name.toLowerCase() === item.medicineName.toLowerCase()
-             );
-             
-             return {
-               ...item,
-               medicineId: existingMed ? existingMed.id : generateId()
-             };
-           });
-        }
         setData(parsed);
       } catch (e) {
         setError("Failed to parse extracted invoice data.");
@@ -53,68 +37,23 @@ export default function ReviewExtraction() {
     }
   }, []);
 
-  const handleConfirm = () => {
-    if (!data) return;
+  const handleConfirm = async () => {
+    if (!data || isSaving) return;
+    setIsSaving(true);
 
-    // 1. Check for Duplicate Invoice Entry
-    const store = loadStore();
-    const isDuplicate = store.purchases?.some(p => 
-      p.invoiceNumber === data.invoiceNumber && 
-      p.distributorName === data.distributorName
-    );
-
-    if (isDuplicate) {
-        setError(`Warning: Invoice #${data.invoiceNumber} from ${data.distributorName} has already been recorded in the past. To prevent inventory errors, you cannot scan the same invoice twice.`);
-        return;
+    try {
+        await savePurchaseInvoice(data, data.items);
+        sessionStorage.removeItem('pillops_extracted_invoice');
+        setIsSuccess(true);
+        setTimeout(() => {
+            router.push('/inventory');
+        }, 2000);
+    } catch (error: any) {
+        console.error('Save failed:', error);
+        setError(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+    } finally {
+        setIsSaving(false);
     }
-
-    // 2. Create the purchase invoice record
-    const invoice: PurchaseInvoice = {
-      distributorName: data.distributorName || 'Unknown Distributor',
-      invoiceNumber: data.invoiceNumber || 'N/A',
-      invoiceDate: data.invoiceDate || new Date().toISOString().split('T')[0],
-      items: data.items,
-      subtotal: data.subtotal || 0,
-      discountAmount: data.discountAmount || 0,
-      gstAmount: data.gstAmount || 0,
-      total: data.total || 0,
-      id: generateId(),
-      createdAt: new Date().toISOString()
-    };
-
-    // 2. Generate new Medicine/Batches objects out of these items 
-    // In a real app we'd map "medicineId" to existing ID, but for demo we just create new medicines
-    const newMedicines: Medicine[] = data.items.map(item => ({
-      id: item.medicineId,
-      name: item.medicineName,
-      genericName: item.medicineName, // Fallback
-      category: item.pack.includes('T') ? 'Tablet' : item.pack.includes('C') ? 'Capsule' : item.pack.includes('G') ? 'Ointment' : 'OTC',
-      manufacturer: item.manufacturer || 'Unknown',
-      hsnCode: item.hsnCode || '',
-      schedule: 'OTC',
-      reorderLevel: 10,
-      rack: 'Unassigned',
-      gstPercent: item.gstPercent,
-      batches: [{
-        id: generateId(),
-        batchNumber: item.batchNumber,
-        quantity: item.quantity + (item.freeQuantity || 0), // Add free stock to total inventory
-        purchasePrice: item.purchasePrice,
-        mrp: item.mrp,
-        expiryDate: item.expiryDate,
-        receivedDate: new Date().toISOString()
-      }],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }));
-
-    // 3. Save to store
-    addPurchaseInvoice(invoice, newMedicines);
-    setIsSuccess(true);
-    
-    setTimeout(() => {
-      router.push('/inventory');
-    }, 2000);
   };
 
   if (error) {
@@ -190,13 +129,13 @@ export default function ReviewExtraction() {
          </div>
          
          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {data.items.map((item, idx) => (
+            {data.items.map((item: any, idx: number) => (
                <Card key={idx} noPadding style={{ padding: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                      <div style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
                          <span style={{ background: 'var(--color-primary-glow)', color: 'var(--color-primary)', borderRadius: '100px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 'bold flex-shrink-0' }}>{idx + 1}</span>
                          {isEditing ? (
-                             <input className="input" value={item.medicineName} onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} style={{ padding: '4px', fontSize: '0.9rem', height: '30px' }} />
+                             <input className="input" value={item.medicineName} onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} style={{ padding: '4px', fontSize: '0.9rem', height: '30px', width: '100%' }} />
                          ) : item.medicineName}
                      </div>
                   </div>
@@ -242,10 +181,11 @@ export default function ReviewExtraction() {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '16px', background: 'var(--color-bg-card)', boxShadow: '0 -4px 12px rgba(0,0,0,0.05)', zIndex: 100 }}>
          <button 
             className="btn btn-primary" 
+            disabled={isSaving}
             style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
             onClick={handleConfirm}
          >
-            Confirm & Add to Inventory
+            {isSaving ? 'Saving to Database...' : 'Confirm & Add to Inventory'}
          </button>
       </div>
     </div>

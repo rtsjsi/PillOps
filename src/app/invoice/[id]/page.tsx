@@ -1,47 +1,28 @@
-'use client';
-
-import { useEffect, useState, use } from 'react';
-import { getInvoiceById, loadStore } from '@/lib/store';
-import { Invoice, StoreData } from '@/lib/types';
+import { getInvoiceById, getStoreSettings } from '@/app/actions';
 import { formatCurrency } from '@/lib/utils';
-import { Printer, ArrowLeft, Download, FileText } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function InvoicePage({ params }: PageProps) {
-  const { id } = use(params);
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [storeInfo, setStoreInfo] = useState<{ name: string; addr: string; phone: string; gstin: string } | null>(null);
-
-  useEffect(() => {
-    const inv = getInvoiceById(id);
-    if (inv) {
-        setInvoice(inv);
-        const store = loadStore();
-        setStoreInfo({
-            name: store.storeName,
-            addr: store.storeAddress,
-            phone: store.storePhone,
-            gstin: store.gstin
-        });
-    }
-  }, [id]);
+export default async function InvoicePage({ params }: PageProps) {
+  const { id } = await params;
+  
+  const [invoice, storeInfo] = await Promise.all([
+    getInvoiceById(id),
+    getStoreSettings()
+  ]);
 
   if (!invoice) {
     return (
         <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '16px' }}>
-            <div className="text-muted">Invoice not found or loading...</div>
+            <div className="text-muted">Invoice not found.</div>
             <Link href="/pos" className="btn btn-outline">Back to POS</Link>
         </div>
     );
   }
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   return (
     <div className="invoice-container" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', background: '#fff', color: '#000', minHeight: '100vh' }}>
@@ -55,7 +36,8 @@ export default function InvoicePage({ params }: PageProps) {
               <button 
                 className="btn btn-primary" 
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                onClick={handlePrint}
+                // We'll use a small client script for printing
+                onClick={undefined} 
               >
                   <Printer size={16} /> Print Invoice
               </button>
@@ -70,11 +52,11 @@ export default function InvoicePage({ params }: PageProps) {
             <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                     <div style={{ width: '32px', height: '32px', background: 'var(--color-primary)', borderRadius: '8px' }}></div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>{storeInfo?.name}</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>{storeInfo?.storeName}</h1>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#4b5563', maxWidth: '280px', lineHeight: '1.5' }}>
-                    {storeInfo?.addr}<br />
-                    Ph: {storeInfo?.phone}<br />
+                    {storeInfo?.storeAddress}<br />
+                    Ph: {storeInfo?.storePhone}<br />
                     GSTIN: {storeInfo?.gstin}
                 </div>
             </div>
@@ -112,10 +94,10 @@ export default function InvoicePage({ params }: PageProps) {
                 </tr>
             </thead>
             <tbody>
-                {invoice.items.map((item, idx) => (
+                {invoice.items.map((item: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '12px 8px', fontSize: '0.9rem', color: '#1f2937', fontWeight: '500' }}>{item.medicineName}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '0.85rem', color: '#4b5563' }}>{item.batchNumber}</td>
+                        <td style={{ padding: '12px 8px', fontSize: '0.9rem', color: '#1f2937', fontWeight: '500' }}>{item.medicineId}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '0.85rem', color: '#4b5563' }}>{item.batchId}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', fontSize: '0.85rem', color: '#4b5563' }}>{item.expiryDate}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '0.85rem', color: '#4b5563' }}>{item.quantity}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '0.85rem', color: '#4b5563' }}>₹{item.mrp.toFixed(2)}</td>
@@ -159,31 +141,16 @@ export default function InvoicePage({ params }: PageProps) {
                 3. Keep all medicines out of reach of children.
             </div>
             <div style={{ textAlign: 'right' }}>
-                For <strong>{storeInfo?.name}</strong><br /><br /><br /><br />
+                For <strong>{storeInfo?.storeName}</strong><br /><br /><br /><br />
                 Authorized Signatory
             </div>
         </div>
       </div>
-
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background: white !important;
-          }
-          .invoice-container {
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: none !important;
-          }
-          #printable-invoice {
-            border: none !important;
-            padding: 0 !important;
-          }
-        }
-      `}</style>
+      
+      {/* Simple Client Print Script */}
+      <script dangerouslySetInnerHTML={{ __html: `
+        document.querySelector('.btn-primary').addEventListener('click', () => window.print());
+      `}} />
     </div>
   );
 }

@@ -7,8 +7,8 @@ import { Home, Package, ShoppingCart, Clock } from 'lucide-react';
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // Don't show bottom nav on splash screen
-  if (pathname === '/') return null;
+  // Don't show bottom nav on splash screen or login
+  if (pathname === '/' || pathname === '/login') return null;
 
   const links = [
     { href: '/dashboard', label: 'Home', icon: Home },

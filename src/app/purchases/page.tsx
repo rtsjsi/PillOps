@@ -1,23 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { loadStore } from '@/lib/store';
-import { StoreData } from '@/lib/types';
+import { getPurchases } from '@/app/actions';
 import { Card } from '@/components/ui/Card';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { FileScan, Box } from 'lucide-react';
 import Link from 'next/link';
 
-export default function Purchases() {
-  const [store, setStore] = useState<StoreData | null>(null);
-
-  useEffect(() => {
-    setStore(loadStore());
-  }, []);
-
-  if (!store) return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
-
-  const purchases = store.purchases || [];
+export default async function Purchases() {
+  const purchases = await getPurchases();
 
   return (
     <div style={{ padding: 'var(--space-4)', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -48,7 +36,7 @@ export default function Purchases() {
                   <p>No purchase records yet.</p>
                </div>
             ) : (
-               purchases.map(inv => (
+               purchases.map((inv: any) => (
                   <Card key={inv.id}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                         <div style={{ fontWeight: 'bold' }}>{inv.distributorName}</div>
@@ -57,9 +45,6 @@ export default function Purchases() {
                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
                         <div>Inv: {inv.invoiceNumber}</div>
                         <div>{formatDate(inv.invoiceDate)}</div>
-                     </div>
-                     <div style={{ marginTop: '12px', fontSize: '0.8rem', background: 'var(--color-bg-primary)', padding: '4px 8px', borderRadius: '4px', display: 'inline-block' }}>
-                        {inv.items.reduce((sum, item) => sum + item.quantity + (item.freeQuantity||0), 0)} items imported
                      </div>
                   </Card>
                ))

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { loadStore } from '@/lib/store';
-import { StoreData, Medicine } from '@/lib/types';
+import { getMedicines } from '@/app/actions';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -10,26 +9,36 @@ import { fuzzyMatch, getTotalStock, getStockStatus } from '@/lib/utils';
 import { PackageSearch, Filter } from 'lucide-react';
 
 export default function Inventory() {
-  const [store, setStore] = useState<StoreData | null>(null);
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   useEffect(() => {
-    setStore(loadStore());
+    async function fetchData() {
+      try {
+        const data = await getMedicines();
+        setMedicines(data);
+      } catch (error) {
+        console.error('Failed to fetch medicines:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
   const filteredMedicines = useMemo(() => {
-    if (!store) return [];
-    return store.medicines.filter(med => {
+    return medicines.filter(med => {
       const matchesSearch = fuzzyMatch(med.name, searchQuery) || fuzzyMatch(med.genericName, searchQuery);
       const matchesCategory = selectedCategory === 'All' || med.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [store, searchQuery, selectedCategory]);
+  }, [medicines, searchQuery, selectedCategory]);
 
-  if (!store) return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
+  if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading...</div>;
 
-  const categories = ['All', ...Array.from(new Set(store.medicines.map(m => m.category)))];
+  const categories = ['All', ...Array.from(new Set(medicines.map(m => m.category)))];
 
   return (
     <div style={{ padding: 'var(--space-4)', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
