@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-heading: var(--font-heading), serif;
   
   --color-background: hsl(var(--background));
@@ -32,9 +33,9 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --color-warning: hsl(var(--warning));
   --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-danger: #f43f5e;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -43,26 +44,27 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%; /* Slate-50 */
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 158 64% 18%; /* Deep Emerald */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --accent: 174 84% 40%; /* Teal */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 343 88% 61%; /* Rose/Danger */
     --destructive-foreground: 210 40% 98%;
+    --warning: 38 96% 54%; /* Amber */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --ring: 158 64% 18%;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -72,19 +74,20 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 158 64% 30%;
+    --primary-foreground: 210 40% 98%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 174 84% 40%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 343 88% 61%;
     --destructive-foreground: 210 40% 98%;
+    --warning: 38 96% 54%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 158 64% 40%;
   }
 }
 
@@ -100,7 +103,7 @@
 
 .main-content {
   padding-top: 70px;
-  padding-bottom: 80px;
+  padding-bottom: 90px;
   min-height: 100vh;
 }
 
@@ -109,7 +112,7 @@
 }
 
 .glass-card {
-  @apply bg-background/70 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-md;
+  @apply bg-white/70 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-sm;
 }
 
 @keyframes page-fade-in {
@@ -125,4 +128,13 @@
 
 .animate-page-in {
   animation: page-fade-in 0.3s ease-out forwards;
+}
+
+/* Custom clinical styles */
+.drug-code {
+    @apply font-mono text-[10px] uppercase tracking-widest text-muted-foreground bg-muted px-1.5 py-0.5 rounded;
+}
+
+.quantity-badge {
+    @apply font-mono font-bold text-sm;
 }

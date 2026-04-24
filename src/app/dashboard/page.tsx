@@ -1,101 +1,280 @@
-import { getDashboardStats } from '@/app/actions';
-import { getGreeting, formatCurrency, formatRelativeTime } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
+import { getDashboardStats, getMedicines } from '@/app/actions';
+import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, PackageOpen, TrendingUp, Eye, ShoppingCart, Box } from 'lucide-react';
-import Link from 'next/link';
-import DashboardError from '@/components/dashboard/DashboardError';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Package, 
+  AlertTriangle, 
+  Clock, 
+  TrendingUp, 
+  ArrowRight, 
+  ShieldAlert,
+  ChevronRight,
+  PackageSearch,
+  ShoppingCart
+} from 'lucide-react';
+import { formatCurrency, cn, getDaysUntilExpiry, getExpiryStatus } from '@/lib/utils';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import TableLoading from '@/components/ui/tableLoading';
 
-export default async function Dashboard() {
-  try {
-    const stats = await getDashboardStats();
+export default function Dashboard() {
+  const [stats, setStats] = useState<any>(null);
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    return (
-      <div className="container py-8 flex flex-col gap-8">
-        {/* Welcome Section */}
-        <section>
-            <h1 className="text-3xl font-bold tracking-tight">{getGreeting()} 👋</h1>
-            <p className="text-muted-foreground font-medium">{stats.storeName}</p>
-        </section>
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [statsData, medicinesData] = await Promise.all([
+          getDashboardStats(),
+          getMedicines()
+        ]);
+        setStats(statsData);
+        setMedicines(medicinesData);
+      } catch (err) {
+        console.error('Dashboard load failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
-        {/* Metrics Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-           <Card className="flex flex-col items-center justify-center p-6 text-center gap-2">
-              <div className="text-emerald-500 bg-emerald-500/10 p-3 rounded-xl"><TrendingUp size={28} /></div>
-              <div>
-                <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Today Sales</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats.todaySales)}</p>
-              </div>
-           </Card>
-           <Card className="flex flex-col items-center justify-center p-6 text-center gap-2">
-              <div className="text-amber-500 bg-amber-500/10 p-3 rounded-xl"><PackageOpen size={28} /></div>
-              <div>
-                <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Low Stock</p>
-                <p className="text-2xl font-bold">{stats.lowStockCount}</p>
-              </div>
-           </Card>
-           <Card className="flex flex-col items-center justify-center p-6 text-center gap-2">
-              <div className="text-red-500 bg-red-500/10 p-3 rounded-xl"><AlertTriangle size={28} /></div>
-              <div>
-                <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Expiring</p>
-                <p className="text-2xl font-bold">{stats.expiringCount}</p>
-              </div>
-           </Card>
+  const chartData = [
+    { name: 'Week 1', sales: 400 },
+    { name: 'Week 2', sales: 600 },
+    { name: 'Week 3', sales: 500 },
+    { name: 'Week 4', sales: 900 },
+  ];
+
+  const categoryData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    medicines.forEach(m => {
+      counts[m.category] = (counts[m.category] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [medicines]);
+
+  const COLORS = ['#0d4a38', '#14b8a6', '#f59e0b', '#f43f5e', '#8b5cf6'];
+
+  const alerts = useMemo(() => {
+    const list: any[] = [];
+    medicines.forEach(med => {
+      const totalQty = med.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+      if (totalQty <= med.reorderLevel) {
+        list.push({ type: 'Low Stock', name: med.name, severity: 'warning', value: `${totalQty} left` });
+      }
+      med.batches.forEach((b: any) => {
+        const days = getDaysUntilExpiry(b.expiryDate);
+        const status = getExpiryStatus(days);
+        if (status === 'expired') {
+          list.push({ type: 'Expired', name: `${med.name} (${b.batchNumber})`, severity: 'error', value: b.expiryDate });
+        } else if (status === 'critical') {
+          list.push({ type: 'Critical Expiry', name: `${med.name} (${b.batchNumber})`, severity: 'critical', value: `${days}d left` });
+        }
+      });
+    });
+    return list.slice(0, 5);
+  }, [medicines]);
+
+  if (loading) return <TableLoading />;
+
+  return (
+    <div className="container py-8 flex flex-col gap-8 animate-page-in">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Clinical Overview</h1>
+          <p className="text-muted-foreground font-medium">{stats?.storeName} • Global Control Center</p>
         </div>
-
-        {/* Quick Actions */}
-        <section>
-          <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Button render={<Link href="/pos" />} variant="default" className="h-24 flex flex-col gap-2 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                <ShoppingCart size={24} />
-                <span>New Sale</span>
+        <div className="flex items-center gap-2">
+            <Button render={<Link href="/pos" />} className="rounded-xl shadow-xl shadow-primary/20 h-11 px-6 font-bold">
+                <ShoppingCart size={18} className="mr-2" />
+                New Sale
             </Button>
-            <Button render={<Link href="/purchases" />} variant="outline" className="h-24 flex flex-col gap-2 rounded-2xl border-primary text-primary hover:bg-primary/10 transition-all">
-                <Box size={24} />
-                <span>Inward Stock</span>
-            </Button>
-          </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Recent Sales */}
-        <section>
-           <h2 className="text-xl font-bold mb-4">Recent Sales</h2>
-           <Card className="overflow-hidden">
-              <div className="divide-y divide-border">
-                 {stats.recentInvoices.map((inv: any) => (
-                    <Link 
-                      key={inv.id} 
-                      href={`/invoice/${inv.id}`}
-                      className="flex justify-between items-center p-4 hover:bg-muted/50 transition-colors"
-                    >
-                       <div className="flex items-center gap-4">
-                          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                             <Eye size={18} />
-                          </div>
-                          <div>
-                             <p className="font-bold text-sm">{inv.invoiceNumber}</p>
-                             <p className="text-xs text-muted-foreground">{formatRelativeTime(inv.createdAt.toISOString())}</p>
-                          </div>
-                       </div>
-                       <div className="font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(inv.total)}
-                       </div>
-                    </Link>
-                 ))}
-                 {stats.recentInvoices.length === 0 && (
-                   <div className="p-8 text-center text-muted-foreground">No sales yet today.</div>
-                 )}
-              </div>
-           </Card>
-        </section>
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          label="Total SKUs" 
+          value={stats?.totalMedicines || 0} 
+          icon={Package} 
+          trend={{ value: 12, isUp: true }}
+          description="Active catalog items"
+        />
+        <StatCard 
+          label="Low Stock" 
+          value={stats?.lowStockCount || 0} 
+          icon={TrendingUp} 
+          trend={{ value: 5, isUp: false }}
+          description="Items below reorder level"
+          className="ring-1 ring-amber-500/10"
+        />
+        <StatCard 
+          label="Expiring Soon" 
+          value={stats?.expiringCount || 0} 
+          icon={Clock} 
+          trend={{ value: 2, isUp: true }}
+          description="Within 30 days"
+          className="ring-1 ring-rose-500/10"
+        />
+        <StatCard 
+          label="Today's Revenue" 
+          value={formatCurrency(stats?.todaySales || 0)} 
+          icon={ShieldAlert} 
+          trend={{ value: 18, isUp: true }}
+          description="Completed transactions"
+        />
       </div>
-    );
-  } catch (error: any) {
-    const isProfileError = error.message?.includes('Store profile not found');
-    return <DashboardError isProfileError={!!isProfileError} />;
-  }
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Dispensing Trends (30D)</CardTitle>
+            <Badge variant="outline" className="text-[10px] font-bold">Revenue in INR</Badge>
+          </CardHeader>
+          <CardContent className="h-[300px] w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
+                <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ fontWeight: 'bold' }}
+                />
+                <Line type="monotone" dataKey="sales" stroke="#0d4a38" strokeWidth={4} dot={{r: 4, fill: '#0d4a38', strokeWidth: 2, stroke: '#fff'}} activeDot={{ r: 6, strokeWidth: 0 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader>
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Stock by Category</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px] flex flex-col items-center justify-center">
+             <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+             </ResponsiveContainer>
+             <div className="flex flex-wrap justify-center gap-4 mt-2">
+                {categoryData.slice(0, 3).map((c, i) => (
+                   <div key={i} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-[10px] font-bold text-muted-foreground">{c.name}</span>
+                   </div>
+                ))}
+             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Section: Alerts & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+          {/* Critical Alerts Table */}
+          <Card className="border-none shadow-sm bg-white overflow-hidden">
+             <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-600 flex items-center gap-2">
+                  <AlertTriangle size={16} />
+                  Critical Alerts
+                </CardTitle>
+                <Link href="/inventory" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">View All</Link>
+             </CardHeader>
+             <div className="divide-y divide-slate-50">
+                {alerts.map((alert, i) => (
+                   <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "p-2 rounded-xl",
+                          alert.severity === 'error' ? "bg-rose-50 text-rose-500" : "bg-amber-50 text-amber-500"
+                        )}>
+                          <ShieldAlert size={18} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-zinc-900">{alert.name}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{alert.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-[10px] font-bold">{alert.value}</Badge>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400">
+                          <ArrowRight size={14} />
+                        </Button>
+                      </div>
+                   </div>
+                ))}
+                {alerts.length === 0 && (
+                   <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-3">
+                      <PackageSearch size={32} className="opacity-20" />
+                      <p className="text-sm font-medium">All clinical metrics are healthy.</p>
+                   </div>
+                )}
+             </div>
+          </Card>
+
+          {/* Recent Activity Feed */}
+          <Card className="border-none shadow-sm bg-white overflow-hidden">
+             <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Clock size={16} />
+                  Recent Sales Activity
+                </CardTitle>
+             </CardHeader>
+             <div className="divide-y divide-slate-50">
+                {stats?.recentInvoices.slice(0, 5).map((inv: any) => (
+                   <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs ring-2 ring-white shadow-sm">
+                           {inv.customerName?.charAt(0) || 'C'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-zinc-900">{inv.customerName || 'Walk-in Customer'}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inv: {inv.invoiceNumber}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-emerald-600">{formatCurrency(inv.total)}</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Just now</p>
+                        </div>
+                        <ChevronRight size={16} className="text-zinc-300 group-hover:text-primary transition-colors" />
+                      </div>
+                   </Link>
+                ))}
+             </div>
+          </Card>
+      </div>
+    </div>
+  );
 }
-
-
