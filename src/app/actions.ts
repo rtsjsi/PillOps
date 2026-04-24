@@ -330,31 +330,5 @@ export async function getUserProfile() {
   };
 }
 
-export async function resetDatabase() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-
-  // Only allow owner to reset
-  const profile = await db.query.userProfiles.findFirst({
-    where: eq(schema.userProfiles.id, user.id),
-  });
-
-  if (profile?.role !== 'owner' && profile?.role !== 'super_admin') throw new Error('Forbidden');
-
-  console.log('🗑️ Resetting database via UI request...');
-
-  await db.execute(sql`TRUNCATE TABLE "invoice_items" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "invoices" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "purchase_items" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "purchases" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "batches" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "medicines" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "user_profiles" CASCADE`);
-  await db.execute(sql`TRUNCATE TABLE "stores" CASCADE`);
-
-  revalidatePath('/');
-  return { success: true };
-}
 
 
