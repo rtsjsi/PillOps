@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Pill, Lock, Mail, Loader2, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,87 +36,85 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-[400px] flex flex-col gap-8">
+    <div className="min-h-screen bg-white text-black p-8 md:p-24 flex flex-col items-start font-sans">
+      <div className="w-full max-w-[400px] flex flex-col gap-6">
         
-        {/* Brand */}
-        <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 ring-4 ring-primary/10">
-              <Pill size={36} />
-            </div>
-            <div className="text-center">
-              <h1 className="text-3xl font-extrabold tracking-tight">PillOps</h1>
-              <p className="text-muted-foreground text-sm font-medium">Secure Staff Access</p>
-            </div>
+        {/* Brand Icon */}
+        <div className="mb-2">
+            <Pill size={48} className="rotate-[135deg] text-black stroke-[2.5]" />
         </div>
 
-        <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-center text-lg">Welcome Back</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="email"
-                    type="email"
-                    placeholder="name@pharmacy.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11"
-                  />
+        {/* Brand Name */}
+        <div className="mb-4">
+            <h1 className="text-5xl font-bold tracking-tight mb-2" style={{ fontFamily: 'serif' }}>PillOps</h1>
+            <p className="text-xl" style={{ fontFamily: 'serif' }}>Secure Staff Access</p>
+        </div>
+
+        {/* Welcome Text */}
+        <div className="mb-2">
+            <p className="text-xl" style={{ fontFamily: 'serif' }}>Welcome Back</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="flex flex-col gap-6 w-full">
+            <div className="grid gap-2">
+                <Label htmlFor="email" className="text-lg" style={{ fontFamily: 'serif' }}>Email Address</Label>
+                <div className="flex items-center gap-3">
+                    <Mail size={32} className="shrink-0" />
+                    <Input 
+                        id="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-10 bg-[#eef4ff] border-gray-400 rounded-sm focus-visible:ring-0 text-lg"
+                    />
                 </div>
-              </div>
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 h-11"
-                  />
+            <div className="grid gap-2">
+                <Label htmlFor="password" title="Password" className="text-lg" style={{ fontFamily: 'serif' }}>Password</Label>
+                <div className="flex items-center gap-3">
+                    <Lock size={32} className="shrink-0" />
+                    <Input 
+                        id="password"
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-10 bg-[#eef4ff] border-gray-400 rounded-sm focus-visible:ring-0 text-lg"
+                    />
                 </div>
-              </div>
+            </div>
 
-              {error && (
-                <div className="text-xs text-red-500 bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                  {error}
-                </div>
-              )}
+            {error && (
+                <p className="text-red-600 text-sm italic">{error}</p>
+            )}
 
-              <Button 
-                type="submit" 
-                className="w-full h-11 mt-2 text-base font-bold shadow-lg shadow-primary/20"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    Sign In <ArrowRight className="ml-2" size={18} />
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <div className="mt-2">
+                <Button 
+                    type="submit" 
+                    variant="outline"
+                    className="h-12 px-6 rounded-md border-gray-400 bg-[#eeeeee] hover:bg-gray-200 text-black text-xl flex items-center gap-2"
+                    disabled={loading}
+                    style={{ fontFamily: 'serif' }}
+                >
+                    {loading ? (
+                        <Loader2 className="animate-spin" size={24} />
+                    ) : (
+                        <>
+                            Sign In <ArrowRight size={24} />
+                        </>
+                    )}
+                </Button>
+            </div>
+        </form>
 
-        <p className="text-center text-xs text-muted-foreground font-medium">
-          Contact administrator for new account access
+        {/* Footer */}
+        <p className="mt-4 text-xl" style={{ fontFamily: 'serif' }}>
+            Contact administrator for new account access
         </p>
       </div>
     </div>
   );
 }
-
-
