@@ -1,9 +1,17 @@
-import { getUserProfile } from '@/app/actions';
+import { getUserProfile, resetDatabase } from '@/app/actions';
 import { Card } from '@/components/ui/Card';
-import { User, Store, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { User, Store, Mail, Phone, MapPin, CreditCard, Trash2, AlertTriangle } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
 export default async function ProfilePage() {
   const { user, profile } = await getUserProfile();
+
+  async function handleReset() {
+    'use server';
+    await resetDatabase();
+    redirect('/login');
+  }
+
 
   return (
     <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: '2rem' }}>
@@ -82,7 +90,24 @@ export default async function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        {/* Danger Zone */}
+        <Card style={{ border: '1px solid var(--color-danger)', background: 'rgba(239, 68, 68, 0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-4)', color: 'var(--color-danger)' }}>
+            <AlertTriangle size={20} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Danger Zone</h3>
+          </div>
+          <p style={{ fontSize: '0.9rem', marginBottom: 'var(--space-4)', color: 'var(--color-text-muted)' }}>
+            This will permanently delete all medicines, batches, invoices, and your store profile. This action cannot be undone.
+          </p>
+          <form action={handleReset}>
+            <button className="btn btn-primary" style={{ background: 'var(--color-danger)', width: '100%', gap: '8px' }}>
+              <Trash2 size={18} /> Reset All Data
+            </button>
+          </form>
+        </Card>
       </div>
     </div>
+
   );
 }
