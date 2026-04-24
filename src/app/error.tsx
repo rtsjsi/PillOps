@@ -40,14 +40,7 @@ export default function Error({
           <Home size={18} /> Back to Login
         </Link>
       </div>
-
-      {isProfileError && (
-        <div className="glass-card" style={{ marginTop: 'var(--space-4)', maxWidth: '500px', border: '1px solid var(--color-primary)' }}>
-          <p style={{ fontSize: '0.9rem' }}>
-            <strong>Administrator Note:</strong> If you just cleared the database, you need to re-seed the initial store data or manually create a user profile record for this email.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
+

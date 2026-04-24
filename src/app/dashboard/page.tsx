@@ -102,31 +102,27 @@ export default async function Dashboard() {
         </div>
         
         <div>
-          <h1 style={{ fontSize: '1.75rem', marginBottom: 'var(--space-2)' }}>
-            {isProfileError ? 'Account Setup Required' : 'Something went wrong'}
+          <h1 style={{ fontSize: '1.75rem', marginBottom: 'var(--space-2)', letterSpacing: '-0.5px' }}>
+            {isProfileError ? 'Account Verification Pending' : 'Something went wrong'}
           </h1>
-          <p className="text-muted" style={{ maxWidth: '450px' }}>
+          <p className="text-muted" style={{ maxWidth: '450px', lineHeight: '1.6' }}>
             {isProfileError 
-              ? 'Your account is authenticated, but no pharmacy store profile was found in our database. This usually happens after a data clear.' 
-              : 'An unexpected error occurred while loading your dashboard.'}
+              ? 'Your account is authenticated, but it hasn\'t been linked to a pharmacy store profile yet. Please reach out to your organization administrator to complete your setup.' 
+              : 'An unexpected error occurred while loading your dashboard. Please try again later.'}
           </p>
         </div>
 
-        {isProfileError && (
-          <div className="glass-card" style={{ padding: 'var(--space-5)', border: '1px solid var(--color-primary)' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: 'var(--space-2)' }}>Next Steps:</h3>
-            <ul style={{ textAlign: 'left', fontSize: '0.9rem', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <li>1. Run the database seed script to create demo data.</li>
-              <li>2. Or, contact your system administrator to link your email to a store.</li>
-            </ul>
-          </div>
-        )}
-
-        <Link href="/login" className="btn btn-outline" style={{ marginTop: 'var(--space-4)' }}>
-          Return to Login
-        </Link>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <Link href="/login" className="btn btn-primary" style={{ padding: '0.75rem 2rem' }}>
+            Return to Login
+          </Link>
+          <button className="btn btn-outline" style={{ padding: '0.75rem 2rem' }} onClick={() => window.location.reload()}>
+            Refresh Page
+          </button>
+        </div>
       </div>
     );
   }
 }
+
 
