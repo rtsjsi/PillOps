@@ -67,20 +67,27 @@ export function formatDate(date: Date | string) {
 }
 
 export function getDaysUntilExpiry(expiryDate: string) {
+  // Input format: YYYY-MM
   const now = new Date();
-  const expiry = new Date(expiryDate);
+  const [year, month] = expiryDate.split('-').map(Number);
+  // Expiry is end of the month
+  const expiry = new Date(year, month, 0); 
   const diffInMs = expiry.getTime() - now.getTime();
   return Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
 }
 
-export function getExpiryUrgency(days: number) {
-  if (days <= 30) return 'critical';
-  if (days <= 90) return 'warning';
-  return 'safe';
+export function getExpiryStatus(days: number) {
+  if (days < 0) return 'expired';
+  if (days <= 7) return 'critical';
+  if (days <= 30) return 'warning';
+  return 'ok';
 }
 
 export function formatExpiryDate(date: string) {
-  return new Date(date).toLocaleDateString('en-IN', {
+  // Input format: YYYY-MM
+  const [year, month] = date.split('-');
+  const d = new Date(Number(year), Number(month) - 1);
+  return d.toLocaleDateString('en-IN', {
     month: 'short',
     year: 'numeric',
   });

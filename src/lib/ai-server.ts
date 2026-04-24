@@ -74,3 +74,16 @@ export async function runGitHub(imageBase64: string) {
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
+export async function chatWithGroq(userPrompt: string, systemPrompt: string = "You are a helpful pharmacy assistant for the PillOps platform.") {
+  if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
+  const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
+  const chatCompletion = await client.chat.completions.create({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0.7,
+  });
+  return chatCompletion.choices[0]?.message?.content || 'I could not generate a response.';
+}

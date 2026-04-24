@@ -5,6 +5,8 @@ import BottomNav from '@/components/ui/bottomNav';
 import Header from '@/components/ui/header';
 import { ThemeProvider } from '@/components/ui/themeProvider';
 import { cn } from "@/lib/utils";
+import { CommandPalette } from '@/components/command-palette';
+import { AIAssistant } from '@/components/ai-assistant';
 
 // Load Google Fonts – Inter for UI, Space Grotesk for headings
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -26,6 +28,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={cn(spaceGrotesk.variable, "font-sans", geist.variable)} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
+          <CommandPalette />
+          <AIAssistant />
           <Header />
           <main className="main-content">
             {children}
@@ -37,7 +41,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-
-
-

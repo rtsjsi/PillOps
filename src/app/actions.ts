@@ -6,7 +6,14 @@ import { eq, desc, sql, and, gt } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 
+import { chatWithGroq } from '@/lib/ai-server';
+
 // ─── SaaS Helpers ──────────────────────────────────────────
+
+export async function askAI(prompt: string, context?: string) {
+  const systemPrompt = `You are a helpful pharmacy assistant for PillOps. ${context || ""}`;
+  return await chatWithGroq(prompt, systemPrompt);
+}
 
 async function getStoreId() {
   const supabase = await createClient();

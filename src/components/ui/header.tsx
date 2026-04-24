@@ -33,6 +33,11 @@ export default function Header() {
         </Link>
 
         <div className="flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-full border border-border mr-2 cursor-default group">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Command Palette</span>
+            <kbd className="text-[10px] font-bold bg-background px-1.5 py-0.5 rounded border border-border text-muted-foreground group-hover:border-primary/50 group-hover:text-primary transition-all">⌘K</kbd>
+          </div>
+          
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </Button>
