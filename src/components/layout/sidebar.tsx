@@ -63,22 +63,22 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="hidden lg:flex w-72 flex-col border-r border-zinc-200 bg-white h-screen shrink-0">
+    <aside className="hidden lg:flex w-64 flex-col border-r border-zinc-100 bg-white h-screen shrink-0">
       {/* Brand Header */}
       <div className="p-6 flex items-center gap-3">
-        <div className="p-2.5 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 rotate-[-10deg]">
-          <Pill size={24} />
+        <div className="h-10 w-10 bg-primary text-white rounded-lg flex items-center justify-center shadow-sm">
+          <Pill size={20} />
         </div>
         <div>
-          <h1 className="font-extrabold text-xl tracking-tighter leading-tight">PillOps</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">
-            {profile?.store?.name || 'Clinical Ops'}
+          <h1 className="font-bold text-lg text-[#44475b] tracking-tight">PillOps</h1>
+          <p className="text-[10px] font-medium text-[#7c7e8c]">
+            {profile?.store?.name || 'Clinical Pharmacy'}
           </p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -88,13 +88,13 @@ export function Sidebar() {
               key={item.href} 
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 h-12 rounded-xl transition-all duration-300 font-bold text-sm group",
+                "flex items-center gap-3 px-3 h-11 rounded-lg transition-all duration-200 text-sm",
                 isActive 
-                  ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  ? "bg-primary/5 text-primary font-bold" 
+                  : "text-[#7c7e8c] hover:bg-zinc-50 hover:text-[#44475b]"
               )}
             >
-              <Icon size={20} className={cn(isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-900")} />
+              <Icon size={18} className={cn(isActive ? "text-primary" : "text-[#7c7e8c]")} />
               {item.label}
             </Link>
           );

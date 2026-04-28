@@ -19,7 +19,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[45] h-[80px] bg-background/80 backdrop-blur-2xl border-t border-border flex items-center justify-around px-2 pb-safe md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-[45] h-[65px] bg-white border-t border-zinc-100 flex items-center justify-around px-2 pb-safe md:hidden shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
       {links.map((link) => {
         const Icon = link.icon;
         const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href));
@@ -29,19 +29,16 @@ export default function BottomNav() {
             key={link.href}
             href={link.href}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 min-h-[44px]",
-              isActive ? "text-primary translate-y-[-4px]" : "text-muted-foreground hover:text-foreground"
+              "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200",
+              isActive ? "text-primary" : "text-[#7c7e8c] hover:text-[#44475b]"
             )}
           >
-            <div className={cn(
-              "p-2 rounded-2xl transition-all duration-300",
-              isActive ? "bg-primary/15 shadow-lg shadow-primary/10 ring-1 ring-primary/20" : "bg-transparent"
-            )}>
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+            <div className="p-1">
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
             </div>
             <span className={cn(
-                "text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-                isActive ? "opacity-100 scale-100" : "opacity-60 scale-90"
+                "text-[10px] font-medium transition-all duration-200",
+                isActive ? "text-primary" : "text-[#7c7e8c]"
             )}>
                 {link.label}
             </span>

@@ -10,38 +10,35 @@ export function TopBar() {
 
   if (pathname === '/' || pathname === '/login') return null;
 
+  const getTitle = () => {
+    const segment = pathname.split('/')[1];
+    if (!segment) return 'Dashboard';
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  };
+
   return (
-    <header className="h-[70px] border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        {/* Mobile Menu Toggle (Simplified) */}
-        <Button variant="ghost" size="icon" className="lg:hidden rounded-xl">
-          <Menu size={20} />
-        </Button>
+    <header className="h-[60px] border-b border-zinc-100 bg-white sticky top-0 z-40 px-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <h1 className="text-xl font-bold text-[#44475b] lg:hidden">{getTitle()}</h1>
         
-        <div className="hidden lg:flex items-center gap-2 text-zinc-400 group cursor-pointer hover:text-zinc-600 transition-colors">
-          <Search size={18} />
-          <span className="text-sm font-bold">Search everything...</span>
-          <div className="flex items-center gap-1 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 text-[10px] font-black tracking-tighter">
-             <Command size={10} /> K
-          </div>
+        <div className="hidden lg:flex items-center gap-2 text-[#7c7e8c] bg-zinc-50 border border-zinc-100 px-3 py-1.5 rounded-lg w-[400px] cursor-pointer hover:bg-zinc-100 transition-colors">
+          <Search size={16} />
+          <span className="text-sm">Search medicines, batches...</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <Button variant="ghost" size="icon" className="rounded-full bg-zinc-50 hover:bg-zinc-100 text-zinc-600">
-            <Bell size={20} />
-          </Button>
-          <span className="absolute top-1.5 right-1.5 h-4 w-4 bg-rose-500 border-2 border-white rounded-full text-[8px] font-black text-white flex items-center justify-center animate-pulse">
-            3
-          </span>
-        </div>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" className="text-[#44475b] hover:bg-zinc-50 rounded-full">
+          <Search size={22} className="lg:hidden" />
+        </Button>
+        <Button variant="ghost" size="icon" className="text-[#44475b] hover:bg-zinc-50 rounded-full">
+          <Bell size={22} />
+        </Button>
         
-        <div className="h-8 w-px bg-zinc-200 mx-2 hidden sm:block" />
-        
-        <div className="hidden sm:flex flex-col items-end">
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Apollo Pharmacy</span>
-            <span className="text-xs font-bold text-zinc-500">Banjara Hills, Hyd</span>
+        <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-[#ffead1] text-[#7d562d] flex items-center justify-center font-bold text-xs ring-1 ring-white shadow-sm">
+                RJ
+            </div>
         </div>
       </div>
     </header>
