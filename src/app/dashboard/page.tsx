@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getDashboardStats, getMedicines, getSalesStats } from '@/app/actions';
+import { getDashboardData } from '@/app/actions';
 import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,14 +42,10 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [statsData, medicinesData, salesData] = await Promise.all([
-          getDashboardStats(),
-          getMedicines(),
-          getSalesStats()
-        ]);
-        setStats(statsData);
-        setMedicines(medicinesData);
-        setSalesTrends(salesData);
+        const { stats, medicines, salesTrends } = await getDashboardData();
+        setStats(stats);
+        setMedicines(medicines);
+        setSalesTrends(salesTrends);
       } catch (err) {
         console.error('Dashboard load failed:', err);
       } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getMedicines, createInvoice, getStoreSettings } from '@/app/actions';
+import { getMedicines, createInvoice, getStoreSettings, getPOSData } from '@/app/actions';
 import { CartItem, Batch } from '@/lib/types';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,10 +29,7 @@ export default function POS() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [medData, settings] = await Promise.all([
-            getMedicines(),
-            getStoreSettings()
-        ]);
+        const { medicines: medData, storeSettings: settings } = await getPOSData();
         setMedicines(medData);
         setStoreSettings(settings);
       } catch (error) {

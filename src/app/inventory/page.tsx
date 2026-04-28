@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
 import { FAB } from '@/components/ui/fab';
 import { csvExport } from '@/lib/export';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { InventoryReport } from '@/components/reports/inventory-report';
+import { InventoryPDFButton } from '@/components/inventory/pdf-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,19 +166,10 @@ export default function Inventory() {
                 Export CSV
              </DropdownMenuItem>
              
-             <div className="p-0">
-               <PDFDownloadLink 
-                 document={<InventoryReport data={filteredMedicines.map(m => ({ ...m, totalQty: getTotalStock(m.batches) }))} storeName="My Pharmacy" />} 
-                 fileName="inventory_report.pdf"
-               >
-                 {({ loading }) => (
-                   <DropdownMenuItem className="flex items-center gap-2 font-bold p-3 rounded-xl cursor-pointer">
-                      <FilePieChart size={16} />
-                      {loading ? 'Preparing PDF...' : 'Export PDF'}
-                   </DropdownMenuItem>
-                 )}
-               </PDFDownloadLink>
-             </div>
+             <InventoryPDFButton 
+                data={filteredMedicines.map(m => ({ ...m, totalQty: getTotalStock(m.batches) }))} 
+                storeName="My Pharmacy" 
+             />
           </DropdownMenuContent>
         </DropdownMenu>
 

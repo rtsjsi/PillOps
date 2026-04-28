@@ -5,6 +5,7 @@ import * as schema from '@/db/schema';
 import { eq, desc, sql, and, gt } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
+import { cache } from 'react';
 
 import { chatWithGroq } from '@/lib/ai-server';
 
@@ -15,7 +16,7 @@ export async function askAI(prompt: string, context?: string) {
   return await chatWithGroq(prompt, systemPrompt);
 }
 
-async function getStoreId() {
+const getStoreId = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
@@ -27,9 +28,9 @@ async function getStoreId() {
   if (!profile) throw new Error('Store profile not found. Please contact administrator.');
   
   return profile.storeId;
-}
+});
 
-export async function getUserProfile() {
+export const getUserProfile = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -42,7 +43,7 @@ export async function getUserProfile() {
   });
 
   return profile ? { ...profile, user } : null;
-}
+});
 
 
 
@@ -135,6 +136,15 @@ export async function getDashboardStats() {
     recentInvoices,
     storeName: storeInfo?.name || 'PillOps Store',
   };
+}
+
+export async function getDashboardData() {
+    const [stats, medicines, salesTrends] = await Promise.all([
+        getDashboardStats(),
+        getMedicines(),
+        getSalesStats()
+    ]);
+    return { stats, medicines, salesTrends };
 }
 
 export async function getSalesStats() {
@@ -259,6 +269,14 @@ export async function getStoreSettings() {
   const storeId = await getStoreId();
   const [settings] = await db.select().from(schema.stores).where(eq(schema.stores.id, storeId)).limit(1);
   return settings;
+}
+
+export async function getPOSData() {
+    const [medicines, storeSettings] = await Promise.all([
+        getMedicines(),
+        getStoreSettings()
+    ]);
+    return { medicines, storeSettings };
 }
 
 // ─── Purchases ─────────────────────────────────────────────

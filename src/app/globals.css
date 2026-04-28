@@ -128,7 +128,7 @@
 }
 
 .animate-page-in {
-  animation: page-fade-in 0.3s ease-out forwards;
+  animation: page-fade-in 0.2s ease-out forwards;
 }
 
 .drug-code {
