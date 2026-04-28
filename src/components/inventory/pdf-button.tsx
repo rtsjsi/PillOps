@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { FilePieChart } from 'lucide-react';
@@ -16,6 +17,21 @@ const InventoryReport = dynamic(
 );
 
 export function InventoryPDFButton({ data, storeName }: { data: any[], storeName: string }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <DropdownMenuItem className="flex items-center gap-2 font-bold p-3 rounded-xl cursor-not-allowed opacity-50">
+        <FilePieChart size={16} />
+        Loading...
+      </DropdownMenuItem>
+    );
+  }
+
   return (
     <div className="p-0">
       <PDFDownloadLink 
