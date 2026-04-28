@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
 import { FAB } from '@/components/ui/fab';
 import { csvExport } from '@/lib/export';
-import { InventoryPDFButton } from '@/components/inventory/pdf-button';
+import dynamic from 'next/dynamic';
+
+const InventoryPDFButton = dynamic(
+  () => import('@/components/inventory/pdf-button').then((mod) => mod.InventoryPDFButton),
+  { ssr: false }
+);
 import {
   DropdownMenu,
   DropdownMenuContent,
