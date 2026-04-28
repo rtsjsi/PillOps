@@ -227,25 +227,21 @@ export default function AdminDashboard() {
         <StatCard 
           label="Total Tenants" 
           value={stats.totalStores} 
-          icon={Building2} 
           className="ring-1 ring-primary/10"
         />
         <StatCard 
           label="Total Users" 
           value={stats.totalUsers} 
-          icon={Users} 
           className="ring-1 ring-indigo-500/10"
         />
         <StatCard 
           label="Active Pro" 
           value={stats.proStores} 
-          icon={CreditCard} 
           className="ring-1 ring-emerald-500/10"
         />
         <StatCard 
           label="Enterprise" 
           value={stats.enterpriseStores} 
-          icon={LayoutDashboard} 
           className="ring-1 ring-amber-500/10"
         />
       </div>
