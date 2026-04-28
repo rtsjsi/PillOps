@@ -14,7 +14,7 @@ interface StatCardProps {
   className?: string;
 }
 
-export function StatCard({ label, value, trend, description, className }: StatCardProps) {
+export function StatCard({ label, value, trend, className }: StatCardProps) {
   return (
     <Card className={cn("border border-zinc-100 bg-white shadow-none rounded-xl", className)}>
       <CardContent className="p-4 flex flex-col gap-1">
