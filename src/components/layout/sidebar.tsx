@@ -56,11 +56,16 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Inventory', href: '/inventory' },
     { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
-    ...(profile?.role === 'super_admin' ? [{ icon: ShieldAlert, label: 'Super Admin', href: '/admin' }] : []),
-    { icon: Users, label: 'Staff List', href: '/staff' },
+    ...(profile?.role === 'super_admin' ? [
+        { icon: ShieldAlert, label: 'Super Admin', href: '/admin' },
+        { icon: Users, label: 'Global Users', href: '/admin?tab=users' }
+    ] : []),
+    ...(profile?.role === 'owner' ? [
+        { icon: Users, label: 'Staff Management', href: '/staff' }
+    ] : []),
     { icon: User, label: 'My Profile', href: '/profile' },
     { icon: Settings, label: 'Settings', href: '/settings' },
-  ];
+];
 
   return (
     <aside className="hidden lg:flex w-64 flex-col border-r border-zinc-100 bg-white h-screen shrink-0">

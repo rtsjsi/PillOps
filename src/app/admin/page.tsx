@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { 
   getAllStores, 
   createStore, 
@@ -45,8 +45,12 @@ import GlobalLoading from '@/app/loading';
 import { StatCard } from '@/components/ui/stat-card';
 import { toast } from 'sonner';
 
-export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'stores' | 'users'>('stores');
+import { useSearchParams } from 'next/navigation';
+
+function AdminDashboardContent() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') as 'stores' | 'users' || 'stores';
+  const [activeTab, setActiveTab] = useState<'stores' | 'users'>(initialTab);
   
   // Data states
   const [stores, setStores] = useState<any[]>([]);
@@ -536,4 +540,12 @@ export default function AdminDashboard() {
       )}
     </div>
   );
+}
+
+export default function AdminDashboard() {
+    return (
+        <Suspense fallback={<GlobalLoading />}>
+            <AdminDashboardContent />
+        </Suspense>
+    );
 }
