@@ -12,5 +12,9 @@
   },
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://pnjfoilzdneemgkkywoo.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuamZvaWx6ZG5lZW1na2t5d29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTYwODgsImV4cCI6MjA5MjU3MjA4OH0.i8GdwNRbnArCJ0syBr4wwU6FDG8w_BhYf2bIc3zSoUE"
   }
 }
