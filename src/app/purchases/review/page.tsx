@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { savePurchaseInvoice } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, cn } from '@/lib/utils';
-import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle, Loader2, Save } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle, Loader2, Save, Trash2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +47,37 @@ export default function ReviewExtraction() {
     if (!data) return;
     const newItems = [...data.items];
     newItems[idx] = { ...newItems[idx], [field]: value } as InvoiceItem;
+    
+    // Auto-calc total
+    if (['quantity', 'purchasePrice', 'discountPercent', 'gstPercent'].includes(field)) {
+       const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
+       const price = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
+       const disc = field === 'discountPercent' ? value : newItems[idx].discountPercent || 0;
+       const gst = field === 'gstPercent' ? value : newItems[idx].gstPercent || 0;
+       const base = qty * price;
+       const afterDisc = base - (base * (disc / 100));
+       newItems[idx].totalAmount = afterDisc + (afterDisc * (gst / 100));
+    }
+    
     setData({ ...data, items: newItems });
+  };
+
+  const removeItem = (idx: number) => {
+    if (!data || data.items.length === 1) return;
+    const newItems = data.items.filter((_, i) => i !== idx);
+    setData({ ...data, items: newItems });
+  };
+
+  const addItem = () => {
+    if (!data) return;
+    setData({
+      ...data, 
+      items: [...data.items, {
+        medicineName: '', batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+        purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
+      }]
+    });
+    setIsEditing(true);
   };
 
   useEffect(() => {
@@ -148,15 +178,22 @@ export default function ReviewExtraction() {
       <div>
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
-             <Button 
-                variant={isEditing ? 'default' : 'outline'}
-                size="sm"
-                className={cn("rounded-full font-bold", isEditing && "bg-emerald-500 hover:bg-emerald-600")}
-                onClick={() => setIsEditing(!isEditing)}
-             >
-                 {isEditing ? <CheckCircle2 size={16} className="mr-2" /> : <Edit2 size={16} className="mr-2" />} 
-                 {isEditing ? 'Save Changes' : 'Edit Items'}
-             </Button>
+             <div className="flex gap-2">
+                 {isEditing && (
+                     <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20">
+                         <Plus size={16} className="mr-2" /> Add Row
+                     </Button>
+                 )}
+                 <Button 
+                    variant={isEditing ? 'default' : 'outline'}
+                    size="sm"
+                    className={cn("rounded-full font-bold", isEditing && "bg-emerald-500 hover:bg-emerald-600")}
+                    onClick={() => setIsEditing(!isEditing)}
+                 >
+                     {isEditing ? <CheckCircle2 size={16} className="mr-2" /> : <Edit2 size={16} className="mr-2" />} 
+                     {isEditing ? 'Save Changes' : 'Edit Items'}
+                 </Button>
+             </div>
          </div>
          
          <div className="flex flex-col gap-4">
@@ -166,14 +203,21 @@ export default function ReviewExtraction() {
                     <span className="bg-primary text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
                       {idx + 1}
                     </span>
-                    {isEditing ? (
-                        <Input 
-                          value={item.medicineName} 
-                          onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
-                          className="h-10 font-bold bg-muted/50"
-                        />
-                    ) : (
-                        <CardTitle className="text-base font-bold text-slate-800">{item.medicineName}</CardTitle>
+                    <div className="flex-1">
+                      {isEditing ? (
+                          <Input 
+                            value={item.medicineName} 
+                            onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
+                            className="h-10 font-bold bg-muted/50"
+                          />
+                      ) : (
+                          <CardTitle className="text-base font-bold text-slate-800">{item.medicineName}</CardTitle>
+                      )}
+                    </div>
+                    {isEditing && data.items.length > 1 && (
+                       <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 hover:bg-rose-50 rounded-full shrink-0">
+                           <Trash2 size={16} />
+                       </Button>
                     )}
                   </CardHeader>
                   
