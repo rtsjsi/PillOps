@@ -64,9 +64,9 @@ function AdminDashboardContent() {
   const [isCreating, setIsCreating] = useState(false);
   
   // Form states
-  const [newStore, setNewStore] = useState({ name: '', address: '', phone: '', gstin: '', subscriptionTier: 'pro' });
+  const [newStore, setNewStore] = useState({ name: '', address: '', phone: '', gstin: '' });
   const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '', role: 'staff', storeId: '' });
-  const [editStore, setEditStore] = useState<{ id: string; name: string; address: string; phone: string; gstin: string; subscriptionTier: string } | null>(null);
+  const [editStore, setEditStore] = useState<{ id: string; name: string; address: string; phone: string; gstin: string } | null>(null);
   const [isUpdatingStore, setIsUpdatingStore] = useState(false);
 
   // Reset password states
@@ -127,7 +127,7 @@ function AdminDashboardContent() {
     try {
       await createStore(newStore);
       toast.success('Pharmacy onboarded successfully');
-      setNewStore({ name: '', address: '', phone: '', gstin: '', subscriptionTier: 'pro' });
+      setNewStore({ name: '', address: '', phone: '', gstin: '' });
       await loadData();
     } catch (err: any) {
       toast.error(err.message || 'Store onboarding failed');
@@ -145,8 +145,7 @@ function AdminDashboardContent() {
         name: editStore.name,
         address: editStore.address,
         phone: editStore.phone,
-        gstin: editStore.gstin,
-        subscriptionTier: editStore.subscriptionTier
+        gstin: editStore.gstin
       });
       setEditStore(null);
       await loadData();
@@ -256,7 +255,7 @@ function AdminDashboardContent() {
       </header>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard 
           label="Total Tenants" 
           value={stats.totalStores} 
@@ -266,16 +265,6 @@ function AdminDashboardContent() {
           label="Total Users" 
           value={stats.totalUsers} 
           className="ring-1 ring-indigo-500/10"
-        />
-        <StatCard 
-          label="Active Pro" 
-          value={stats.proStores} 
-          className="ring-1 ring-emerald-500/10"
-        />
-        <StatCard 
-          label="Enterprise" 
-          value={stats.enterpriseStores} 
-          className="ring-1 ring-amber-500/10"
         />
       </div>
 
@@ -321,18 +310,6 @@ function AdminDashboardContent() {
                     <Input placeholder="+91" className="rounded-xl bg-slate-50 h-10"
                         value={newStore.phone} onChange={e => setNewStore({...newStore, phone: e.target.value})} />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Subscription Tier</Label>
-                    <Select value={newStore.subscriptionTier} onValueChange={(v) => setNewStore({...newStore, subscriptionTier: v || 'pro'})}>
-                      <SelectTrigger className="rounded-xl bg-slate-50 h-10 font-bold">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free Tier</SelectItem>
-                        <SelectItem value="pro" className="text-emerald-600">Pro Tier</SelectItem>
-                        <SelectItem value="enterprise" className="text-primary">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address</Label>
@@ -371,18 +348,6 @@ function AdminDashboardContent() {
                     <Input className="rounded-xl h-10"
                         value={editStore.phone} onChange={e => setEditStore({...editStore, phone: e.target.value})} />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs font-bold text-slate-500">Subscription Tier</Label>
-                    <Select value={editStore.subscriptionTier} onValueChange={(v) => setEditStore({...editStore, subscriptionTier: v || 'pro'})}>
-                      <SelectTrigger className="rounded-xl h-10 font-bold">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free Tier</SelectItem>
-                        <SelectItem value="pro" className="text-emerald-600">Pro Tier</SelectItem>
-                        <SelectItem value="enterprise" className="text-primary">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs font-bold text-slate-500">Address</Label>
@@ -410,13 +375,6 @@ function AdminDashboardContent() {
                           <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                   <h3 className="font-bold text-lg leading-tight truncate">{store.name}</h3>
-                                  <Badge variant={store.subscriptionTier === 'pro' ? 'default' : 'outline'} className={cn(
-                                      "text-[9px] font-black uppercase tracking-widest",
-                                      store.subscriptionTier === 'pro' ? 'bg-emerald-500 hover:bg-emerald-600' : 
-                                      store.subscriptionTier === 'enterprise' ? 'bg-primary hover:bg-primary/90' : ''
-                                  )}>
-                                      {store.subscriptionTier}
-                                  </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground truncate">{store.address || 'No address provided'}</p>
                               <div className="flex items-center gap-4 mt-2">
@@ -430,7 +388,7 @@ function AdminDashboardContent() {
                           </div>
                       </div>
                       <div className="px-5 py-4 border-t sm:border-t-0 sm:border-l border-slate-100 flex flex-row sm:flex-col items-center justify-center gap-2 bg-slate-50/50">
-                          <Button variant="ghost" size="icon" className="text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setEditStore({ id: store.id, name: store.name, address: store.address || '', phone: store.phone || '', gstin: store.gstin || '', subscriptionTier: store.subscriptionTier || 'pro' })}>
+                          <Button variant="ghost" size="icon" className="text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setEditStore({ id: store.id, name: store.name, address: store.address || '', phone: store.phone || '', gstin: store.gstin || '' })}>
                               <Edit size={16} />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteStore(store.id)}>
