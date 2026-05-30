@@ -57,11 +57,23 @@ export const getUserProfile = cache(async () => {
   if (!user) return null;
 
   const adminDb = createAdminClient();
-  const { data: profile } = await adminDb
+  const { data: profile, error } = await adminDb
     .from('user_profiles')
     .select('*, store:stores(*)')
     .eq('id', user.id)
     .maybeSingle();
+
+  if (error) {
+    console.error('getUserProfile DB Error:', error);
+    // Even if store join fails for some reason, we should at least fetch the raw profile
+    const { data: fallbackProfile } = await adminDb
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+      
+    if (fallbackProfile) return { ...fallbackProfile, user };
+  }
 
   return profile ? { ...profile, user } : null;
 });
