@@ -57,25 +57,31 @@ export const getUserProfile = cache(async () => {
   if (!user) return null;
 
   const adminDb = createAdminClient();
+  
+  // 1. Fetch the raw profile first
   const { data: profile, error } = await adminDb
     .from('user_profiles')
-    .select('*, store:stores(*)')
+    .select('*')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (error) {
-    console.error('getUserProfile DB Error:', error);
-    // Even if store join fails for some reason, we should at least fetch the raw profile
-    const { data: fallbackProfile } = await adminDb
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-      
-    if (fallbackProfile) return { ...fallbackProfile, user };
+  if (error || !profile) {
+    return null;
   }
 
-  return profile ? { ...profile, user } : null;
+  // 2. If they are a super_admin, they don't have a fixed store. Return immediately.
+  if (profile.role === 'super_admin') {
+    return { ...profile, user };
+  }
+
+  // 3. For normal users, fetch their assigned store
+  const { data: store } = await adminDb
+    .from('stores')
+    .select('*')
+    .eq('id', profile.store_id)
+    .maybeSingle();
+
+  return { ...profile, store, user };
 });
 
 async function checkSuperAdmin() {
