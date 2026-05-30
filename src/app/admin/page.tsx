@@ -44,6 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import GlobalLoading from '@/app/loading';
 import { StatCard } from '@/components/ui/stat-card';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -65,6 +66,8 @@ function AdminDashboardContent() {
   // Form states
   const [newStore, setNewStore] = useState({ name: '', address: '', phone: '', gstin: '', subscriptionTier: 'pro' });
   const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '', role: 'staff', storeId: '' });
+  const [editStore, setEditStore] = useState<{ id: string; name: string; address: string; phone: string; gstin: string; subscriptionTier: string } | null>(null);
+  const [isUpdatingStore, setIsUpdatingStore] = useState(false);
 
   // Reset password states
   const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
@@ -134,6 +137,28 @@ function AdminDashboardContent() {
       toast.error(err.message || 'Store onboarding failed');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUpdateStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editStore) return;
+    setIsUpdatingStore(true);
+    try {
+      await updateStore(editStore.id, {
+        name: editStore.name,
+        address: editStore.address,
+        phone: editStore.phone,
+        gstin: editStore.gstin,
+        subscriptionTier: editStore.subscriptionTier
+      });
+      setEditStore(null);
+      await loadData();
+      toast.success('Pharmacy updated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update store');
+    } finally {
+      setIsUpdatingStore(false);
     }
   };
 
@@ -258,15 +283,15 @@ function AdminDashboardContent() {
         />
       </div>
 
-      <div className="flex items-center justify-between mb-2 mt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 mt-4">
         <h2 className="text-xl font-bold tracking-tight">
           {activeTab === 'stores' ? 'Active Pharmacies' : 'System Users'}
         </h2>
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
           <Input 
             placeholder={`Search ${activeTab}...`}
-            className="h-9 w-64 pl-9 text-xs rounded-full bg-white border-slate-200 shadow-sm"
+            className="h-9 w-full sm:w-64 pl-9 text-xs rounded-full bg-white border-slate-200 shadow-sm"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -328,6 +353,55 @@ function AdminDashboardContent() {
             </Card>
           </section>
 
+          <Dialog open={!!editStore} onOpenChange={(open) => !open && setEditStore(null)}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Pharmacy</DialogTitle>
+              </DialogHeader>
+              {editStore && (
+                <form onSubmit={handleUpdateStore} className="flex flex-col gap-4 mt-2">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Pharmacy Name</Label>
+                    <Input required className="rounded-xl h-10"
+                        value={editStore.name} onChange={e => setEditStore({...editStore, name: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">GSTIN Number</Label>
+                    <Input className="rounded-xl h-10"
+                        value={editStore.gstin} onChange={e => setEditStore({...editStore, gstin: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Contact Number</Label>
+                    <Input className="rounded-xl h-10"
+                        value={editStore.phone} onChange={e => setEditStore({...editStore, phone: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Subscription Tier</Label>
+                    <Select value={editStore.subscriptionTier} onValueChange={(v) => setEditStore({...editStore, subscriptionTier: v || 'pro'})}>
+                      <SelectTrigger className="rounded-xl h-10 font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free Tier</SelectItem>
+                        <SelectItem value="pro" className="text-emerald-600">Pro Tier</SelectItem>
+                        <SelectItem value="enterprise" className="text-primary">Enterprise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Address</Label>
+                    <Input className="rounded-xl h-10"
+                        value={editStore.address} onChange={e => setEditStore({...editStore, address: e.target.value})} />
+                  </div>
+                  <Button type="submit" disabled={isUpdatingStore} className="h-12 mt-2 font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700">
+                      {isUpdatingStore ? <Loader2 className="mr-2 animate-spin" /> : <Edit className="mr-2" size={16} />}
+                      Save Changes
+                  </Button>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {/* Stores List */}
           <section className="lg:col-span-2 space-y-4">
               {filteredStores.map(store => (
@@ -359,7 +433,10 @@ function AdminDashboardContent() {
                               </div>
                           </div>
                       </div>
-                      <div className="px-5 py-4 border-l border-slate-100 flex items-center justify-center gap-2 bg-slate-50/50">
+                      <div className="px-5 py-4 border-t sm:border-t-0 sm:border-l border-slate-100 flex flex-row sm:flex-col items-center justify-center gap-2 bg-slate-50/50">
+                          <Button variant="ghost" size="icon" className="text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => setEditStore({ id: store.id, name: store.name, address: store.address || '', phone: store.phone || '', gstin: store.gstin || '', subscriptionTier: store.subscriptionTier || 'pro' })}>
+                              <Edit size={16} />
+                          </Button>
                           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteStore(store.id)}>
                               <Trash2 size={16} />
                           </Button>
