@@ -20,7 +20,8 @@ const getStoreId = cache(async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data: profile, error } = await supabase
+  const adminDb = createAdminClient();
+  const { data: profile, error } = await adminDb
     .from('user_profiles')
     .select('store_id')
     .eq('id', user.id)
@@ -35,7 +36,8 @@ export const getUserProfile = cache(async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const adminDb = createAdminClient();
+  const { data: profile } = await adminDb
     .from('user_profiles')
     .select('*, store:stores(*)')
     .eq('id', user.id)
@@ -49,14 +51,14 @@ async function checkSuperAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data: profile } = await supabase
+  const adminDb = createAdminClient();
+  const { data: profile } = await adminDb
     .from('user_profiles')
     .select('role')
     .eq('id', user.id)
-    .eq('role', 'super_admin')
     .single();
 
-  if (!profile) throw new Error('Forbidden: Super Admin access required');
+  if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin access required');
   return true;
 }
 
@@ -100,7 +102,7 @@ export async function getAllStores() {
 
 export async function getDashboardStats() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -195,7 +197,7 @@ export async function getDashboardData() {
 
 export async function getSalesStats() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -226,7 +228,7 @@ export async function getSalesStats() {
 
 export async function getMedicines() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('medicines')
@@ -240,7 +242,7 @@ export async function getMedicines() {
 
 export async function getMedicineById(id: string) {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('medicines')
@@ -257,7 +259,7 @@ export async function getMedicineById(id: string) {
 
 export async function createInvoice(invoiceData: any, items: any[]) {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc('create_invoice', {
     invoice_data: { ...invoiceData, storeId },
@@ -274,7 +276,7 @@ export async function createInvoice(invoiceData: any, items: any[]) {
 
 export async function getInvoiceById(id: string) {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('invoices')
@@ -289,7 +291,7 @@ export async function getInvoiceById(id: string) {
 
 export async function getInvoices() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('invoices')
@@ -303,7 +305,7 @@ export async function getInvoices() {
 
 export async function getStoreSettings() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('stores')
@@ -327,7 +329,7 @@ export async function getPOSData() {
 
 export async function getPurchases() {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('purchases')
@@ -341,7 +343,7 @@ export async function getPurchases() {
 
 export async function savePurchaseInvoice(purchaseData: any, items: any[]) {
   const storeId = await getStoreId();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc('save_purchase_invoice', {
     purchase_data: { ...purchaseData, storeId },

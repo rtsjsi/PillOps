@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [salesTrends, setSalesTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Explore');
 
   useEffect(() => {
     async function fetchData() {
@@ -68,17 +69,17 @@ export default function Dashboard() {
   const alerts = useMemo(() => {
     const list: any[] = [];
     medicines.forEach(med => {
-      const totalQty = med.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
-      if (totalQty <= med.reorderLevel) {
+      const totalQty = (med.batches ?? []).reduce((sum: number, b: any) => sum + b.quantity, 0);
+      if (totalQty <= (med.reorder_level ?? med.reorderLevel ?? 0)) {
         list.push({ type: 'Low Stock', name: med.name, severity: 'warning', value: `${totalQty} left` });
       }
-      med.batches.forEach((b: any) => {
-        const days = getDaysUntilExpiry(b.expiryDate);
+      (med.batches ?? []).forEach((b: any) => {
+        const days = getDaysUntilExpiry(b.expiry_date ?? b.expiryDate);
         const status = getExpiryStatus(days);
         if (status === 'expired') {
-          list.push({ type: 'Expired', name: `${med.name} (${b.batchNumber})`, severity: 'error', value: b.expiryDate });
+          list.push({ type: 'Expired', name: `${med.name} (${b.batch_number ?? b.batchNumber})`, severity: 'error', value: b.expiry_date ?? b.expiryDate });
         } else if (status === 'critical') {
-          list.push({ type: 'Critical Expiry', name: `${med.name} (${b.batchNumber})`, severity: 'critical', value: `${days}d left` });
+          list.push({ type: 'Critical Expiry', name: `${med.name} (${b.batch_number ?? b.batchNumber})`, severity: 'critical', value: `${days}d left` });
         }
       });
     });
@@ -88,9 +89,6 @@ export default function Dashboard() {
   if (loading) return <GlobalLoading />;
 
   const tabs = ['Explore', 'Holdings', 'Positions', 'Orders', 'My Watchlist'];
-  const [activeTab, setActiveTab] = useState('Explore');
-
-  if (loading) return <GlobalLoading />;
 
   return (
     <div className="flex flex-col gap-6 animate-page-in bg-white min-h-screen">
