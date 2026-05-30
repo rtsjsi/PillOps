@@ -27,6 +27,7 @@ export default function ReviewExtraction() {
     manufacturer?: string;
     hsnCode?: string;
     gstPercent?: number;
+    totalAmount?: number;
   }
 
   interface InvoiceData {

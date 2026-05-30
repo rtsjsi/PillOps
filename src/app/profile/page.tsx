@@ -77,7 +77,6 @@ export default function ProfilePage() {
   const initials = (profile.full_name || profile.user.email || 'U').substring(0, 2).toUpperCase();
 
   return (
-  return (
     <div className="container py-8 max-w-2xl flex flex-col gap-8 pb-24">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
