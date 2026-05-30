@@ -74,7 +74,6 @@ export async function createStore(storeData: {
     .single();
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin');
   return store;
 }
 
@@ -106,7 +105,6 @@ export async function updateStore(
     .single();
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin');
   return updated;
 }
 
@@ -132,7 +130,6 @@ export async function deleteStore(storeId: string) {
     .eq('id', storeId);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin');
   return { success: true };
 }
 
@@ -272,7 +269,6 @@ export async function createUser(userData: {
     throw new Error(`Failed to create user profile: ${profileError.message}`);
   }
 
-  revalidatePath('/admin');
   return { id: authUser.user.id, email: authUser.user.email };
 }
 
@@ -291,7 +287,6 @@ export async function updateUserRole(userId: string, newRole: string) {
     .eq('id', userId);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin');
   return { success: true };
 }
 
@@ -314,7 +309,6 @@ export async function updateUserStore(userId: string, newStoreId: string) {
     .eq('id', userId);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin');
   return { success: true };
 }
 
@@ -357,6 +351,5 @@ export async function deleteUser(userId: string) {
     console.error('Warning: Auth user deletion failed:', authError.message);
   }
 
-  revalidatePath('/admin');
   return { success: true };
 }
