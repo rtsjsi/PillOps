@@ -333,9 +333,6 @@ export async function createInvoice(invoiceData: any, items: any[]) {
 
   if (error) throw new Error(error.message);
 
-  revalidatePath('/dashboard');
-  revalidatePath('/inventory');
-  revalidatePath('/pos');
   return data;
 }
 
@@ -417,9 +414,6 @@ export async function savePurchaseInvoice(purchaseData: any, items: any[]) {
 
   if (error) throw new Error(error.message);
 
-  revalidatePath('/dashboard');
-  revalidatePath('/inventory');
-  revalidatePath('/purchases');
   return data;
 }
 
@@ -437,7 +431,6 @@ export async function updateProfile(fullName: string) {
     .eq('id', user.id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/profile');
 }
 
 export async function updatePassword(password: string) {
@@ -468,7 +461,6 @@ export async function updateStoreSettings(data: { name: string, address: string,
     .eq('id', storeId);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/settings');
 }
 
 // ─── Staff Management ──────────────────────────────────────
@@ -535,7 +527,6 @@ export async function addStoreStaff(data: { fullName: string, email: string, pas
       return { error: profileError.message };
     }
 
-    revalidatePath('/staff');
     return { success: true };
   } catch (err: any) {
     return { error: err.message || "An unexpected error occurred." };
@@ -565,7 +556,6 @@ export async function updateStaffRole(userId: string, role: string) {
     .eq('id', userId);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/staff');
 }
 
 export async function removeStaff(userId: string) {
@@ -587,5 +577,4 @@ export async function removeStaff(userId: string) {
 
   const { error } = await adminDb.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
-  revalidatePath('/staff');
 }
