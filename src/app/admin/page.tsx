@@ -310,7 +310,6 @@ function AdminDashboardContent() {
                     <Input placeholder="+91" className="rounded-xl bg-slate-50 h-10"
                         value={newStore.phone} onChange={e => setNewStore({...newStore, phone: e.target.value})} />
                   </div>
-                  </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address</Label>
                     <Input placeholder="Full Location" className="rounded-xl bg-slate-50 h-10"
@@ -347,7 +346,6 @@ function AdminDashboardContent() {
                     <Label className="text-xs font-bold text-slate-500">Contact Number</Label>
                     <Input className="rounded-xl h-10"
                         value={editStore.phone} onChange={e => setEditStore({...editStore, phone: e.target.value})} />
-                  </div>
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs font-bold text-slate-500">Address</Label>
