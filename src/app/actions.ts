@@ -578,3 +578,21 @@ export async function removeStaff(userId: string) {
   const { error } = await adminDb.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
 }
+
+export async function disposeBatch(batchId: string) {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+
+  const { error } = await adminDb
+    .from('batches')
+    .update({ quantity: 0 })
+    .eq('id', batchId)
+    .eq('store_id', storeId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/inventory');
+  revalidatePath('/expiry');
+  revalidatePath('/dashboard');
+  revalidatePath('/pos');
+}

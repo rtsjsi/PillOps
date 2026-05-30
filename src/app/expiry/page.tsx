@@ -1,31 +1,44 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getMedicines } from '@/app/actions';
+import { getMedicines, disposeBatch } from '@/app/actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getDaysUntilExpiry, getExpiryStatus, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
 import { Clock, AlertTriangle, Trash2, RotateCcw, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import { toast } from 'sonner';
 
 export default function ExpiryTracker() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const data = await getMedicines();
-        setMedicines(data);
-      } catch (error) {
-        console.error('Failed to fetch expiry data:', error);
-      } finally {
-        setLoading(false);
-      }
+  async function fetchData() {
+    try {
+      const data = await getMedicines();
+      setMedicines(data);
+    } catch (error) {
+      console.error('Failed to fetch expiry data:', error);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchData();
   }, []);
+
+  const handleDispose = async (batchId: string) => {
+    if (!confirm('Are you sure you want to dispose of this batch? This will reduce its quantity to 0.')) return;
+    try {
+      await disposeBatch(batchId);
+      toast.success('Batch disposed successfully.');
+      await fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to dispose batch.');
+    }
+  };
 
   if (loading) return <TableLoading />;
 
@@ -132,11 +145,11 @@ export default function ExpiryTracker() {
                     </div>
 
                     <div className="flex gap-2 pt-4 border-t border-border">
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl">
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl" onClick={() => handleDispose(item.batch.id)}>
                          <RotateCcw size={14} className="mr-2" />
                          Return to Vendor
                        </Button>
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100">
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100" onClick={() => handleDispose(item.batch.id)}>
                          <Trash2 size={14} className="mr-2" />
                          Dispose Stock
                        </Button>
