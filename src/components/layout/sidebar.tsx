@@ -11,7 +11,8 @@ import {
   Users, 
   Pill,
   User,
-  ShieldAlert
+  ShieldAlert,
+  ArrowDownToLine
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserProfile } from '@/app/actions';
@@ -34,6 +35,7 @@ export function Sidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Inventory', href: '/inventory' },
+    { icon: ArrowDownToLine, label: 'Purchases', href: '/purchases' },
     { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
     ...(profile?.role === 'super_admin' ? [
         { icon: ShieldAlert, label: 'Super Admin', href: '/admin' }

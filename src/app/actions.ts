@@ -395,7 +395,7 @@ export async function getPurchases() {
 
   const { data, error } = await supabase
     .from('purchases')
-    .select('*')
+    .select('*, items:purchase_items(*)')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false });
 

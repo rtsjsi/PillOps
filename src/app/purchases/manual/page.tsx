@@ -1,0 +1,242 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { savePurchaseInvoice } from '@/app/actions';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Plus, Trash2, Save, CheckCircle2, Loader2, Edit2 } from 'lucide-react';
+import Link from 'next/link';
+
+export default function ManualPurchaseEntry() {
+  const router = useRouter();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [invoiceData, setInvoiceData] = useState({
+    distributorName: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceNumber: '',
+  });
+
+  const [items, setItems] = useState([
+    {
+      medicineName: '',
+      batchNumber: '',
+      expiryDate: '',
+      quantity: 1,
+      freeQuantity: 0,
+      purchasePrice: 0,
+      mrp: 0,
+      discountPercent: 0,
+      gstPercent: 12,
+      totalAmount: 0
+    }
+  ]);
+
+  const handleInvoiceChange = (field: string, value: string) => {
+    setInvoiceData({ ...invoiceData, [field]: value });
+  };
+
+  const handleItemChange = (idx: number, field: string, value: any) => {
+    const newItems = [...items];
+    (newItems[idx] as any)[field] = value;
+    
+    // Auto-calculate total amount
+    if (['quantity', 'purchasePrice', 'discountPercent', 'gstPercent'].includes(field)) {
+       const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
+       const price = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
+       const disc = field === 'discountPercent' ? value : newItems[idx].discountPercent || 0;
+       const gst = field === 'gstPercent' ? value : newItems[idx].gstPercent || 0;
+       
+       const base = qty * price;
+       const afterDisc = base - (base * (disc / 100));
+       const finalTotal = afterDisc + (afterDisc * (gst / 100));
+       newItems[idx].totalAmount = Number(finalTotal.toFixed(2));
+    }
+    
+    setItems(newItems);
+  };
+
+  const addItem = () => {
+    setItems([...items, {
+      medicineName: '',
+      batchNumber: '',
+      expiryDate: '',
+      quantity: 1,
+      freeQuantity: 0,
+      purchasePrice: 0,
+      mrp: 0,
+      discountPercent: 0,
+      gstPercent: 12,
+      totalAmount: 0
+    }]);
+  };
+
+  const removeItem = (idx: number) => {
+    if (items.length === 1) return;
+    const newItems = items.filter((_, i) => i !== idx);
+    setItems(newItems);
+  };
+
+  const calculateTotals = () => {
+    let subtotal = 0;
+    let discountAmount = 0;
+    let gstAmount = 0;
+    let total = 0;
+
+    items.forEach(item => {
+       const base = item.quantity * item.purchasePrice;
+       const disc = base * ((item.discountPercent || 0) / 100);
+       const afterDisc = base - disc;
+       const gst = afterDisc * ((item.gstPercent || 0) / 100);
+       
+       subtotal += base;
+       discountAmount += disc;
+       gstAmount += gst;
+       total += (afterDisc + gst);
+    });
+
+    return { subtotal, discountAmount, gstAmount, total };
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSaving(true);
+
+    try {
+      const totals = calculateTotals();
+      const finalData = {
+        ...invoiceData,
+        ...totals,
+        items
+      };
+
+      await savePurchaseInvoice(finalData, items);
+      setIsSuccess(true);
+      setTimeout(() => {
+         router.push('/purchases');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save purchase invoice');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isSuccess) {
+    return (
+        <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
+            <CheckCircle2 size={80} className="text-emerald-500 animate-bounce" />
+            <div className="grid gap-2">
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Stock Added Manually!</h2>
+              <p className="text-muted-foreground font-medium">Inventory updated successfully. Redirecting...</p>
+            </div>
+        </div>
+    );
+  }
+
+  const totals = calculateTotals();
+
+  return (
+    <div className="container py-8 flex flex-col gap-6 pb-32">
+      <header className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" render={<Link href="/purchases" />} className="rounded-full">
+            <ArrowLeft size={24} />
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">Manual Purchase Entry</h1>
+      </header>
+
+      {error && (
+        <div className="bg-red-50 text-red-500 p-4 rounded-xl border border-red-200">
+           {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="flex flex-col gap-6">
+        <Card className="border-primary/20 shadow-xl shadow-primary/5">
+          <CardHeader>
+            <CardTitle>Invoice Details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+               <Label>Distributor Name</Label>
+               <Input required placeholder="Enter distributor name" value={invoiceData.distributorName} onChange={e => handleInvoiceChange('distributorName', e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+               <Label>Invoice Number</Label>
+               <Input required placeholder="e.g. INV-12345" value={invoiceData.invoiceNumber} onChange={e => handleInvoiceChange('invoiceNumber', e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+               <Label>Invoice Date</Label>
+               <Input required type="date" value={invoiceData.invoiceDate} onChange={e => handleInvoiceChange('invoiceDate', e.target.value)} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-between items-center">
+           <h2 className="text-xl font-bold tracking-tight">Line Items</h2>
+           <Button type="button" onClick={addItem} variant="outline" size="sm" className="rounded-full font-bold">
+               <Plus size={16} className="mr-2" /> Add Item
+           </Button>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {items.map((item, idx) => (
+             <Card key={idx} className="relative ring-1 ring-slate-200 overflow-visible">
+                <CardHeader className="p-4 flex flex-row items-center gap-4 pb-0">
+                  <span className="bg-slate-800 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1">
+                     <Input required placeholder="Medicine Name" value={item.medicineName} onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} className="font-bold border-none bg-slate-50 shadow-inner h-12 text-lg" />
+                  </div>
+                  {items.length > 1 && (
+                     <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 shrink-0">
+                        <Trash2 size={18} />
+                     </Button>
+                  )}
+                </CardHeader>
+                
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM/YY)</Label><Input required placeholder="12/25" value={item.expiryDate} onChange={e=>handleItemChange(idx, 'expiryDate', e.target.value)} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><Input required type="number" step="0.01" value={item.purchasePrice || ''} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">MRP (₹)</Label><Input required type="number" step="0.01" value={item.mrp || ''} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Qty</Label><Input required type="number" value={item.quantity || ''} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Free</Label><Input type="number" value={item.freeQuantity || ''} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Disc %</Label><Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">GST %</Label><Input type="number" step="0.1" value={item.gstPercent || ''} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9"/></div>
+                  </div>
+                </CardContent>
+             </Card>
+          ))}
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+           <div className="container max-w-4xl flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex gap-6 font-bold">
+                 <div className="flex flex-col"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Subtotal</span>₹{totals.subtotal.toFixed(2)}</div>
+                 <div className="flex flex-col"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Tax</span>₹{totals.gstAmount.toFixed(2)}</div>
+                 <div className="flex flex-col text-primary text-xl"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Net Total</span>₹{totals.total.toFixed(2)}</div>
+              </div>
+              <Button 
+                 type="submit"
+                 className="w-full md:w-auto h-14 px-8 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2 shrink-0"
+                 disabled={isSaving}
+              >
+                 {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+                 {isSaving ? 'Saving Invoice...' : 'Save & Add to Inventory'}
+              </Button>
+           </div>
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Menu, X, LayoutDashboard, Package, ShoppingCart, 
-  Settings, Users, Pill, User, ShieldAlert 
+  Settings, Users, Pill, User, ShieldAlert, ArrowDownToLine
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ export function MobileSidebar({ profile }: { profile: any }) {
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Package, label: 'Inventory', href: '/inventory' },
+    { icon: ArrowDownToLine, label: 'Purchases', href: '/purchases' },
     { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
     ...(profile?.role === 'super_admin' ? [
         { icon: ShieldAlert, label: 'Super Admin', href: '/admin' }

@@ -22,9 +22,14 @@ export default async function Purchases() {
          <div className="text-center max-w-sm">
             <h2 className="text-2xl font-extrabold mb-1 tracking-tight">AI Invoice Scanner</h2>
             <p className="text-muted-foreground text-sm font-medium mb-6 leading-relaxed">Instantly digitize distributor bills and update your inventory automatically.</p>
-            <Button render={<Link href="/purchases/scan" />} size="lg" className="w-full h-14 text-lg font-bold rounded-2xl shadow-lg shadow-primary/20">
-              Scan New Invoice
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <Button render={<Link href="/purchases/scan" />} size="lg" className="flex-1 h-12 text-md font-bold rounded-xl shadow-lg shadow-primary/20">
+                Scan Invoice
+              </Button>
+              <Button variant="outline" render={<Link href="/purchases/manual" />} size="lg" className="flex-1 h-12 text-md font-bold rounded-xl border-primary/20 hover:bg-primary/5">
+                Manual Entry
+              </Button>
+            </div>
          </div>
       </Card>
 
@@ -51,6 +56,27 @@ export default async function Purchases() {
                          <div className="bg-muted px-2 py-0.5 rounded"># {inv.invoiceNumber}</div>
                          <div>{formatDate(inv.invoiceDate)}</div>
                       </div>
+                      
+                      {inv.items && inv.items.length > 0 && (
+                        <details className="mt-2 group cursor-pointer border-t border-border/50 pt-2 text-sm">
+                           <summary className="font-bold text-primary flex items-center gap-1 select-none">
+                              View Items ({inv.items.length})
+                           </summary>
+                           <div className="mt-3 flex flex-col gap-2">
+                             {inv.items.map((item: any) => (
+                               <div key={item.id} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-slate-800">{item.medicine_name}</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase">Batch: {item.batch_number} • Qty: {item.quantity}</span>
+                                  </div>
+                                  <div className="font-bold text-slate-900">
+                                    ₹{item.total_amount}
+                                  </div>
+                               </div>
+                             ))}
+                           </div>
+                        </details>
+                      )}
                     </CardContent>
                   </Card>
                ))
