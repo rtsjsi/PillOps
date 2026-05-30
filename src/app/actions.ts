@@ -25,7 +25,7 @@ const getStoreId = cache(async () => {
     .from('user_profiles')
     .select('store_id')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw new Error(`DB Error in getStoreId: ${error.message || JSON.stringify(error)}`);
@@ -46,7 +46,7 @@ export const getUserProfile = cache(async () => {
     .from('user_profiles')
     .select('*, store:stores(*)')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   return profile ? { ...profile, user } : null;
 });
@@ -61,7 +61,7 @@ async function checkSuperAdmin() {
     .from('user_profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile || profile.role !== 'super_admin') throw new Error('Forbidden: Super Admin access required');
   return true;
