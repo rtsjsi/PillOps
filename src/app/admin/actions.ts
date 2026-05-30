@@ -18,9 +18,8 @@ async function checkSuperAdmin() {
     .eq('role', 'super_admin')
     .single();
 
-  if (!profile && user.email !== 'admin@pillops.com') {
-    throw new Error('Forbidden: Super Admin access required');
-  }
+  if (!profile) throw new Error('Forbidden: Super Admin access required');
+  
   return user;
 }
 
