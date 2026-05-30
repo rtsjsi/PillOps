@@ -125,7 +125,7 @@ export default function ReviewExtraction() {
       </header>
 
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
-        <CardContent className="p-6 grid grid-cols-2 gap-y-6">
+        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
             <div className="space-y-1">
                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Distributor</Label>
                <p className="text-lg font-bold text-slate-900">{data.distributorName}</p>

@@ -275,7 +275,7 @@ export default function POS() {
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer Details (Optional)</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-0 grid grid-cols-2 gap-3">
+              <CardContent className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input 
                     placeholder="Name" 
                     value={customerName}
@@ -293,7 +293,7 @@ export default function POS() {
       )}
 
       {cart.length > 0 && (
-          <div className="fixed bottom-24 left-4 right-4 z-40 lg:left-auto lg:right-4 lg:w-96">
+          <div className="fixed bottom-6 left-4 right-4 z-40 lg:left-auto lg:right-4 lg:w-96">
             <Card className="bg-card/80 backdrop-blur-2xl border-primary/20 shadow-2xl shadow-primary/20">
                 <CardContent className="p-6">
                   <div className="flex justify-between mb-2 text-sm font-medium">

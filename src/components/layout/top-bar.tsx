@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getUserProfile, getAvailableStoresForSuperAdmin } from '@/app/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MobileSidebar } from '@/components/layout/mobile-sidebar';
 
 export function TopBar() {
   const pathname = usePathname();
@@ -66,8 +67,9 @@ export function TopBar() {
 
   return (
     <header className="h-[60px] border-b border-zinc-100 bg-white sticky top-0 z-40 px-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-[#44475b] lg:hidden">{getTitle()}</h1>
+      <div className="flex items-center gap-2">
+        <MobileSidebar profile={profile} />
+        <h1 className="text-xl font-bold text-[#44475b] lg:hidden ml-1">{getTitle()}</h1>
 
         <div className="hidden lg:flex items-center gap-2 text-[#7c7e8c] bg-zinc-50 border border-zinc-100 px-3 py-1.5 rounded-lg w-[400px] cursor-pointer hover:bg-zinc-100 transition-colors">
           <Search size={16} />

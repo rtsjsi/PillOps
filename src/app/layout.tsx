@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Geist_Mono, Space_Grotesk } from 'next/font/google';
-import BottomNav from '@/components/ui/bottomNav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { ThemeProvider } from '@/components/ui/themeProvider';
@@ -43,8 +42,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
           
-          {/* Mobile Navigation */}
-          <BottomNav />
           
           <Toaster position="top-center" richColors />
         </ThemeProvider>

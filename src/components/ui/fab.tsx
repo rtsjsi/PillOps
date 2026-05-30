@@ -22,7 +22,7 @@ export function FAB({ onClick, href, icon, label, className }: FABProps) {
     };
 
     return (
-        <div className={cn("fixed bottom-24 right-6 z-[60] md:hidden animate-in slide-in-from-bottom-10 duration-500", className)}>
+        <div className={cn("fixed bottom-6 right-6 z-[60] md:hidden animate-in slide-in-from-bottom-10 duration-500", className)}>
             <Button 
                 onClick={handleClick}
                 size="lg"
