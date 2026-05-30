@@ -51,7 +51,7 @@ const getStoreId = cache(async () => {
   return profile.store_id as string;
 });
 
-export const getUserProfile = cache(async () => {
+export async function getUserProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -82,7 +82,7 @@ export const getUserProfile = cache(async () => {
     .maybeSingle();
 
   return { ...profile, store, user };
-});
+}
 
 async function checkSuperAdmin() {
   const supabase = await createClient();
