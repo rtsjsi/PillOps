@@ -45,7 +45,10 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/pos') ||
     request.nextUrl.pathname.startsWith('/purchases') ||
     request.nextUrl.pathname.startsWith('/invoice') ||
-    request.nextUrl.pathname.startsWith('/admin');
+    request.nextUrl.pathname.startsWith('/admin') ||
+    request.nextUrl.pathname.startsWith('/profile') ||
+    request.nextUrl.pathname.startsWith('/settings') ||
+    request.nextUrl.pathname.startsWith('/staff');
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
@@ -70,6 +73,9 @@ export const config = {
     '/purchases/:path*',
     '/invoice/:path*',
     '/admin/:path*',
+    '/profile/:path*',
+    '/settings/:path*',
+    '/staff/:path*',
     '/login'
   ],
 };
