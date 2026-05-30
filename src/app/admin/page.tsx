@@ -98,10 +98,6 @@ function AdminDashboardContent() {
       setUsers(usersData);
       setStats(statsRes.data || { totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0, freeStores: 0 } as any);
       
-      // Auto-select first store for new user if available
-      if (storesData.length > 0 && !newUser.storeId) {
-        setNewUser(prev => ({ ...prev, storeId: storesData[0].id }));
-      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load admin data');
     } finally {
