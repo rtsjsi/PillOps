@@ -78,14 +78,22 @@ function AdminDashboardContent() {
   async function loadData() {
     try {
       setLoading(true);
-      const [storesData, usersData, statsData] = await Promise.all([
+      const [storesRes, usersRes, statsRes] = await Promise.all([
         getAllStores(),
         getAllUsers(),
         getStoreStats()
       ]);
+      
+      if (storesRes.error) toast.error(storesRes.error);
+      if (usersRes.error) toast.error(usersRes.error);
+      if (statsRes.error) toast.error(statsRes.error);
+
+      const storesData = storesRes.data || [];
+      const usersData = usersRes.data || [];
+      
       setStores(storesData);
       setUsers(usersData);
-      setStats(statsData as any);
+      setStats(statsRes.data || { totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0, freeStores: 0 } as any);
       
       // Auto-select first store for new user if available
       if (storesData.length > 0 && !newUser.storeId) {
