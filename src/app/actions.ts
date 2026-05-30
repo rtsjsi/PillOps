@@ -431,6 +431,11 @@ export async function updatePassword(password: string) {
 // ─── Store Settings ────────────────────────────────────────
 
 export async function updateStoreSettings(data: { name: string, address: string, phone: string, gstin: string }) {
+  const profile = await getUserProfile();
+  if (profile?.role !== 'owner' && profile?.role !== 'super_admin') {
+    throw new Error('Unauthorized: Only store owners can update store settings.');
+  }
+
   const storeId = await getStoreId();
   const adminDb = createAdminClient();
   
@@ -478,6 +483,11 @@ export async function getStoreStaff() {
 
 export async function addStoreStaff(data: { fullName: string, email: string, password: string, role: string }) {
   try {
+    const profile = await getUserProfile();
+    if (profile?.role !== 'owner' && profile?.role !== 'super_admin') {
+      return { error: 'Unauthorized: Only store owners can add staff.' };
+    }
+
     const storeId = await getStoreId();
     const adminDb = createAdminClient();
 
@@ -515,16 +525,21 @@ export async function addStoreStaff(data: { fullName: string, email: string, pas
 }
 
 export async function updateStaffRole(userId: string, role: string) {
+  const profile = await getUserProfile();
+  if (profile?.role !== 'owner' && profile?.role !== 'super_admin') {
+    throw new Error('Unauthorized: Only store owners can update staff roles.');
+  }
+
   const storeId = await getStoreId();
   const adminDb = createAdminClient();
 
-  const { data: profile } = await adminDb
+  const { data: staffProfile } = await adminDb
     .from('user_profiles')
     .select('store_id')
     .eq('id', userId)
     .single();
 
-  if (profile?.store_id !== storeId) throw new Error('Unauthorized');
+  if (staffProfile?.store_id !== storeId) throw new Error('Unauthorized');
 
   const { error } = await adminDb
     .from('user_profiles')
@@ -536,16 +551,21 @@ export async function updateStaffRole(userId: string, role: string) {
 }
 
 export async function removeStaff(userId: string) {
+  const profile = await getUserProfile();
+  if (profile?.role !== 'owner' && profile?.role !== 'super_admin') {
+    throw new Error('Unauthorized: Only store owners can remove staff.');
+  }
+
   const storeId = await getStoreId();
   const adminDb = createAdminClient();
 
-  const { data: profile } = await adminDb
+  const { data: staffProfile } = await adminDb
     .from('user_profiles')
     .select('store_id')
     .eq('id', userId)
     .single();
 
-  if (profile?.store_id !== storeId) throw new Error('Unauthorized');
+  if (staffProfile?.store_id !== storeId) throw new Error('Unauthorized');
 
   const { error } = await adminDb.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);

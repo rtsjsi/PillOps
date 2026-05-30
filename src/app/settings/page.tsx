@@ -13,6 +13,7 @@ import GlobalLoading from '../loading';
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState('staff');
   const [storeData, setStoreData] = useState({
     name: '',
     address: '',
@@ -37,6 +38,10 @@ export default function SettingsPage() {
           gstin: data.gstin || ''
         });
       }
+      
+      const { getUserProfile } = await import('../actions');
+      const profile = await getUserProfile();
+      setRole(profile?.role || 'staff');
     } catch (e: any) {
       toast.error(e.message || "Failed to load store settings");
     } finally {
@@ -46,6 +51,10 @@ export default function SettingsPage() {
 
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (role !== 'owner' && role !== 'super_admin') {
+      toast.error('Only owners can update store settings');
+      return;
+    }
     setSaving(true);
     try {
       await updateStoreSettings(storeData);
@@ -57,6 +66,8 @@ export default function SettingsPage() {
       setSaving(false);
     }
   };
+
+  const isEditable = role === 'owner' || role === 'super_admin';
 
   if (loading) return <GlobalLoading />;
 
@@ -78,25 +89,26 @@ export default function SettingsPage() {
              <form onSubmit={handleSaveStore} className="flex flex-col gap-4">
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pharmacy Name</Label>
-                  <Input required value={storeData.name} onChange={e => setStoreData({...storeData, name: e.target.value})} className="h-10 bg-slate-50" />
+                  <Input required disabled={!isEditable} value={storeData.name} onChange={e => setStoreData({...storeData, name: e.target.value})} className="h-10 bg-slate-50" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Number</Label>
-                  <Input value={storeData.phone} onChange={e => setStoreData({...storeData, phone: e.target.value})} className="h-10 bg-slate-50" />
+                  <Input disabled={!isEditable} value={storeData.phone} onChange={e => setStoreData({...storeData, phone: e.target.value})} className="h-10 bg-slate-50" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GSTIN Number</Label>
-                  <Input value={storeData.gstin} onChange={e => setStoreData({...storeData, gstin: e.target.value})} className="h-10 bg-slate-50 uppercase" />
+                  <Input disabled={!isEditable} value={storeData.gstin} onChange={e => setStoreData({...storeData, gstin: e.target.value})} className="h-10 bg-slate-50 uppercase" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Physical Address</Label>
-                  <Input value={storeData.address} onChange={e => setStoreData({...storeData, address: e.target.value})} className="h-10 bg-slate-50" />
+                  <Input disabled={!isEditable} value={storeData.address} onChange={e => setStoreData({...storeData, address: e.target.value})} className="h-10 bg-slate-50" />
                 </div>
 
-                <Button type="submit" disabled={saving} className="mt-4 font-bold shadow-md shadow-primary/20">
+                <Button type="submit" disabled={!isEditable || saving} className="mt-4 font-bold shadow-md shadow-primary/20">
                   {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
                   Save Changes
                 </Button>
+                {!isEditable && <p className="text-[10px] text-rose-500 text-center mt-1">Only store owners can edit these details.</p>}
              </form>
           </CardContent>
         </Card>
