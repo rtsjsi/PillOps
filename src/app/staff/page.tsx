@@ -44,11 +44,15 @@ export default function StaffPage() {
     }
     setAdding(true);
     try {
-      await addStoreStaff(newUser);
-      toast.success("Staff member added successfully");
-      setIsAddingUser(false);
-      setNewUser({ fullName: '', email: '', password: '', role: 'staff' });
-      await loadStaff();
+      const res = await addStoreStaff(newUser);
+      if (res && res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Staff member added successfully");
+        setIsAddingUser(false);
+        setNewUser({ fullName: '', email: '', password: '', role: 'staff' });
+        await loadStaff();
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to add staff");
     } finally {

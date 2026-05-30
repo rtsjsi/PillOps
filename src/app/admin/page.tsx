@@ -409,25 +409,27 @@ function AdminDashboardContent() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Assign to Pharmacy</Label>
-                    <Select value={newUser.storeId} onValueChange={(v) => setNewUser({...newUser, storeId: v || ''})}>
-                      <SelectTrigger className="rounded-xl bg-slate-50 h-10 font-bold truncate">
-                        <SelectValue placeholder="Select Store" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stores.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {newUser.role !== 'super_admin' && (
+                    <div className="grid gap-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Assign to Pharmacy</Label>
+                      <Select value={newUser.storeId} onValueChange={(v) => setNewUser({...newUser, storeId: v || ''})}>
+                        <SelectTrigger className="rounded-xl bg-slate-50 h-10 font-bold truncate">
+                          <SelectValue placeholder="Select Store" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stores.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   
-                  <Button type="submit" disabled={isCreating || stores.length === 0} className="h-12 mt-2 font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">
+                  <Button type="submit" disabled={isCreating || (stores.length === 0 && newUser.role !== 'super_admin')} className="h-12 mt-2 font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20">
                       {isCreating ? <Loader2 className="mr-2 animate-spin" /> : <Users size={18} className="mr-2" />}
                       Create User
                   </Button>
-                  {stores.length === 0 && (
+                  {(stores.length === 0 && newUser.role !== 'super_admin') && (
                     <p className="text-[10px] text-rose-500 text-center mt-1">Please create a pharmacy first.</p>
                   )}
                 </form>

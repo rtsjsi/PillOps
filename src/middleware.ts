@@ -38,31 +38,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch user role if user exists
-  let userRole = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    userRole = profile?.role;
-  }
-
-  // Super Admin check
-  if (request.nextUrl.pathname.startsWith('/admin') && userRole !== 'super_admin') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-
   // Protected routes logic
   const isProtectedRoute = 
     request.nextUrl.pathname.startsWith('/dashboard') ||
     request.nextUrl.pathname.startsWith('/inventory') ||
     request.nextUrl.pathname.startsWith('/pos') ||
     request.nextUrl.pathname.startsWith('/purchases') ||
-    request.nextUrl.pathname.startsWith('/invoice');
+    request.nextUrl.pathname.startsWith('/invoice') ||
+    request.nextUrl.pathname.startsWith('/admin');
 
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();

@@ -208,19 +208,24 @@ export async function createUser(userData: {
   password: string;
   fullName: string;
   role: string;
-  storeId: string;
+  storeId?: string;
 }) {
   await checkSuperAdmin();
   const adminClient = createAdminClient();
 
-  // Validate store exists
-  const { data: store, error: storeError } = await adminClient
-    .from('stores')
-    .select('id')
-    .eq('id', userData.storeId)
-    .single();
+  // Validate store exists if role is not super_admin or if storeId is provided
+  let validStoreId = null;
+  if (userData.role !== 'super_admin' || userData.storeId) {
+    if (!userData.storeId) throw new Error('A store must be assigned for this role.');
+    const { data: store, error: storeError } = await adminClient
+      .from('stores')
+      .select('id')
+      .eq('id', userData.storeId)
+      .single();
 
-  if (storeError || !store) throw new Error('Selected store does not exist.');
+    if (storeError || !store) throw new Error('Selected store does not exist.');
+    validStoreId = store.id;
+  }
 
   // Create auth user via Supabase Admin API
   const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
@@ -237,7 +242,7 @@ export async function createUser(userData: {
     .from('user_profiles')
     .insert({
       id: authUser.user.id,
-      store_id: userData.storeId,
+      store_id: validStoreId,
       role: userData.role,
       full_name: userData.fullName,
     });

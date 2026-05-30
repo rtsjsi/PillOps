@@ -15,6 +15,8 @@ export async function askAI(prompt: string, context?: string) {
 
 // ─── SaaS Helpers ──────────────────────────────────────────
 
+import { cookies } from 'next/headers';
+
 const getStoreId = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -23,7 +25,7 @@ const getStoreId = cache(async () => {
   const adminDb = createAdminClient();
   const { data: profile, error } = await adminDb
     .from('user_profiles')
-    .select('store_id')
+    .select('role, store_id')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -31,8 +33,21 @@ const getStoreId = cache(async () => {
     throw new Error(`DB Error in getStoreId: ${error.message || JSON.stringify(error)}`);
   }
   if (!profile) {
-    throw new Error(`Store profile not found for user ${user.id}. Please contact administrator.`);
+    throw new Error(`User profile not found. Please contact administrator.`);
   }
+
+  if (profile.role === 'super_admin') {
+    const cookieStore = await cookies();
+    const selectedStoreId = cookieStore.get('pillops_selected_store_id')?.value;
+    if (selectedStoreId) return selectedStoreId;
+    
+    throw new Error('Super Admin must select a pharmacy from the top bar before accessing this section.');
+  }
+
+  if (!profile.store_id) {
+    throw new Error('No pharmacy assigned to your profile.');
+  }
+
   return profile.store_id as string;
 });
 
@@ -101,6 +116,28 @@ export async function getAllStores() {
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function getAvailableStoresForSuperAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const adminDb = createAdminClient();
+  const { data: profile } = await adminDb
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'super_admin') return [];
+
+  const { data } = await adminDb
+    .from('stores')
+    .select('id, name')
+    .order('name', { ascending: true });
+
+  return data ?? [];
 }
 
 // ─── Dashboard Stats ──────────────────────────────────────
@@ -440,32 +477,41 @@ export async function getStoreStaff() {
 }
 
 export async function addStoreStaff(data: { fullName: string, email: string, password: string, role: string }) {
-  const storeId = await getStoreId();
-  const adminDb = createAdminClient();
+  try {
+    const storeId = await getStoreId();
+    const adminDb = createAdminClient();
 
-  const { data: authUser, error: authError } = await adminDb.auth.admin.createUser({
-    email: data.email,
-    password: data.password,
-    email_confirm: true,
-  });
-
-  if (authError) throw new Error(authError.message);
-
-  const { error: profileError } = await adminDb
-    .from('user_profiles')
-    .insert({
-      id: authUser.user.id,
-      store_id: storeId,
-      full_name: data.fullName,
-      role: data.role
+    const { data: authUser, error: authError } = await adminDb.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
     });
 
-  if (profileError) {
-    await adminDb.auth.admin.deleteUser(authUser.user.id);
-    throw new Error(profileError.message);
-  }
+    if (authError) return { error: authError.message };
 
-  revalidatePath('/staff');
+    if (!authUser?.user?.id) {
+       return { error: "Failed to create user in authentication system." };
+    }
+
+    const { error: profileError } = await adminDb
+      .from('user_profiles')
+      .insert({
+        id: authUser.user.id,
+        store_id: storeId,
+        full_name: data.fullName,
+        role: data.role
+      });
+
+    if (profileError) {
+      await adminDb.auth.admin.deleteUser(authUser.user.id);
+      return { error: profileError.message };
+    }
+
+    revalidatePath('/staff');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "An unexpected error occurred." };
+  }
 }
 
 export async function updateStaffRole(userId: string, role: string) {

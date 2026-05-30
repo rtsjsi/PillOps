@@ -1,22 +1,34 @@
 'use client';
 
-import { Bell, Search, LogOut, User } from 'lucide-react';
+import { Bell, Search, LogOut, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getUserProfile } from '@/app/actions';
+import { getUserProfile, getAvailableStoresForSuperAdmin } from '@/app/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [stores, setStores] = useState<any[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string>('');
 
   useEffect(() => {
-    getUserProfile().then(setProfile).catch(() => {});
+    getUserProfile().then(p => {
+      setProfile(p);
+      if (p?.role === 'super_admin') {
+        getAvailableStoresForSuperAdmin().then(setStores).catch(() => {});
+        
+        // Read cookie to set initial select value
+        const match = document.cookie.match(new RegExp('(^| )pillops_selected_store_id=([^;]+)'));
+        if (match) setSelectedStore(match[2]);
+      }
+    }).catch(() => {});
   }, []);
 
   if (pathname === '/' || pathname === '/login') return null;
@@ -37,12 +49,17 @@ export function TopBar() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      // Hard redirect — fastest way to clear state and hit middleware
       window.location.replace('/login');
     } catch {
       toast.error('Logout failed');
       setSigningOut(false);
     }
+  };
+
+  const handleStoreChange = (storeId: string) => {
+    setSelectedStore(storeId);
+    document.cookie = `pillops_selected_store_id=${storeId}; path=/; max-age=31536000`; // 1 year expiry
+    window.location.reload(); // Reload to refresh server components with the new store context
   };
 
   return (
@@ -57,6 +74,23 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Super Admin Store Selector */}
+        {profile?.role === 'super_admin' && (
+          <div className="hidden sm:flex items-center gap-2 mr-2">
+            <Store size={16} className="text-primary" />
+            <Select value={selectedStore} onValueChange={handleStoreChange}>
+              <SelectTrigger className="w-[200px] h-9 text-xs font-bold rounded-xl border-slate-200 bg-slate-50">
+                <SelectValue placeholder="Select Pharmacy" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <Button variant="ghost" size="icon" className="text-[#44475b] hover:bg-zinc-50 rounded-full lg:hidden">
           <Search size={22} />
         </Button>
