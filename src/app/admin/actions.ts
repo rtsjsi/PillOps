@@ -11,7 +11,8 @@ async function checkSuperAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data: profile } = await supabase
+  const adminDb = createAdminClient();
+  const { data: profile } = await adminDb
     .from('user_profiles')
     .select('role')
     .eq('id', user.id)
