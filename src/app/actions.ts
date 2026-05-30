@@ -27,7 +27,12 @@ const getStoreId = cache(async () => {
     .eq('id', user.id)
     .single();
 
-  if (error || !profile) throw new Error('Store profile not found. Please contact administrator.');
+  if (error) {
+    throw new Error(`DB Error in getStoreId: ${error.message || JSON.stringify(error)}`);
+  }
+  if (!profile) {
+    throw new Error(`Store profile not found for user ${user.id}. Please contact administrator.`);
+  }
   return profile.store_id as string;
 });
 
