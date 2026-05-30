@@ -56,7 +56,8 @@ export function TopBar() {
     }
   };
 
-  const handleStoreChange = (storeId: string) => {
+  const handleStoreChange = (storeId: string | null) => {
+    if (!storeId) return;
     setSelectedStore(storeId);
     document.cookie = `pillops_selected_store_id=${storeId}; path=/; max-age=31536000`; // 1 year expiry
     window.location.reload(); // Reload to refresh server components with the new store context
