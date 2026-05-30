@@ -7,7 +7,6 @@ import { TopBar } from '@/components/layout/top-bar';
 import { ThemeProvider } from '@/components/ui/themeProvider';
 import { cn } from "@/lib/utils";
 import { CommandPalette } from '@/components/command-palette';
-import { AIAssistant } from '@/components/ai-assistant';
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -28,8 +27,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={cn(inter.variable, geistMono.variable, spaceGrotesk.variable, "font-sans")} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/10 overflow-x-hidden">
         <ThemeProvider>
-          <CommandPalette />
-          <AIAssistant />
           <div className="flex h-screen overflow-hidden">
             {/* Desktop Sidebar */}
             <Sidebar />
