@@ -19,6 +19,7 @@ export function TopBar() {
   const [selectedStore, setSelectedStore] = useState<string>('');
 
   useEffect(() => {
+    if (pathname === '/' || pathname === '/login') return;
     getUserProfile().then(p => {
       setProfile(p);
       if (p?.role === 'super_admin') {
@@ -29,7 +30,7 @@ export function TopBar() {
         if (match) setSelectedStore(match[2]);
       }
     }).catch(() => {});
-  }, []);
+  }, [pathname]);
 
   if (pathname === '/' || pathname === '/login') return null;
 

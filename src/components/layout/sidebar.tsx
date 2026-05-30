@@ -21,12 +21,13 @@ export function Sidebar() {
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
+    if (pathname === '/' || pathname === '/login') return;
     async function loadProfile() {
         const p = await getUserProfile();
         setProfile(p);
     }
     loadProfile();
-  }, []);
+  }, [pathname]);
 
   if (pathname === '/' || pathname === '/login') return null;
 
