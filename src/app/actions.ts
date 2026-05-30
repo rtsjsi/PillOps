@@ -187,12 +187,17 @@ function getThreeMonthsFromNow(): string {
 }
 
 export async function getDashboardData() {
-  const [stats, medicines, salesTrends] = await Promise.all([
-    getDashboardStats(),
-    getMedicines(),
-    getSalesStats(),
-  ]);
-  return { stats, medicines, salesTrends };
+  try {
+    const [stats, medicines, salesTrends] = await Promise.all([
+      getDashboardStats(),
+      getMedicines(),
+      getSalesStats(),
+    ]);
+    return { stats, medicines, salesTrends, error: null };
+  } catch (err: any) {
+    console.error('getDashboardData Error:', err);
+    return { error: err.message || err.toString() };
+  }
 }
 
 export async function getSalesStats() {

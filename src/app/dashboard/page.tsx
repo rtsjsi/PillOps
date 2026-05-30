@@ -40,15 +40,22 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Explore');
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchData() {
       try {
-        const { stats, medicines, salesTrends } = await getDashboardData();
-        setStats(stats);
-        setMedicines(medicines);
-        setSalesTrends(salesTrends);
-      } catch (err) {
+        const result: any = await getDashboardData();
+        if (result.error) {
+           setErrorMsg(result.error);
+        } else {
+           setStats(result.stats);
+           setMedicines(result.medicines || []);
+           setSalesTrends(result.salesTrends || []);
+        }
+      } catch (err: any) {
         console.error('Dashboard load failed:', err);
+        setErrorMsg(err.message || 'Unknown error occurred');
       } finally {
         setLoading(false);
       }
@@ -87,6 +94,18 @@ export default function Dashboard() {
   }, [medicines]);
 
   if (loading) return <GlobalLoading />;
+
+  if (errorMsg) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-zinc-50">
+        <AlertTriangle size={64} className="text-destructive mb-6" />
+        <h1 className="text-2xl font-bold text-zinc-900 mb-2">Something went wrong</h1>
+        <p className="text-zinc-500 max-w-md mb-8">{errorMsg}</p>
+        <p className="text-xs text-zinc-400">If this is a "SUPABASE_SERVICE_ROLE_KEY" error, ensure you have added the key to Cloudflare's dashboard variables and redeployed.</p>
+        <Button onClick={() => window.location.reload()} className="mt-6">Try Again</Button>
+      </div>
+    );
+  }
 
   const tabs = ['Explore', 'Holdings', 'Positions', 'Orders', 'My Watchlist'];
 
