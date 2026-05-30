@@ -24,6 +24,11 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: Mark existing migrations as applied
+        run: supabase migration repair --status applied 0000_slim_morbius -p ${{ secrets.SUPABASE_DB_PASSWORD }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Push Migrations
         run: supabase db push -p ${{ secrets.SUPABASE_DB_PASSWORD }}
         env:
