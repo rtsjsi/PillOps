@@ -1,8 +1,5 @@
 'use server';
 
-import { db } from '@/db';
-import * as schema from '@/db/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
@@ -14,12 +11,12 @@ async function checkSuperAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const profile = await db.query.userProfiles.findFirst({
-    where: and(
-      eq(schema.userProfiles.id, user.id),
-      eq(schema.userProfiles.role, 'super_admin')
-    ),
-  });
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .eq('role', 'super_admin')
+    .single();
 
   if (!profile) throw new Error('Forbidden: Super Admin access required');
   return user;
@@ -31,18 +28,19 @@ async function checkSuperAdmin() {
 
 export async function getAllStores() {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
-  const storesData = await db.query.stores.findMany({
-    orderBy: [desc(schema.stores.createdAt)],
-    with: {
-      users: true,
-    },
-  });
+  const { data, error } = await supabase
+    .from('stores')
+    .select('*, users:user_profiles(id)')
+    .order('created_at', { ascending: false });
 
-  return storesData.map(store => ({
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map(store => ({
     ...store,
-    userCount: store.users?.length || 0,
-    users: undefined, // Don't leak full user data
+    userCount: store.users?.length ?? 0,
+    users: undefined,
   }));
 }
 
@@ -54,81 +52,109 @@ export async function createStore(storeData: {
   subscriptionTier?: string;
 }) {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
-  const [store] = await db.insert(schema.stores).values({
-    name: storeData.name,
-    address: storeData.address || '',
-    phone: storeData.phone || '',
-    gstin: storeData.gstin || '',
-    subscriptionTier: storeData.subscriptionTier || 'pro',
-  }).returning();
+  const { data: store, error } = await supabase
+    .from('stores')
+    .insert({
+      name: storeData.name,
+      address: storeData.address ?? '',
+      phone: storeData.phone ?? '',
+      gstin: storeData.gstin ?? '',
+      subscription_tier: storeData.subscriptionTier ?? 'pro',
+    })
+    .select()
+    .single();
 
+  if (error) throw new Error(error.message);
   revalidatePath('/admin');
   return store;
 }
 
-export async function updateStore(storeId: string, storeData: {
-  name?: string;
-  address?: string;
-  phone?: string;
-  gstin?: string;
-  subscriptionTier?: string;
-}) {
+export async function updateStore(
+  storeId: string,
+  storeData: {
+    name?: string;
+    address?: string;
+    phone?: string;
+    gstin?: string;
+    subscriptionTier?: string;
+  }
+) {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
-  const [updated] = await db.update(schema.stores)
-    .set({
-      ...storeData,
-      updatedAt: new Date(),
+  const { data: updated, error } = await supabase
+    .from('stores')
+    .update({
+      ...(storeData.name !== undefined && { name: storeData.name }),
+      ...(storeData.address !== undefined && { address: storeData.address }),
+      ...(storeData.phone !== undefined && { phone: storeData.phone }),
+      ...(storeData.gstin !== undefined && { gstin: storeData.gstin }),
+      ...(storeData.subscriptionTier !== undefined && { subscription_tier: storeData.subscriptionTier }),
+      updated_at: new Date().toISOString(),
     })
-    .where(eq(schema.stores.id, storeId))
-    .returning();
+    .eq('id', storeId)
+    .select()
+    .single();
 
+  if (error) throw new Error(error.message);
   revalidatePath('/admin');
   return updated;
 }
 
 export async function deleteStore(storeId: string) {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
   // Check if store has users
-  const users = await db.query.userProfiles.findMany({
-    where: eq(schema.userProfiles.storeId, storeId),
-  });
+  const { count, error: countError } = await supabase
+    .from('user_profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('store_id', storeId);
 
-  if (users.length > 0) {
-    throw new Error(`Cannot delete store: ${users.length} user(s) are still assigned. Remove all users first.`);
+  if (countError) throw new Error(countError.message);
+
+  if ((count ?? 0) > 0) {
+    throw new Error(`Cannot delete store: ${count} user(s) are still assigned. Remove all users first.`);
   }
 
-  await db.delete(schema.stores).where(eq(schema.stores.id, storeId));
+  const { error } = await supabase
+    .from('stores')
+    .delete()
+    .eq('id', storeId);
+
+  if (error) throw new Error(error.message);
   revalidatePath('/admin');
   return { success: true };
 }
 
 export async function getStoreStats() {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
-  const [totalStores] = await db.select({ count: sql`count(*)` }).from(schema.stores);
-  const [totalUsers] = await db.select({ count: sql`count(*)` }).from(schema.userProfiles);
-
-  const tierCounts = await db.select({
-    tier: schema.stores.subscriptionTier,
-    count: sql<number>`count(*)`,
-  })
-    .from(schema.stores)
-    .groupBy(schema.stores.subscriptionTier);
+  const [
+    { count: totalStores },
+    { count: totalUsers },
+    { data: tierData },
+  ] = await Promise.all([
+    supabase.from('stores').select('*', { count: 'exact', head: true }),
+    supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('stores').select('subscription_tier'),
+  ]);
 
   const tierMap: Record<string, number> = {};
-  for (const t of tierCounts) {
-    tierMap[t.tier || 'free'] = Number(t.count);
+  for (const row of tierData ?? []) {
+    const tier = row.subscription_tier ?? 'free';
+    tierMap[tier] = (tierMap[tier] ?? 0) + 1;
   }
 
   return {
-    totalStores: Number(totalStores.count),
-    totalUsers: Number(totalUsers.count),
-    proStores: tierMap['pro'] || 0,
-    enterpriseStores: tierMap['enterprise'] || 0,
-    freeStores: tierMap['free'] || 0,
+    totalStores: totalStores ?? 0,
+    totalUsers: totalUsers ?? 0,
+    proStores: tierMap['pro'] ?? 0,
+    enterpriseStores: tierMap['enterprise'] ?? 0,
+    freeStores: tierMap['free'] ?? 0,
   };
 }
 
@@ -138,41 +164,41 @@ export async function getStoreStats() {
 
 export async function getAllUsers() {
   await checkSuperAdmin();
-
-  const users = await db.query.userProfiles.findMany({
-    orderBy: [desc(schema.userProfiles.createdAt)],
-    with: {
-      store: true,
-    },
-  });
-
-  // Get email addresses from Supabase Auth
   const adminClient = createAdminClient();
-  const { data: authUsers } = await adminClient.auth.admin.listUsers();
+
+  const [{ data: profiles, error: profileError }, { data: authUsers }] = await Promise.all([
+    adminClient
+      .from('user_profiles')
+      .select('*, store:stores(name)')
+      .order('created_at', { ascending: false }),
+    adminClient.auth.admin.listUsers(),
+  ]);
+
+  if (profileError) throw new Error(profileError.message);
 
   const authMap = new Map<string, { email: string; lastSignIn: string | null; created: string }>();
   if (authUsers?.users) {
     for (const u of authUsers.users) {
       authMap.set(u.id, {
-        email: u.email || '',
-        lastSignIn: u.last_sign_in_at || null,
+        email: u.email ?? '',
+        lastSignIn: u.last_sign_in_at ?? null,
         created: u.created_at,
       });
     }
   }
 
-  return users.map(profile => {
+  return (profiles ?? []).map(profile => {
     const authData = authMap.get(profile.id);
     return {
       id: profile.id,
-      fullName: profile.fullName || 'Unnamed User',
-      role: profile.role || 'staff',
-      storeId: profile.storeId,
-      storeName: profile.store?.name || 'Unknown Store',
-      email: authData?.email || 'N/A',
-      lastSignIn: authData?.lastSignIn || null,
-      authCreated: authData?.created || profile.createdAt?.toISOString(),
-      createdAt: profile.createdAt?.toISOString(),
+      fullName: profile.full_name ?? 'Unnamed User',
+      role: profile.role ?? 'staff',
+      storeId: profile.store_id,
+      storeName: (profile.store as any)?.name ?? 'Unknown Store',
+      email: authData?.email ?? 'N/A',
+      lastSignIn: authData?.lastSignIn ?? null,
+      authCreated: authData?.created ?? profile.created_at,
+      createdAt: profile.created_at,
     };
   });
 }
@@ -185,38 +211,38 @@ export async function createUser(userData: {
   storeId: string;
 }) {
   await checkSuperAdmin();
+  const adminClient = createAdminClient();
 
   // Validate store exists
-  const store = await db.query.stores.findFirst({
-    where: eq(schema.stores.id, userData.storeId),
-  });
-  if (!store) throw new Error('Selected store does not exist.');
+  const { data: store, error: storeError } = await adminClient
+    .from('stores')
+    .select('id')
+    .eq('id', userData.storeId)
+    .single();
+
+  if (storeError || !store) throw new Error('Selected store does not exist.');
 
   // Create auth user via Supabase Admin API
-  const adminClient = createAdminClient();
   const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
     email: userData.email,
     password: userData.password,
-    email_confirm: true, // Auto-confirm email
+    email_confirm: true,
   });
 
-  if (authError) {
-    throw new Error(`Failed to create auth user: ${authError.message}`);
-  }
+  if (authError) throw new Error(`Failed to create auth user: ${authError.message}`);
+  if (!authUser?.user) throw new Error('Auth user creation returned no user data.');
 
-  if (!authUser?.user) {
-    throw new Error('Auth user creation returned no user data.');
-  }
-
-  // Create profile in user_profiles table
-  try {
-    await db.insert(schema.userProfiles).values({
+  // Create profile
+  const { error: profileError } = await adminClient
+    .from('user_profiles')
+    .insert({
       id: authUser.user.id,
-      storeId: userData.storeId,
+      store_id: userData.storeId,
       role: userData.role,
-      fullName: userData.fullName,
+      full_name: userData.fullName,
     });
-  } catch (profileError: any) {
+
+  if (profileError) {
     // Rollback: delete the auth user if profile creation fails
     await adminClient.auth.admin.deleteUser(authUser.user.id);
     throw new Error(`Failed to create user profile: ${profileError.message}`);
@@ -234,27 +260,36 @@ export async function updateUserRole(userId: string, newRole: string) {
     throw new Error(`Invalid role: ${newRole}. Must be one of: ${validRoles.join(', ')}`);
   }
 
-  await db.update(schema.userProfiles)
-    .set({ role: newRole })
-    .where(eq(schema.userProfiles.id, userId));
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ role: newRole })
+    .eq('id', userId);
 
+  if (error) throw new Error(error.message);
   revalidatePath('/admin');
   return { success: true };
 }
 
 export async function updateUserStore(userId: string, newStoreId: string) {
   await checkSuperAdmin();
+  const supabase = createAdminClient();
 
   // Verify store exists
-  const store = await db.query.stores.findFirst({
-    where: eq(schema.stores.id, newStoreId),
-  });
-  if (!store) throw new Error('Target store does not exist.');
+  const { data: store, error: storeError } = await supabase
+    .from('stores')
+    .select('id')
+    .eq('id', newStoreId)
+    .single();
 
-  await db.update(schema.userProfiles)
-    .set({ storeId: newStoreId })
-    .where(eq(schema.userProfiles.id, userId));
+  if (storeError || !store) throw new Error('Target store does not exist.');
 
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ store_id: newStoreId })
+    .eq('id', userId);
+
+  if (error) throw new Error(error.message);
   revalidatePath('/admin');
   return { success: true };
 }
@@ -271,10 +306,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
     password: newPassword,
   });
 
-  if (error) {
-    throw new Error(`Password reset failed: ${error.message}`);
-  }
-
+  if (error) throw new Error(`Password reset failed: ${error.message}`);
   return { success: true };
 }
 
@@ -285,16 +317,20 @@ export async function deleteUser(userId: string) {
     throw new Error('You cannot delete your own account.');
   }
 
-  // Delete profile first (cascading from schema handles store refs)
-  await db.delete(schema.userProfiles).where(eq(schema.userProfiles.id, userId));
+  const adminClient = createAdminClient();
+
+  // Delete profile first (FK cascade handles store refs)
+  const { error: profileError } = await adminClient
+    .from('user_profiles')
+    .delete()
+    .eq('id', userId);
+
+  if (profileError) throw new Error(profileError.message);
 
   // Delete from Supabase Auth
-  const adminClient = createAdminClient();
-  const { error } = await adminClient.auth.admin.deleteUser(userId);
-
-  if (error) {
-    console.error('Warning: Auth user deletion failed:', error.message);
-    // Profile is already deleted, so we continue
+  const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+  if (authError) {
+    console.error('Warning: Auth user deletion failed:', authError.message);
   }
 
   revalidatePath('/admin');
