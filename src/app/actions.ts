@@ -367,3 +367,141 @@ export async function savePurchaseInvoice(purchaseData: any, items: any[]) {
   revalidatePath('/purchases');
   return data;
 }
+
+// ─── Profile & User Settings ────────────────────────────────
+
+export async function updateProfile(fullName: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const adminDb = createAdminClient();
+  const { error } = await adminDb
+    .from('user_profiles')
+    .update({ full_name: fullName })
+    .eq('id', user.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/profile');
+}
+
+export async function updatePassword(password: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Store Settings ────────────────────────────────────────
+
+export async function updateStoreSettings(data: { name: string, address: string, phone: string, gstin: string }) {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+  
+  const { error } = await adminDb
+    .from('stores')
+    .update({
+      name: data.name,
+      address: data.address,
+      phone: data.phone,
+      gstin: data.gstin
+    })
+    .eq('id', storeId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/settings');
+}
+
+// ─── Staff Management ──────────────────────────────────────
+
+export async function getStoreStaff() {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+
+  const { data: profiles, error } = await adminDb
+    .from('user_profiles')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const { data: authData, error: authError } = await adminDb.auth.admin.listUsers();
+  if (authError) throw new Error(authError.message);
+
+  const staff = profiles.map(profile => {
+    const authUser = authData.users.find(u => u.id === profile.id);
+    return {
+      ...profile,
+      email: authUser?.email || ''
+    };
+  });
+
+  return staff;
+}
+
+export async function addStoreStaff(data: { fullName: string, email: string, password: string, role: string }) {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+
+  const { data: authUser, error: authError } = await adminDb.auth.admin.createUser({
+    email: data.email,
+    password: data.password,
+    email_confirm: true,
+  });
+
+  if (authError) throw new Error(authError.message);
+
+  const { error: profileError } = await adminDb
+    .from('user_profiles')
+    .insert({
+      id: authUser.user.id,
+      store_id: storeId,
+      full_name: data.fullName,
+      role: data.role
+    });
+
+  if (profileError) {
+    await adminDb.auth.admin.deleteUser(authUser.user.id);
+    throw new Error(profileError.message);
+  }
+
+  revalidatePath('/staff');
+}
+
+export async function updateStaffRole(userId: string, role: string) {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+
+  const { data: profile } = await adminDb
+    .from('user_profiles')
+    .select('store_id')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.store_id !== storeId) throw new Error('Unauthorized');
+
+  const { error } = await adminDb
+    .from('user_profiles')
+    .update({ role })
+    .eq('id', userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath('/staff');
+}
+
+export async function removeStaff(userId: string) {
+  const storeId = await getStoreId();
+  const adminDb = createAdminClient();
+
+  const { data: profile } = await adminDb
+    .from('user_profiles')
+    .select('store_id')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.store_id !== storeId) throw new Error('Unauthorized');
+
+  const { error } = await adminDb.auth.admin.deleteUser(userId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/staff');
+}
