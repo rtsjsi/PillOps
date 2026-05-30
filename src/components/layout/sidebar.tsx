@@ -42,7 +42,9 @@ export function Sidebar() {
         { icon: Users, label: 'Staff Management', href: '/staff' }
     ] : []),
     { icon: User, label: 'My Profile', href: '/profile' },
-    { icon: Settings, label: 'Settings', href: '/settings' },
+    ...(['owner', 'super_admin'].includes(profile?.role) ? [
+        { icon: Settings, label: 'Settings', href: '/settings' }
+    ] : []),
 ];
 
   return (
