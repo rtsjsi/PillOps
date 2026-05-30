@@ -35,10 +35,9 @@ export function Sidebar() {
     { icon: Package, label: 'Inventory', href: '/inventory' },
     { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
     ...(profile?.role === 'super_admin' ? [
-        { icon: ShieldAlert, label: 'Super Admin', href: '/admin' },
-        { icon: Users, label: 'Global Users', href: '/admin?tab=users' }
+        { icon: ShieldAlert, label: 'Super Admin', href: '/admin' }
     ] : []),
-    ...(profile?.role === 'owner' ? [
+    ...(['owner', 'super_admin'].includes(profile?.role) ? [
         { icon: Users, label: 'Staff Management', href: '/staff' }
     ] : []),
     { icon: User, label: 'My Profile', href: '/profile' },
