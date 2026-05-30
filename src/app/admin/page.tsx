@@ -422,7 +422,7 @@ function AdminDashboardContent() {
                       <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Assign to Pharmacy</Label>
                       <Select value={newUser.storeId} onValueChange={(v) => setNewUser({...newUser, storeId: v || ''})}>
                         <SelectTrigger className="rounded-xl bg-slate-50 h-10 font-bold truncate">
-                          <SelectValue placeholder="Select Store" />
+                          <span className="truncate">{stores.find(s => s.id === newUser.storeId)?.name || "Select Store"}</span>
                         </SelectTrigger>
                         <SelectContent>
                           {stores.map(s => (

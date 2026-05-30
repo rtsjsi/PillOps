@@ -84,7 +84,7 @@ export function TopBar() {
             <Store size={16} className="text-primary" />
             <Select value={selectedStore} onValueChange={handleStoreChange}>
               <SelectTrigger className="w-[200px] h-9 text-xs font-bold rounded-xl border-slate-200 bg-slate-50">
-                <SelectValue placeholder="Select Pharmacy" />
+                <span className="truncate">{stores.find(s => s.id === selectedStore)?.name || "Select Pharmacy"}</span>
               </SelectTrigger>
               <SelectContent>
                 {stores.map(s => (
