@@ -118,7 +118,7 @@ export default function ManualPurchaseEntry() {
     }
   ]);
 
-  const [medicines, setMedicines] = useState([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
