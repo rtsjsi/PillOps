@@ -235,8 +235,8 @@ export default function ManualPurchaseEntry() {
   };
 
   useKeyboardShortcuts([
-    { keys: ['Control', 'Shift', 'N'], action: addItem },
-    { keys: ['Control', 'Enter'], action: () => handleSave() }
+    { key: 'n', ctrl: true, shift: true, action: addItem, allowInInput: true },
+    { key: 'Enter', ctrl: true, action: () => handleSave(), allowInInput: true }
   ]);
 
   if (isSuccess) {
