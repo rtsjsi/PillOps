@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getStoreStaff, addStoreStaff, updateStaffRole, removeStaff } from '../actions';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
 
@@ -27,7 +26,9 @@ export default function StaffPage() {
 
   async function loadStaff() {
     try {
-      const data = await getStoreStaff();
+      const res = await fetch('/api/staff');
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setStaff(data);
     } catch (e: any) {
       toast.error(e.message || "Failed to load staff");
@@ -44,9 +45,10 @@ export default function StaffPage() {
     }
     setAdding(true);
     try {
-      const res = await addStoreStaff(newUser);
-      if (res && res.error) {
-        toast.error(res.error);
+      const res = await fetch('/api/staff', { method: 'POST', body: JSON.stringify(newUser) });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
       } else {
         toast.success("Staff member added successfully");
         setIsAddingUser(false);
@@ -62,7 +64,9 @@ export default function StaffPage() {
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
-      await updateStaffRole(userId, newRole);
+      const res = await fetch('/api/staff', { method: 'PUT', body: JSON.stringify({ userId, role: newRole }) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       toast.success("Role updated");
       await loadStaff();
     } catch (e: any) {
@@ -73,7 +77,9 @@ export default function StaffPage() {
   const handleRemoveStaff = async (userId: string) => {
     if (!confirm('Are you sure you want to remove this staff member?')) return;
     try {
-      await removeStaff(userId);
+      const res = await fetch('/api/staff?userId=' + userId, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       toast.success("Staff member removed");
       await loadStaff();
     } catch (e: any) {

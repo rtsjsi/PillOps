@@ -1,19 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
-import { 
-  getAllStores, 
-  createStore, 
-  updateStore, 
-  deleteStore, 
-  getStoreStats,
-  getAllUsers,
-  createUser,
-  updateUserRole,
-  updateUserStore,
-  resetUserPassword,
-  deleteUser
-} from './actions';
+// Actions have been removed to prevent server action bundling into RSC tree
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -82,9 +70,9 @@ function AdminDashboardContent() {
     try {
       setLoading(true);
       const [storesRes, usersRes, statsRes] = await Promise.all([
-        getAllStores(),
-        getAllUsers(),
-        getStoreStats()
+        fetch('/api/admin?action=getAllStores').then(r => r.json()),
+        fetch('/api/admin?action=getAllUsers').then(r => r.json()),
+        fetch('/api/admin?action=getStoreStats').then(r => r.json())
       ]);
       
       if (storesRes.error) toast.error(storesRes.error);
@@ -125,7 +113,9 @@ function AdminDashboardContent() {
     e.preventDefault();
     setIsCreating(true);
     try {
-      await createStore(newStore);
+      const res = await fetch('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'createStore', data: newStore }) });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('Pharmacy onboarded successfully');
       setNewStore({ name: '', address: '', phone: '', gstin: '' });
       await loadData();
@@ -141,12 +131,21 @@ function AdminDashboardContent() {
     if (!editStore) return;
     setIsUpdatingStore(true);
     try {
-      await updateStore(editStore.id, {
-        name: editStore.name,
-        address: editStore.address,
-        phone: editStore.phone,
-        gstin: editStore.gstin
+      const res = await fetch('/api/admin', { 
+        method: 'PUT', 
+        body: JSON.stringify({ 
+          action: 'updateStore', 
+          id: editStore.id, 
+          data: {
+            name: editStore.name,
+            address: editStore.address,
+            phone: editStore.phone,
+            gstin: editStore.gstin
+          } 
+        }) 
       });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       setEditStore(null);
       await loadData();
       toast.success('Pharmacy updated successfully');
@@ -160,7 +159,9 @@ function AdminDashboardContent() {
   const handleDeleteStore = async (id: string) => {
     if (!confirm('Are you sure you want to delete this store?')) return;
     try {
-      await deleteStore(id);
+      const res = await fetch('/api/admin?action=deleteStore&id=' + id, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('Store deleted successfully');
       await loadData();
     } catch (err: any) {
@@ -173,7 +174,9 @@ function AdminDashboardContent() {
     e.preventDefault();
     setIsCreating(true);
     try {
-      await createUser(newUser);
+      const res = await fetch('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'createUser', data: newUser }) });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('User created successfully');
       setNewUser({ fullName: '', email: '', password: '', role: 'staff', storeId: stores[0]?.id || '' });
       await loadData();
@@ -187,7 +190,9 @@ function AdminDashboardContent() {
   const handleDeleteUser = async (id: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      await deleteUser(id);
+      const res = await fetch('/api/admin?action=deleteUser&id=' + id, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('User deleted successfully');
       await loadData();
     } catch (err: any) {
@@ -197,7 +202,9 @@ function AdminDashboardContent() {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await updateUserRole(userId, newRole);
+      const res = await fetch('/api/admin', { method: 'PUT', body: JSON.stringify({ action: 'updateUserRole', id: userId, role: newRole }) });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('User role updated');
       await loadData();
     } catch (err: any) {
@@ -210,7 +217,9 @@ function AdminDashboardContent() {
     if (!resetPasswordId) return;
     setIsResetting(true);
     try {
-      await resetUserPassword(resetPasswordId, newPassword);
+      const res = await fetch('/api/admin', { method: 'PUT', body: JSON.stringify({ action: 'resetUserPassword', id: resetPasswordId, password: newPassword }) });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
       toast.success('Password reset successfully');
       setResetPasswordId(null);
       setNewPassword('');

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
-import { updateStoreSettings } from '../actions';
+import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
 
@@ -58,7 +58,11 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
-      await updateStoreSettings(storeData);
+      const profile = await fetchUserProfile();
+      if (!profile?.store_id) throw new Error("No store assigned");
+      const supabase = createClient();
+      const { error } = await supabase.from('stores').update(storeData).eq('id', profile.store_id);
+      if (error) throw new Error(error.message);
       toast.success("Store settings updated successfully");
       await loadSettings();
     } catch (e: any) {
