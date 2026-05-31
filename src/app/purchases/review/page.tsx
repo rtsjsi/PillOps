@@ -253,7 +253,7 @@ export default function ReviewExtraction() {
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
                     </div>
                   </CardContent>
-               </Card>d>
+               </Card>
             ))}
          </div>
       </div>
