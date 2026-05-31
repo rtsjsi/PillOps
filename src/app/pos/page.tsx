@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { createInvoice } from '@/app/actions';
-import { fetchMedicines, fetchStoreSettings } from '@/lib/queries';
+import { fetchMedicines, fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
+import { createClient } from '@/utils/supabase/client';
 import { CartItem, Batch } from '@/lib/types';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -151,6 +151,9 @@ export default function POS() {
     setIsCheckingOut(true);
 
     try {
+        const profile = await fetchUserProfile();
+        if (!profile?.store_id) throw new Error("Store ID not found");
+
         const invoiceData = {
             invoiceNumber: generateInvoiceNumber(),
             customerName: customerName.trim() || 'Walk-in Customer',
@@ -162,13 +165,19 @@ export default function POS() {
             total,
         };
 
-        const result = await createInvoice(invoiceData, cart);
+        const supabase = createClient();
+        const { data: result, error } = await supabase.rpc('create_invoice', {
+            invoice_data: { ...invoiceData, storeId: profile.store_id },
+            items: cart,
+        });
+        
+        if (error) throw error;
         
         setCart([]);
         setDiscountPercent(0);
         setCustomerName('');
         setCustomerPhone('');
-        setLastInvoiceId(result.id);
+        setLastInvoiceId(result?.id || result);
         setIsSuccess(true);
         toast.success('Sale completed successfully');
         

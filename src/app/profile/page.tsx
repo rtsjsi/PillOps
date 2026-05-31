@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateProfile, updatePassword } from '../actions';
+import { createClient } from '@/utils/supabase/client';
 import { fetchUserProfile } from '@/lib/queries';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
@@ -43,7 +43,13 @@ export default function ProfilePage() {
   const handleUpdateName = async () => {
     setSavingName(true);
     try {
-      await updateProfile(newName);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not logged in");
+      
+      const { error } = await supabase.from('user_profiles').update({ full_name: newName }).eq('id', user.id);
+      if (error) throw error;
+      
       toast.success("Profile updated");
       setIsEditingName(false);
       await loadProfile();
@@ -61,7 +67,10 @@ export default function ProfilePage() {
     }
     setSavingPass(true);
     try {
-      await updatePassword(newPassword);
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      
       toast.success("Password updated successfully");
       setIsEditingPass(false);
       setNewPassword('');

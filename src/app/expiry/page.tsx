@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { disposeBatch } from '@/app/actions';
 import { fetchMedicines } from '@/lib/queries';
+import { createClient } from '@/utils/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getDaysUntilExpiry, getExpiryStatus, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
@@ -46,8 +46,10 @@ export default function ExpiryTracker() {
     setDialogOpen(false);
     const ids = batchToProcess === 'bulk' ? Array.from(selectedBatches) : [batchToProcess as string];
     try {
+      const supabase = createClient();
       for (const id of ids) {
-        await disposeBatch(id);
+        const { error } = await supabase.from('batches').update({ quantity: 0 }).eq('id', id);
+        if (error) throw error;
       }
       toast.success(dialogAction === 'return' ? 'Stock returned successfully.' : 'Stock disposed successfully.');
       if (batchToProcess === 'bulk') setSelectedBatches(new Set());

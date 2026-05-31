@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { savePurchaseInvoice } from '@/app/actions';
+import { createClient } from '@/utils/supabase/client';
+import { fetchUserProfile } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,7 +222,17 @@ export default function ManualPurchaseEntry() {
         items
       };
 
-      await savePurchaseInvoice(finalData, items);
+      const profile = await fetchUserProfile();
+      if (!profile?.store_id) throw new Error("Store ID not found");
+
+      const supabase = createClient();
+      const { error } = await supabase.rpc('save_purchase_invoice', {
+        purchase_data: { ...finalData, storeId: profile.store_id },
+        items: items,
+      });
+
+      if (error) throw new Error(error.message);
+
       setIsSuccess(true);
       sessionStorage.removeItem('manual_purchase_draft');
       setTimeout(() => {

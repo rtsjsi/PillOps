@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchUserProfile } from '@/lib/queries';
-import { getAvailableStoresForSuperAdmin } from '@/app/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MobileSidebar } from '@/components/layout/mobile-sidebar';
 
@@ -25,7 +24,8 @@ export function TopBar() {
     fetchUserProfile().then(p => {
       setProfile(p);
       if (p?.role === 'super_admin') {
-        getAvailableStoresForSuperAdmin().then(setStores).catch(() => {});
+        const supabase = createClient();
+        supabase.from('stores').select('id, name').order('name').then(res => setStores(res.data || [])).catch(() => {});
         
         // Read cookie to set initial select value
         const match = document.cookie.match(new RegExp('(^| )pillops_selected_store_id=([^;]+)'));
@@ -37,6 +37,7 @@ export function TopBar() {
   if (pathname === '/' || pathname === '/login') return null;
 
   const getTitle = () => {
+    if (!pathname) return 'Dashboard';
     const segment = pathname.split('/')[1];
     if (!segment) return 'Dashboard';
     return segment.charAt(0).toUpperCase() + segment.slice(1);

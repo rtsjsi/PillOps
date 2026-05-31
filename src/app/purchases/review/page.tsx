@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { savePurchaseInvoice } from '@/app/actions';
+import { createClient } from '@/utils/supabase/client';
+import { fetchUserProfile } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, cn } from '@/lib/utils';
 import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle, Loader2, Save, Trash2, Plus } from 'lucide-react';
@@ -117,7 +118,17 @@ export default function ReviewExtraction() {
     setIsSaving(true);
 
     try {
-        await savePurchaseInvoice(data, data.items);
+        const profile = await fetchUserProfile();
+        if (!profile?.store_id) throw new Error("Store ID not found");
+
+        const supabase = createClient();
+        const { error } = await supabase.rpc('save_purchase_invoice', {
+          purchase_data: { ...data, storeId: profile.store_id },
+          items: data.items,
+        });
+
+        if (error) throw new Error(error.message);
+
         sessionStorage.removeItem('pillops_extracted_invoice');
         setIsSuccess(true);
         setTimeout(() => {

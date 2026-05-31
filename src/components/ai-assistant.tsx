@@ -5,7 +5,6 @@ import { Sparkles, X, Send, Loader2, User, Bot, MessageSquare } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { askAI } from '@/app/actions';
 
 export function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,8 +28,31 @@ export function AIAssistant() {
     setIsLoading(true);
 
     try {
-      const response = await askAI(userMessage);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const res = await fetch('/api/ai/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userMessage })
+      });
+      if (!res.ok) throw new Error('API Error');
+      
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+
+      if (reader) {
+        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          assistantMessage += chunk;
+          setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1].content = assistantMessage;
+            return newMessages;
+          });
+        }
+      }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting right now." }]);
     } finally {
