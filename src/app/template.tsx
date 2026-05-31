@@ -5,13 +5,15 @@ import { usePathname } from 'next/navigation';
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Specifically skip the splash screen since it has its own hardcoded entrance animation
+  // Skip animation for splash screen (has its own entrance animation)
   if (pathname === '/') {
-      return <>{children}</>;
+    return <>{children}</>;
   }
 
+  // Use CSS animation class but NO key={pathname} — that would remount
+  // all children on every route change, destroying form state.
   return (
-    <div key={pathname} className="animate-page-in w-full h-full">
+    <div className="animate-page-in w-full h-full">
       {children}
     </div>
   );

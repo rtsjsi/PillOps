@@ -6,7 +6,9 @@ import { Settings as SettingsIcon, Bell, Store, Loader2, Save } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getStoreSettings, updateStoreSettings } from '../actions';
+import { Textarea } from "@/components/ui/textarea";
+import { fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
+import { updateStoreSettings } from '../actions';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
 
@@ -29,7 +31,7 @@ export default function SettingsPage() {
 
   async function loadSettings() {
     try {
-      const data = await getStoreSettings();
+      const data = await fetchStoreSettings();
       if (data) {
         setStoreData({
           name: data.name || '',
@@ -39,8 +41,7 @@ export default function SettingsPage() {
         });
       }
       
-      const { getUserProfile } = await import('../actions');
-      const profile = await getUserProfile();
+      const profile = await fetchUserProfile();
       setRole(profile?.role || 'staff');
     } catch (e: any) {
       toast.error(e.message || "Failed to load store settings");
@@ -89,7 +90,7 @@ export default function SettingsPage() {
              <form onSubmit={handleSaveStore} className="flex flex-col gap-4">
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pharmacy Name</Label>
-                  <Input required disabled={!isEditable} value={storeData.name} onChange={e => setStoreData({...storeData, name: e.target.value})} className="h-10 bg-slate-50" />
+                  <Input autoFocus required disabled={!isEditable} value={storeData.name} onChange={e => setStoreData({...storeData, name: e.target.value})} className="h-10 bg-slate-50" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Number</Label>
@@ -97,11 +98,11 @@ export default function SettingsPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GSTIN Number</Label>
-                  <Input disabled={!isEditable} value={storeData.gstin} onChange={e => setStoreData({...storeData, gstin: e.target.value})} className="h-10 bg-slate-50 uppercase" />
+                  <Input disabled={!isEditable} value={storeData.gstin} onChange={e => setStoreData({...storeData, gstin: e.target.value})} className="h-10 bg-slate-50 uppercase" pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$" title="Valid 15-character GSTIN required" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Physical Address</Label>
-                  <Input disabled={!isEditable} value={storeData.address} onChange={e => setStoreData({...storeData, address: e.target.value})} className="h-10 bg-slate-50" />
+                  <Textarea disabled={!isEditable} value={storeData.address} onChange={e => setStoreData({...storeData, address: e.target.value})} className="min-h-[80px] bg-slate-50 resize-y" />
                 </div>
 
                 <Button type="submit" disabled={!isEditable || saving} className="mt-4 font-bold shadow-md shadow-primary/20">

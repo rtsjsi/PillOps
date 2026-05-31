@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getMedicines, disposeBatch } from '@/app/actions';
+import { disposeBatch } from '@/app/actions';
+import { fetchMedicines } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getDaysUntilExpiry, getExpiryStatus, formatExpiryDate, formatCurrency, cn } from '@/lib/utils';
-import { Clock, AlertTriangle, Trash2, RotateCcw, TrendingDown } from 'lucide-react';
+import { Clock, AlertTriangle, Trash2, RotateCcw, TrendingDown, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 export default function ExpiryTracker() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -16,7 +18,7 @@ export default function ExpiryTracker() {
 
   async function fetchData() {
     try {
-      const data = await getMedicines();
+      const data = await fetchMedicines();
       setMedicines(data);
     } catch (error) {
       console.error('Failed to fetch expiry data:', error);
@@ -29,14 +31,44 @@ export default function ExpiryTracker() {
     fetchData();
   }, []);
 
-  const handleDispose = async (batchId: string) => {
-    if (!confirm('Are you sure you want to dispose of this batch? This will reduce its quantity to 0.')) return;
+  const [selectedBatches, setSelectedBatches] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'return' | 'dispose'>('dispose');
+  const [batchToProcess, setBatchToProcess] = useState<string | 'bulk' | null>(null);
+
+  const requestAction = (action: 'return' | 'dispose', target: string | 'bulk') => {
+    setDialogAction(action);
+    setBatchToProcess(target);
+    setDialogOpen(true);
+  };
+
+  const confirmAction = async () => {
+    setDialogOpen(false);
+    const ids = batchToProcess === 'bulk' ? Array.from(selectedBatches) : [batchToProcess as string];
     try {
-      await disposeBatch(batchId);
-      toast.success('Batch disposed successfully.');
+      for (const id of ids) {
+        await disposeBatch(id);
+      }
+      toast.success(dialogAction === 'return' ? 'Stock returned successfully.' : 'Stock disposed successfully.');
+      if (batchToProcess === 'bulk') setSelectedBatches(new Set());
       await fetchData();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to dispose batch.');
+      toast.error(error.message || 'Failed to process batch.');
+    }
+  };
+
+  const toggleBatch = (id: string) => {
+    const next = new Set(selectedBatches);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedBatches(next);
+  };
+
+  const selectAll = () => {
+    if (selectedBatches.size === items.length) {
+      setSelectedBatches(new Set());
+    } else {
+      setSelectedBatches(new Set(items.map(i => i.batch.id)));
     }
   };
 
@@ -93,13 +125,34 @@ export default function ExpiryTracker() {
          </CardContent>
       </Card>
 
+      <div className="flex justify-between items-center my-2">
+         <h2 className="text-xl font-bold tracking-tight">Expiring Batches ({items.length})</h2>
+         {selectedBatches.size > 0 && (
+           <div className="flex gap-2">
+             <Button variant="outline" size="sm" className="font-bold text-primary border-primary/20 bg-primary/5" onClick={() => requestAction('return', 'bulk')}>
+               <RotateCcw size={16} className="mr-2" /> Return Selected ({selectedBatches.size})
+             </Button>
+             <Button variant="outline" size="sm" className="font-bold text-red-500 border-red-200 bg-red-50 hover:bg-red-100 hover:text-red-600" onClick={() => requestAction('dispose', 'bulk')}>
+               <Trash2 size={16} className="mr-2" /> Dispose Selected ({selectedBatches.size})
+             </Button>
+           </div>
+         )}
+      </div>
+
+      <div className="flex items-center gap-2 px-1 mb-2">
+         <input type="checkbox" className="w-5 h-5 accent-primary cursor-pointer" checked={items.length > 0 && selectedBatches.size === items.length} onChange={selectAll} />
+         <span className="text-sm font-bold text-muted-foreground cursor-pointer" onClick={selectAll}>Select All</span>
+      </div>
+
       <div className="flex flex-col gap-4">
          {items.map(item => {
             const urgency = item.urgency;
+            const isSelected = selectedBatches.has(item.batch.id);
             
             return (
                <Card key={item.batch.id} className={cn(
                  "border-l-4 transition-all hover:shadow-md relative overflow-hidden",
+                 isSelected && "ring-2 ring-primary border-transparent",
                  urgency === 'expired' ? "border-l-red-600 bg-red-500/5" : 
                  urgency === 'critical' ? "border-l-orange-500 bg-orange-500/5" : 
                  urgency === 'warning' ? "border-l-amber-500 bg-amber-500/5" : 
@@ -111,9 +164,10 @@ export default function ExpiryTracker() {
                     </div>
                   )}
 
-                  <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0">
-                     <div className="grid gap-1">
-                        <CardTitle className="text-lg font-bold">{item.medicine.name}</CardTitle>
+                  <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
+                     <input type="checkbox" className="w-5 h-5 accent-primary shrink-0 cursor-pointer" checked={isSelected} onChange={() => toggleBatch(item.batch.id)} />
+                     <div className="flex-1 grid gap-1">
+                        <CardTitle className="text-lg font-bold cursor-pointer" onClick={() => toggleBatch(item.batch.id)}>{item.medicine.name}</CardTitle>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Section: {item.medicine.rack || 'Main'}</p>
                      </div>
                      <Badge variant={urgency === 'expired' || urgency === 'critical' ? 'destructive' : 'outline'} className={cn(
@@ -145,11 +199,11 @@ export default function ExpiryTracker() {
                     </div>
 
                     <div className="flex gap-2 pt-4 border-t border-border">
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl" onClick={() => handleDispose(item.batch.id)}>
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl" onClick={() => requestAction('return', item.batch.id)}>
                          <RotateCcw size={14} className="mr-2" />
                          Return to Vendor
                        </Button>
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100" onClick={() => handleDispose(item.batch.id)}>
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100" onClick={() => requestAction('dispose', item.batch.id)}>
                          <Trash2 size={14} className="mr-2" />
                          Dispose Stock
                        </Button>
@@ -165,6 +219,25 @@ export default function ExpiryTracker() {
             </Card>
           )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialogAction === 'return' ? 'Return Stock' : 'Dispose Stock'}</DialogTitle>
+            <DialogDescription>
+              {dialogAction === 'return' 
+                ? 'Are you sure you want to return the selected stock to the vendor? This will reduce the quantity to 0.'
+                : 'Are you sure you want to dispose of the selected stock? This will reduce the quantity to 0.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant={dialogAction === 'return' ? 'default' : 'destructive'} onClick={confirmAction}>
+              Confirm {dialogAction === 'return' ? 'Return' : 'Dispose'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

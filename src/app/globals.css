@@ -3,7 +3,7 @@
 @theme {
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-heading: var(--font-heading), serif;
+  --font-heading: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
   
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -34,8 +34,8 @@
   --color-ring: hsl(var(--ring));
 
   --color-warning: hsl(var(--warning));
-  --color-success: #10b981;
-  --color-danger: #f43f5e;
+  --color-success: hsl(var(--success));
+  --color-danger: hsl(var(--danger));
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -65,21 +65,21 @@
     --input: 228 10% 92%;
     --ring: 165 100% 41%;
     --radius: 0.5rem;
-    --success: 165 100% 41%;
-    --error: 10 79% 58%;
+    --success: 160 84% 39%;
+    --danger: 350 89% 60%;
   }
 
   .dark {
     --background: 228 14% 10%;
-    --foreground: 0 0% 100%;
+    --foreground: 0 0% 95%;
     --card: 228 14% 12%;
-    --card-foreground: 0 0% 100%;
+    --card-foreground: 0 0% 95%;
     --popover: 228 14% 12%;
-    --popover-foreground: 0 0% 100%;
+    --popover-foreground: 0 0% 95%;
     --primary: 165 100% 41%;
     --primary-foreground: 0 0% 100%;
     --secondary: 228 14% 16%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: 0 0% 95%;
     --muted: 228 14% 16%;
     --muted-foreground: 231 6% 65%;
     --accent: 165 100% 41%;
@@ -90,6 +90,8 @@
     --border: 228 14% 18%;
     --input: 228 14% 18%;
     --ring: 165 100% 41%;
+    --success: 160 84% 39%;
+    --danger: 350 89% 60%;
   }
 }
 
@@ -113,13 +115,13 @@
 }
 
 .glass-card {
-  @apply bg-white/70 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-sm;
+  @apply bg-card/70 backdrop-blur-xl border border-border/50 rounded-2xl shadow-sm;
 }
 
 @keyframes page-fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -139,7 +141,7 @@
     @apply font-mono font-bold text-sm;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar — adapts to theme */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -147,9 +149,18 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: hsl(var(--border));
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

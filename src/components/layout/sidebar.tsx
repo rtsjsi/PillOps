@@ -3,19 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Settings, 
-  Users, 
-  Pill,
-  User,
-  ShieldAlert,
-  ArrowDownToLine
-} from 'lucide-react';
+import { Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getUserProfile } from '@/app/actions';
+import { fetchUserProfile } from '@/lib/queries';
+import { getVisibleNavItems } from '@/lib/nav-config';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -23,49 +14,30 @@ export function Sidebar() {
 
   useEffect(() => {
     if (pathname === '/' || pathname === '/login') return;
-    async function loadProfile() {
-        const p = await getUserProfile();
-        setProfile(p);
-    }
-    loadProfile();
+    fetchUserProfile().then(setProfile).catch(() => {});
   }, [pathname]);
 
   if (pathname === '/' || pathname === '/login') return null;
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-    { icon: Package, label: 'Inventory', href: '/inventory' },
-    { icon: ArrowDownToLine, label: 'Purchases', href: '/purchases' },
-    { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
-    ...(profile?.role === 'super_admin' ? [
-        { icon: ShieldAlert, label: 'Super Admin', href: '/admin' }
-    ] : []),
-    ...(['owner', 'super_admin'].includes(profile?.role) ? [
-        { icon: Users, label: 'Staff Management', href: '/staff' }
-    ] : []),
-    { icon: User, label: 'My Profile', href: '/profile' },
-    ...(['owner', 'super_admin'].includes(profile?.role) ? [
-        { icon: Settings, label: 'Settings', href: '/settings' }
-    ] : []),
-];
+  const navItems = getVisibleNavItems(profile?.role);
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col border-r border-zinc-100 bg-white h-screen shrink-0">
+    <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card h-screen shrink-0">
       {/* Brand Header */}
       <div className="p-6 flex items-center gap-3">
-        <div className="h-10 w-10 bg-primary text-white rounded-lg flex items-center justify-center shadow-sm">
+        <div className="h-10 w-10 bg-primary text-primary-foreground rounded-lg flex items-center justify-center shadow-sm">
           <Pill size={20} />
         </div>
         <div>
-          <h1 className="font-bold text-lg text-[#44475b] tracking-tight">PillOps</h1>
-          <p className="text-[10px] font-medium text-[#7c7e8c]">
+          <h1 className="font-bold text-lg text-foreground tracking-tight">PillOps</h1>
+          <p className="text-[10px] font-medium text-muted-foreground">
             {profile?.store?.name || 'Clinical Pharmacy'}
           </p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-2">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-2" aria-label="Main navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -74,14 +46,15 @@ export function Sidebar() {
             <Link 
               key={item.href} 
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 "flex items-center gap-3 px-3 h-11 rounded-lg transition-all duration-200 text-sm",
                 isActive 
-                  ? "bg-primary/5 text-primary font-bold" 
-                  : "text-[#7c7e8c] hover:bg-zinc-50 hover:text-[#44475b]"
+                  ? "bg-primary/8 text-primary font-bold" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon size={18} className={cn(isActive ? "text-primary" : "text-[#7c7e8c]")} />
+              <Icon size={18} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
               {item.label}
             </Link>
           );

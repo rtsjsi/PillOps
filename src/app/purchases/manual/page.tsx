@@ -9,6 +9,86 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Plus, Trash2, Save, CheckCircle2, Loader2, Edit2 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
+import { fetchMedicines } from '@/lib/queries';
+import { useMedicineSearch } from '@/hooks/use-medicine-search';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { cn } from '@/lib/utils';
+
+function MedicineAutocomplete({ 
+  value, 
+  onChange, 
+  medicines 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  medicines: any[] 
+}) {
+  const { query, setQuery, results, isOpen, setIsOpen, selectedIndex, handleKeyDown } = useMedicineSearch({ medicines });
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Sync initial value
+  useEffect(() => {
+    if (value && value !== query) {
+      setQuery(value);
+    }
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [setIsOpen]);
+
+  return (
+    <div className="relative flex-1" ref={wrapperRef}>
+      <Input 
+        required 
+        placeholder="Medicine Name" 
+        value={query} 
+        onChange={e => {
+          setQuery(e.target.value);
+          onChange(e.target.value);
+          setIsOpen(true);
+        }} 
+        onFocus={() => {
+           if (query) setIsOpen(true);
+        }}
+        onKeyDown={(e) => {
+          const result = handleKeyDown(e);
+          if (result && typeof result !== 'boolean') {
+             onChange(result.name);
+             setQuery(result.name);
+             setIsOpen(false);
+          }
+        }}
+        className="font-bold border-none bg-slate-50 shadow-inner h-12 text-lg w-full" 
+      />
+      {isOpen && results.length > 0 && (
+        <div className="absolute z-50 top-full left-0 w-full bg-white border shadow-xl rounded-xl mt-1 max-h-60 overflow-y-auto">
+          {results.map((r, i) => (
+            <div 
+              key={r.id} 
+              className={cn("px-4 py-3 cursor-pointer hover:bg-slate-50 border-b last:border-0", selectedIndex === i && "bg-slate-100")}
+              onClick={() => {
+                onChange(r.name);
+                setQuery(r.name);
+                setIsOpen(false);
+              }}
+            >
+              <div className="font-bold">{r.name}</div>
+              <div className="text-xs text-muted-foreground">{r.genericName}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ManualPurchaseEntry() {
   const router = useRouter();
@@ -37,6 +117,29 @@ export default function ManualPurchaseEntry() {
       totalAmount: 0
     }
   ]);
+
+  const [medicines, setMedicines] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    fetchMedicines().then(setMedicines);
+    
+    const draft = sessionStorage.getItem('manual_purchase_draft');
+    if (draft) {
+       try {
+         const data = JSON.parse(draft);
+         if (data.invoiceData) setInvoiceData(data.invoiceData);
+         if (data.items) setItems(data.items);
+       } catch(e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      sessionStorage.setItem('manual_purchase_draft', JSON.stringify({ invoiceData, items }));
+    }
+  }, [invoiceData, items, isClient]);
 
   const handleInvoiceChange = (field: string, value: string) => {
     setInvoiceData({ ...invoiceData, [field]: value });
@@ -104,8 +207,9 @@ export default function ManualPurchaseEntry() {
     return { subtotal, discountAmount, gstAmount, total };
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!invoiceData.distributorName || !invoiceData.invoiceNumber) return;
     setError(null);
     setIsSaving(true);
 
@@ -119,6 +223,7 @@ export default function ManualPurchaseEntry() {
 
       await savePurchaseInvoice(finalData, items);
       setIsSuccess(true);
+      sessionStorage.removeItem('manual_purchase_draft');
       setTimeout(() => {
          router.push('/purchases');
       }, 2000);
@@ -128,6 +233,11 @@ export default function ManualPurchaseEntry() {
       setIsSaving(false);
     }
   };
+
+  useKeyboardShortcuts([
+    { keys: ['Control', 'Shift', 'N'], action: addItem },
+    { keys: ['Control', 'Enter'], action: () => handleSave() }
+  ]);
 
   if (isSuccess) {
     return (
@@ -166,7 +276,7 @@ export default function ManualPurchaseEntry() {
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
                <Label>Distributor Name</Label>
-               <Input required placeholder="Enter distributor name" value={invoiceData.distributorName} onChange={e => handleInvoiceChange('distributorName', e.target.value)} />
+               <Input autoFocus required placeholder="Enter distributor name" value={invoiceData.distributorName} onChange={e => handleInvoiceChange('distributorName', e.target.value)} />
             </div>
             <div className="space-y-1.5">
                <Label>Invoice Number</Label>
@@ -193,9 +303,11 @@ export default function ManualPurchaseEntry() {
                   <span className="bg-slate-800 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
                     {idx + 1}
                   </span>
-                  <div className="flex-1">
-                     <Input required placeholder="Medicine Name" value={item.medicineName} onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} className="font-bold border-none bg-slate-50 shadow-inner h-12 text-lg" />
-                  </div>
+                  <MedicineAutocomplete 
+                    value={item.medicineName} 
+                    onChange={val => handleItemChange(idx, 'medicineName', val)}
+                    medicines={medicines}
+                  />
                   {items.length > 1 && (
                      <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 shrink-0">
                         <Trash2 size={18} />
@@ -206,7 +318,11 @@ export default function ManualPurchaseEntry() {
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM/YY)</Label><Input required placeholder="12/25" value={item.expiryDate} onChange={e=>handleItemChange(idx, 'expiryDate', e.target.value)} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM/YY)</Label><Input required placeholder="12/25" value={item.expiryDate} onChange={e=>{
+                       let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+                       if (v.length >= 3) v = `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+                       handleItemChange(idx, 'expiryDate', v);
+                    }} className="h-9"/></div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><Input required type="number" step="0.01" value={item.purchasePrice || ''} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9"/></div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">MRP (₹)</Label><Input required type="number" step="0.01" value={item.mrp || ''} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9"/></div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Qty</Label><Input required type="number" value={item.quantity || ''} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9"/></div>

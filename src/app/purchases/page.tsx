@@ -1,12 +1,33 @@
-import { getPurchases } from '@/app/actions';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { fetchPurchases } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { FileScan, Box, History } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import TableLoading from '@/components/ui/tableLoading';
 
-export default async function Purchases() {
-  const purchases = await getPurchases();
+export default function Purchases() {
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPurchases() {
+      try {
+        const data = await fetchPurchases();
+        setPurchases(data);
+      } catch (error) {
+        console.error('Failed to fetch purchases:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPurchases();
+  }, []);
+
+  if (loading) return <TableLoading />;
 
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
@@ -86,5 +107,3 @@ export default async function Purchases() {
     </div>
   );
 }
-
-

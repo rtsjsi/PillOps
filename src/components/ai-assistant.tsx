@@ -49,6 +49,7 @@ export function AIAssistant() {
       {/* Trigger Button */}
       <Button 
         onClick={() => setIsOpen(true)}
+        aria-label="Open AI Assistant"
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl shadow-primary/40 z-40 md:flex hidden items-center justify-center animate-bounce hover:animate-none"
       >
         <Sparkles size={24} />
@@ -60,23 +61,23 @@ export function AIAssistant() {
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         {/* Header */}
-        <div className="p-6 bg-[#0f4c3a] text-white flex items-center justify-between">
+        <div className="p-6 bg-primary text-primary-foreground flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-lg">
+            <div className="p-2 bg-white/20 rounded-lg">
               <Sparkles size={20} />
             </div>
             <div>
               <h3 className="font-bold text-lg leading-tight">AI Assistant</h3>
-              <p className="text-[10px] font-black uppercase tracking-widest text-teal-300">Powered by Groq</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary-foreground/70">Powered by Groq</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/10 rounded-full">
+          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded-full" aria-label="Close AI Assistant">
             <X size={20} />
           </Button>
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-50/50 dark:bg-zinc-900/50">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/20">
           {messages.length === 0 && (
              <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-muted-foreground py-12">
                 <div className="p-4 bg-primary/5 rounded-full">
@@ -91,7 +92,7 @@ export function AIAssistant() {
                         <button 
                             key={i} 
                             onClick={() => setInput(s)}
-                            className="text-[11px] font-bold text-primary bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 hover:bg-primary hover:text-white transition-all text-left"
+                            className="text-[11px] font-bold text-primary bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 hover:bg-primary hover:text-primary-foreground transition-all text-left"
                         >
                             {s}
                         </button>
@@ -107,16 +108,16 @@ export function AIAssistant() {
             )}>
               <div className={cn(
                 "p-2 rounded-lg shrink-0",
-                m.role === 'user' ? "bg-primary text-white" : "bg-[#0f4c3a] text-white"
+                m.role === 'user' ? "bg-primary text-primary-foreground" : "bg-primary text-primary-foreground"
               )}>
                 {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
               <div className={cn(
                 "relative p-4 rounded-2xl text-sm font-medium shadow-sm max-w-[85%]",
-                m.role === 'user' ? "bg-primary text-white rounded-tr-none" : "bg-white dark:bg-zinc-800 text-foreground border border-border rounded-tl-none"
+                m.role === 'user' ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-card text-foreground border border-border rounded-tl-none"
               )}>
                 {m.role === 'assistant' && (
-                    <div className="absolute -top-3 left-0 bg-teal-500 text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-sm ring-2 ring-white">AI</div>
+                    <div className="absolute -top-3 left-0 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-sm ring-2 ring-background">AI</div>
                 )}
                 {m.content}
               </div>
@@ -124,10 +125,10 @@ export function AIAssistant() {
           ))}
           {isLoading && (
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-[#0f4c3a] text-white rounded-lg shrink-0 animate-pulse">
+              <div className="p-2 bg-primary text-primary-foreground rounded-lg shrink-0 animate-pulse">
                 <Bot size={16} />
               </div>
-              <div className="bg-white dark:bg-zinc-800 p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+              <div className="bg-card p-4 rounded-2xl rounded-tl-none border border-border shadow-sm flex items-center gap-2">
                 <Loader2 className="animate-spin text-primary" size={16} />
                 <span className="text-xs text-muted-foreground font-bold italic">Assistant is typing...</span>
               </div>
@@ -143,13 +144,14 @@ export function AIAssistant() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask anything..."
-              className="h-12 pr-12 rounded-xl bg-zinc-50 border-zinc-200 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+              className="h-12 pr-12 rounded-xl bg-muted/50 border-border focus:ring-4 focus:ring-primary/10 transition-all font-medium"
             />
             <Button 
                 onClick={handleSend}
                 size="icon" 
                 className="absolute right-1 top-1 h-10 w-10 rounded-lg shadow-lg"
                 disabled={!input.trim() || isLoading}
+                aria-label="Send message"
             >
               <Send size={18} />
             </Button>

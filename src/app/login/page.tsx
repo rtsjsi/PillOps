@@ -37,11 +37,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white selection:bg-teal-500/20">
+    <div className="min-h-screen flex flex-col md:flex-row bg-background selection:bg-primary/20">
       
-      {/* Left Panel - Deep Teal */}
-      <div className="md:w-1/2 bg-[#0f4c3a] p-8 md:p-16 flex flex-col justify-between text-white overflow-hidden relative">
-        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-teal-400/10 rounded-full blur-[100px]" />
+      {/* Left Panel - Primary Color */}
+      <div className="md:w-1/2 bg-primary p-8 md:p-16 flex flex-col justify-between text-primary-foreground overflow-hidden relative">
+        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-white/10 rounded-full blur-[100px]" />
         
         <div className="z-10 animate-page-in">
           <div className="flex items-center gap-3 mb-12">
@@ -52,10 +52,10 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-6">
-            <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight">
+            <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight text-white">
               Smart Pharmacy <br /> Operations.
             </h1>
-            <p className="text-teal-100/70 text-lg max-w-md">
+            <p className="text-primary-foreground/80 text-lg max-w-md">
               The next-generation platform for pharmaceutical inventory, sales, and automated compliance.
             </p>
 
@@ -65,8 +65,8 @@ export default function LoginPage() {
                  'Real-time Stock Urgency Alerts',
                  'Comprehensive Multi-branch Reporting'
                ].map((feature, i) => (
-                 <li key={i} className="flex items-center gap-3 text-teal-50 font-medium">
-                   <CheckCircle2 size={20} className="text-teal-400" />
+                 <li key={i} className="flex items-center gap-3 text-primary-foreground/90 font-medium">
+                   <CheckCircle2 size={20} className="text-primary-foreground" />
                    {feature}
                  </li>
                ))}
@@ -75,49 +75,50 @@ export default function LoginPage() {
         </div>
 
         <div className="z-10 pt-12 animate-page-in [animation-delay:200ms]">
-          <p className="text-teal-400/60 text-sm font-bold uppercase tracking-widest">Trusted by 500+ Pharmacies</p>
+          <p className="text-primary-foreground/60 text-sm font-bold uppercase tracking-widest">Trusted by 500+ Pharmacies</p>
         </div>
       </div>
 
       {/* Right Panel - Sign In Form */}
-      <div className="md:w-1/2 flex items-center justify-center p-8 bg-zinc-50/50">
+      <div className="md:w-1/2 flex items-center justify-center p-8 bg-muted/20">
         <div className="w-full max-w-[420px] animate-page-in [animation-delay:150ms]">
-          <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-teal-900/5 border border-zinc-100">
+          <div className="bg-card p-10 rounded-[2.5rem] shadow-2xl shadow-black/5 border border-border">
             <div className="mb-10 space-y-2">
-                <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900">Welcome Back</h2>
-                <p className="text-zinc-500 font-medium">Secure access to your store dashboard.</p>
+                <h2 className="text-3xl font-extrabold tracking-tight text-card-foreground">Welcome Back</h2>
+                <p className="text-muted-foreground font-medium">Secure access to your store dashboard.</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2 group">
-                <Label htmlFor="email" className="text-sm font-bold text-zinc-700 group-focus-within:text-[#0f4c3a] transition-colors">
+                <Label htmlFor="email" className="text-sm font-bold text-card-foreground group-focus-within:text-primary transition-colors">
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-[#0f4c3a] transition-colors" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input 
                     id="email"
                     type="email"
+                    autoFocus
                     placeholder="pharmacist@store.com"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-14 bg-zinc-50 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-[#0f4c3a] transition-all font-medium"
+                    className="pl-12 h-14 bg-muted/50 border-border rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium"
                   />
                 </div>
               </div>
 
               <div className="space-y-2 group">
                 <div className="flex items-center justify-between">
-                    <Label htmlFor="password" title="Password" className="text-sm font-bold text-zinc-700 group-focus-within:text-[#0f4c3a] transition-colors">
+                    <Label htmlFor="password" title="Password" className="text-sm font-bold text-card-foreground group-focus-within:text-primary transition-colors">
                         Password
                     </Label>
-                    <button type="button" className="text-xs font-bold text-[#0f4c3a] hover:underline">
+                    <button type="button" className="text-xs font-bold text-primary hover:underline">
                         Forgot password?
                     </button>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-[#0f4c3a] transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input 
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -125,12 +126,12 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 pr-12 h-14 bg-zinc-50 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-[#0f4c3a] transition-all font-medium"
+                    className="pl-12 pr-12 h-14 bg-muted/50 border-border rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium"
                   />
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -138,14 +139,14 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="text-sm font-bold text-red-600 bg-red-50 p-4 rounded-2xl border border-red-100 animate-in fade-in zoom-in-95 duration-300 text-center">
+                <div className="text-sm font-bold text-destructive bg-destructive/10 p-4 rounded-2xl border border-destructive/20 animate-in fade-in zoom-in-95 duration-300 text-center">
                   {error}
                 </div>
               )}
 
               <Button 
                 type="submit" 
-                className="w-full h-14 text-lg font-bold rounded-2xl bg-[#0f4c3a] hover:bg-[#0c3e2f] shadow-xl shadow-teal-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
+                className="w-full h-14 text-lg font-bold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
                 disabled={loading}
               >
                 {loading ? (
@@ -158,10 +159,10 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-8 pt-8 border-t border-zinc-100 text-center">
-              <p className="text-sm text-zinc-400 font-medium leading-relaxed">
+            <div className="mt-8 pt-8 border-t border-border text-center">
+              <p className="text-sm text-muted-foreground font-medium leading-relaxed">
                 New branch registration? <br />
-                <span className="text-zinc-600 font-bold underline cursor-pointer">Contact administrator</span>
+                <span className="text-foreground font-bold underline cursor-pointer hover:text-primary">Contact administrator</span>
               </p>
             </div>
           </div>

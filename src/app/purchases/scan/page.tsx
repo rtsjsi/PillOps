@@ -96,19 +96,14 @@ export default function AIInvoiceScanner() {
 
   if (scanning) {
     return (
-      <div style={{ height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000', color: 'white', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.15, background: 'url("https://www.transparenttextures.com/patterns/cubes.png")' }} />
-        <div style={{
-          position: 'absolute', top: '50%', left: 0, right: 0, height: '2px',
-          background: 'var(--color-primary)', boxShadow: '0 0 40px 10px var(--color-primary)',
-          zIndex: 10, animation: 'scanline 2s infinite linear alternate'
-        }} />
-        <Focus size={64} color="var(--color-primary)" style={{ marginBottom: '32px', animation: 'pulse 2s infinite' }} />
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '16px', zIndex: 10 }}>PillOps Vision AI</h2>
-        <p style={{ color: 'var(--color-primary)', zIndex: 10, textAlign: 'center', padding: '0 20px' }}>{progressText}</p>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-15 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
+        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-primary shadow-[0_0_40px_10px_var(--color-primary)] z-10 animate-[scanline_2s_infinite_linear_alternate]" />
+        <Focus size={64} className="text-primary mb-8 animate-pulse z-10" />
+        <h2 className="text-2xl mb-4 z-10">PillOps Vision AI</h2>
+        <p className="text-primary z-10 text-center px-5">{progressText}</p>
         
         <style dangerouslySetInnerHTML={{__html: `
-          @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
           @keyframes scanline { 0% { top: 10%; } 100% { top: 90%; } }
         `}} />
       </div>
@@ -116,46 +111,51 @@ export default function AIInvoiceScanner() {
   }
 
   return (
-    <div style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-bg-primary)' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 'var(--space-6)' }}>
-        <Link href="/purchases" className="btn btn-outline" style={{ padding: '8px', border: 'none' }}>
+    <div className="p-4 flex flex-col h-screen bg-background">
+      <header className="flex items-center gap-4 mb-6">
+        <Link href="/purchases" className="p-2 border-none">
            <ArrowLeft size={24} />
         </Link>
-        <h1 style={{ fontSize: '1.5rem' }}>Scan Invoice</h1>
+        <h1 className="text-2xl font-bold">Scan Invoice</h1>
       </header>
 
       {error && (
-        <div style={{ background: 'var(--color-danger)', color: 'white', padding: '16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-           <AlertTriangle size={24} style={{ flexShrink: 0 }} />
-           <div style={{ fontSize: '0.9rem' }}>
+        <div className="bg-red-500 text-white p-4 rounded-lg mb-4 flex items-start gap-3">
+           <AlertTriangle size={24} className="shrink-0" />
+           <div className="text-sm">
               <strong>Scan Failed:</strong> {error}
            </div>
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        <h2 style={{ fontSize: '1.1rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Choose an input method</h2>
+      <div className="flex-1 flex flex-col gap-4">
+        <h2 className="text-lg text-center text-muted-foreground">Choose an input method</h2>
         
         <button 
-          className="glass-card flex-center" 
-          style={{ flex: 1, flexDirection: 'column', gap: '16px', fontSize: '1.2rem', fontWeight: 'bold', border: '2px dashed var(--color-primary)', background: 'var(--color-primary-glow)' }}
+          className="flex-1 flex flex-col items-center justify-center gap-4 text-xl font-bold border-2 border-dashed border-primary bg-primary/10 rounded-xl"
           onClick={() => {
-              // In a real mobile PWA, we'd trigger the <input capture="environment"> here
-              fileInputRef.current?.click();
+              if (fileInputRef.current) {
+                fileInputRef.current.capture = 'environment';
+                fileInputRef.current.click();
+              }
           }}
         >
-          <Camera size={48} color="var(--color-primary)" />
+          <Camera size={48} className="text-primary" />
           Open Camera
         </button>
 
-        <div className="flex-center text-muted">OR</div>
+        <div className="flex items-center justify-center text-muted-foreground">OR</div>
 
         <button 
-          className="glass-card flex-center" 
-          style={{ flex: 1, flexDirection: 'column', gap: '16px', fontSize: '1.2rem', fontWeight: 'bold', border: '1px solid rgba(107,114,128,0.2)' }}
-          onClick={() => fileInputRef.current?.click()}
+          className="flex-1 flex flex-col items-center justify-center gap-4 text-xl font-bold border border-muted/20 bg-card rounded-xl"
+          onClick={() => {
+            if (fileInputRef.current) {
+              fileInputRef.current.removeAttribute('capture');
+              fileInputRef.current.click();
+            }
+          }}
         >
-          <Upload size={48} color="var(--color-text-muted)" />
+          <Upload size={48} className="text-muted-foreground" />
           Upload Image
         </button>
         
@@ -163,7 +163,7 @@ export default function AIInvoiceScanner() {
           type="file" 
           accept="image/*" 
           ref={fileInputRef} 
-          style={{ display: 'none' }} 
+          className="hidden" 
           onChange={handleFileChange}
         />
       </div>

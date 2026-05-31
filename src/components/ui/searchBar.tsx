@@ -1,71 +1,50 @@
 'use client';
 
 import { Search, X } from 'lucide-react';
-import { InputHTMLAttributes } from 'react';
+import { InputHTMLAttributes, forwardRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface SearchBarProps extends InputHTMLAttributes<HTMLInputElement> {
   onClear?: () => void;
 }
 
-export function SearchBar({ value, onChange, onClear, placeholder = 'Search...', className = '', ...props }: SearchBarProps) {
-  return (
-    <div 
-      className={className}
-      style={{ 
-        position: 'relative', 
-        display: 'flex', 
-        alignItems: 'center',
-        width: '100%'
-      }}
-    >
-      <Search 
-        size={18} 
-        style={{ 
-          position: 'absolute', 
-          left: '12px', 
-          color: 'var(--color-text-muted)' 
-        }} 
-      />
-      
-      <input
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '12px 36px 12px 40px',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid rgba(107, 114, 128, 0.2)',
-          background: 'var(--color-bg-glass)',
-          color: 'var(--color-text-primary)',
-          fontSize: 'var(--font-size-base)',
-          outline: 'none',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
-          transition: 'border-color 0.2s',
-        }}
-        {...props}
-      />
+export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
+  function SearchBar({ value, onChange, onClear, placeholder = 'Search...', className = '', ...props }, ref) {
+    return (
+      <div className={cn('relative flex items-center w-full', className)}>
+        <Search
+          size={18}
+          className="absolute left-3 text-muted-foreground pointer-events-none"
+        />
 
-      {value && onClear && (
-        <button
-          onClick={onClear}
-          style={{
-            position: 'absolute',
-            right: '12px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            display: 'flex',
-            color: 'var(--color-text-muted)'
-          }}
-          aria-label="Clear search"
-        >
-          <X size={16} />
-        </button>
-      )}
-    </div>
-  );
-}
+        <input
+          ref={ref}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={cn(
+            'w-full py-3 pl-10 pr-9',
+            'rounded-lg border border-border',
+            'bg-muted/30 text-foreground placeholder:text-muted-foreground',
+            'text-sm font-medium',
+            'outline-none transition-all duration-200',
+            'focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:bg-background',
+            'shadow-inner shadow-black/[0.02]'
+          )}
+          {...props}
+        />
 
-
+        {value && onClear && (
+          <button
+            onClick={onClear}
+            className="absolute right-3 p-0.5 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-muted"
+            aria-label="Clear search"
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+    );
+  }
+);

@@ -1,21 +1,46 @@
-import { getInvoiceById, getStoreSettings } from '@/app/actions';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { fetchInvoiceById, fetchStoreSettings } from '@/lib/queries';
 import { formatCurrency } from '@/lib/utils';
-import { Printer, ArrowLeft, Pill, CheckCircle2 } from 'lucide-react';
+import { Printer, ArrowLeft, Pill, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+export default function InvoicePage() {
+  const { id } = useParams<{ id: string }>();
+  const [invoice, setInvoice] = useState<any>(null);
+  const [storeInfo, setStoreInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function InvoicePage({ params }: PageProps) {
-  const { id } = await params;
-  
-  const [invoice, storeInfo] = await Promise.all([
-    getInvoiceById(id),
-    getStoreSettings()
-  ]);
+  useEffect(() => {
+    if (!id) return;
+    async function load() {
+      try {
+        const [inv, store] = await Promise.all([
+          fetchInvoiceById(id),
+          fetchStoreSettings(),
+        ]);
+        setInvoice(inv);
+        setStoreInfo(store);
+      } catch (err) {
+        console.error('Failed to load invoice:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="container min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!invoice) {
     return (
@@ -38,8 +63,7 @@ export default async function InvoicePage({ params }: PageProps) {
           </Button>
           <Button 
             className="font-bold shadow-lg shadow-primary/20"
-            // Simple approach for server component print
-            // In a real app we'd use a client component for the button
+            onClick={() => window.print()}
           >
             <Printer size={16} className="mr-2" /> Print Invoice
           </Button>
@@ -104,8 +128,8 @@ export default async function InvoicePage({ params }: PageProps) {
                 <tbody className="divide-y divide-slate-100">
                     {invoice.items.map((item: any, idx: number) => (
                         <tr key={idx} className="text-sm font-bold text-slate-700">
-                            <td className="p-4">{item.medicineId}</td>
-                            <td className="p-4 text-center text-slate-500 font-mono text-xs">{item.batchId}</td>
+                            <td className="p-4">{item.medicine?.name || item.medicineId}</td>
+                            <td className="p-4 text-center text-slate-500 font-mono text-xs">{item.batch?.batch_number || item.batchId}</td>
                             <td className="p-4 text-center text-slate-500 text-xs">{item.expiryDate}</td>
                             <td className="p-4 text-right">{item.quantity}</td>
                             <td className="p-4 text-right text-slate-500">₹{item.mrp.toFixed(2)}</td>
@@ -158,15 +182,6 @@ export default async function InvoicePage({ params }: PageProps) {
           </div>
         </CardContent>
       </Card>
-      
-      {/* Simple Client Print Script */}
-      <script dangerouslySetInnerHTML={{ __html: `
-        document.querySelectorAll('button').forEach(btn => {
-          if (btn.innerText.includes('Print')) {
-            btn.addEventListener('click', () => window.print());
-          }
-        });
-      `}} />
     </div>
   );
 }

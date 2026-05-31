@@ -42,27 +42,11 @@ export function AIStreamer({ prompt }: AIStreamerProps) {
   }, [prompt]);
 
   return (
-    <div className="glass-card" style={{ padding: 'var(--space-4)', minHeight: '100px' }}>
-      <p style={{ lineHeight: '1.6', color: 'var(--color-text-primary)' }}>
+    <div className="bg-card/70 backdrop-blur-xl border border-border/50 rounded-2xl shadow-sm p-6 min-h-[100px]">
+      <p className="leading-relaxed text-foreground whitespace-pre-wrap">
         {text}
-        {loading && <span className="blinking-cursor">|</span>}
+        {loading && <span className="inline-block w-0.5 h-4 ml-0.5 bg-primary animate-pulse align-middle" />}
       </p>
-      
-      <style jsx>{`
-        .blinking-cursor {
-          display: inline-block;
-          width: 2px;
-          margin-left: 2px;
-          background-color: var(--color-primary);
-          animation: blink 1s step-end infinite;
-        }
-        @keyframes blink {
-          from, to { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
-
-

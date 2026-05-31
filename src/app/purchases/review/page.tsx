@@ -41,7 +41,6 @@ export default function ReviewExtraction() {
   const [data, setData] = useState<InvoiceData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any) => {
@@ -78,7 +77,6 @@ export default function ReviewExtraction() {
         purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
       }]
     });
-    setIsEditing(true);
   };
 
   useEffect(() => {
@@ -97,6 +95,25 @@ export default function ReviewExtraction() {
 
   const handleConfirm = async () => {
     if (!data || isSaving) return;
+
+    // Validation
+    if (!data.distributorName || !data.invoiceNumber || !data.invoiceDate) {
+      setError("Please fill in all invoice details.");
+      return;
+    }
+    
+    for (const item of data.items) {
+      if (!item.medicineName || !item.batchNumber || !item.expiryDate || !item.quantity || !item.purchasePrice) {
+        setError("Please fill in all required fields for each item (Name, Batch, Expiry, Qty, Rate).");
+        return;
+      }
+      // Simple MM/YY format validation
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(item.expiryDate)) {
+        setError(`Invalid expiry format for ${item.medicineName || 'an item'}. Use MM/YY.`);
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     try {
@@ -159,15 +176,28 @@ export default function ReviewExtraction() {
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
             <div className="space-y-1">
                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Distributor</Label>
-               <p className="text-lg font-bold text-slate-900">{data.distributorName}</p>
+               <Input 
+                 value={data.distributorName} 
+                 onChange={e => setData({ ...data, distributorName: e.target.value })} 
+                 className="text-lg font-bold text-slate-900 bg-white"
+               />
             </div>
             <div className="space-y-1 text-right">
                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Date</Label>
-               <p className="text-lg font-bold text-slate-900">{data.invoiceDate}</p>
+               <Input 
+                 type="date"
+                 value={data.invoiceDate} 
+                 onChange={e => setData({ ...data, invoiceDate: e.target.value })} 
+                 className="text-lg font-bold text-slate-900 bg-white text-right"
+               />
             </div>
             <div className="space-y-1">
                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Invoice Number</Label>
-               <p className="text-lg font-bold text-primary">{data.invoiceNumber}</p>
+               <Input 
+                 value={data.invoiceNumber} 
+                 onChange={e => setData({ ...data, invoiceNumber: e.target.value })} 
+                 className="text-lg font-bold text-primary bg-white"
+               />
             </div>
             <div className="space-y-1 text-right">
                <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Net Amount</Label>
@@ -180,42 +210,27 @@ export default function ReviewExtraction() {
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
              <div className="flex gap-2">
-                 {isEditing && (
-                     <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20">
-                         <Plus size={16} className="mr-2" /> Add Row
-                     </Button>
-                 )}
-                 <Button 
-                    variant={isEditing ? 'default' : 'outline'}
-                    size="sm"
-                    className={cn("rounded-full font-bold", isEditing && "bg-emerald-500 hover:bg-emerald-600")}
-                    onClick={() => setIsEditing(!isEditing)}
-                 >
-                     {isEditing ? <CheckCircle2 size={16} className="mr-2" /> : <Edit2 size={16} className="mr-2" />} 
-                     {isEditing ? 'Save Changes' : 'Edit Items'}
+                 <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20">
+                     <Plus size={16} className="mr-2" /> Add Row
                  </Button>
              </div>
          </div>
          
          <div className="flex flex-col gap-4">
-            {data.items.map((item: any, idx: number) => (
-               <Card key={idx} className={cn("transition-all", isEditing && "ring-2 ring-primary/20 border-primary/30")}>
+             {data.items.map((item: any, idx: number) => (
+               <Card key={idx} className="transition-all ring-2 ring-primary/20 border-primary/30">
                   <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
                     <span className="bg-primary text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
                       {idx + 1}
                     </span>
                     <div className="flex-1">
-                      {isEditing ? (
-                          <Input 
-                            value={item.medicineName} 
-                            onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
-                            className="h-10 font-bold bg-muted/50"
-                          />
-                      ) : (
-                          <CardTitle className="text-base font-bold text-slate-800">{item.medicineName}</CardTitle>
-                      )}
+                      <Input 
+                        value={item.medicineName} 
+                        onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
+                        className="h-10 font-bold bg-muted/50"
+                      />
                     </div>
-                    {isEditing && data.items.length > 1 && (
+                    {data.items.length > 1 && (
                        <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 hover:bg-rose-50 rounded-full shrink-0">
                            <Trash2 size={16} />
                        </Button>
@@ -224,28 +239,21 @@ export default function ReviewExtraction() {
                   
                   <CardContent className="p-4 pt-0">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {isEditing ? (
-                        <>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (YYYY-MM)</Label><Input value={item.expiryDate} onChange={e=>handleItemChange(idx, 'expiryDate', e.target.value)} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
-                          <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Batch</span><span className="text-sm font-bold">{item.batchNumber}</span></div>
-                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Expiry</span><span className="text-sm font-bold">{item.expiryDate}</span></div>
-                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Rate</span><span className="text-sm font-bold">₹{item.purchasePrice}</span></div>
-                          <div className="flex flex-col"><span className="text-[9px] uppercase tracking-widest font-black text-muted-foreground mb-0.5">Quantity</span><span className="text-sm font-bold text-primary">{item.quantity} {item.freeQuantity > 0 && <span className="text-emerald-500 font-black">+{item.freeQuantity}</span>}</span></div>
-                        </>
-                      )}
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM/YY)</Label><Input placeholder="12/25" value={item.expiryDate} onChange={e=>{
+                         let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+                         if (v.length >= 3) v = `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+                         handleItemChange(idx, 'expiryDate', v);
+                      }} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
                     </div>
                   </CardContent>
-               </Card>
+               </Card>d>
             ))}
          </div>
       </div>

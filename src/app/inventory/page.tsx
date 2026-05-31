@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getMedicines } from '@/app/actions';
+import { fetchMedicines, fetchStoreSettings } from '@/lib/queries';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ import {
 
 export default function Inventory() {
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [storeName, setStoreName] = useState('My Pharmacy');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -34,10 +35,14 @@ export default function Inventory() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await getMedicines();
+        const [data, settings] = await Promise.all([
+          fetchMedicines(),
+          fetchStoreSettings()
+        ]);
         setMedicines(data);
+        if (settings?.name) setStoreName(settings.name);
       } catch (error) {
-        console.error('Failed to fetch medicines:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
@@ -143,6 +148,7 @@ export default function Inventory() {
       <div className="flex gap-2">
         <div className="flex-1">
           <SearchBar 
+            autoFocus
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
             onClear={() => setSearchQuery('')}
@@ -173,7 +179,7 @@ export default function Inventory() {
              
              <InventoryPDFButton 
                 data={filteredMedicines.map(m => ({ ...m, totalQty: getTotalStock(m.batches) }))} 
-                storeName="My Pharmacy" 
+                storeName={storeName} 
              />
           </DropdownMenuContent>
         </DropdownMenu>

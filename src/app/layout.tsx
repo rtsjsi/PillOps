@@ -5,7 +5,6 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { ThemeProvider } from '@/components/ui/themeProvider';
 import { cn } from "@/lib/utils";
-import { CommandPalette } from '@/components/command-palette';
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -34,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Top Bar */}
               <TopBar />
               
-              <main className="flex-1 overflow-y-auto bg-slate-50/50 p-4 lg:p-8 scroll-smooth pb-32 lg:pb-8">
+              <main className="flex-1 overflow-y-auto bg-muted/20 p-4 lg:p-8 scroll-smooth pb-20 lg:pb-8">
                 <div className="max-w-7xl mx-auto w-full">
                   {children}
                 </div>

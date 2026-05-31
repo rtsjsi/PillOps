@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getUserProfile, updateProfile, updatePassword } from '../actions';
+import { updateProfile, updatePassword } from '../actions';
+import { fetchUserProfile } from '@/lib/queries';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
 
@@ -29,7 +30,7 @@ export default function ProfilePage() {
 
   async function loadProfile() {
     try {
-      const data = await getUserProfile();
+      const data = await fetchUserProfile();
       setProfile(data);
       setNewName(data?.full_name || '');
     } catch (e: any) {

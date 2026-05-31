@@ -2,24 +2,29 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, ShoppingCart, BarChart3, User, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { fetchUserProfile } from '@/lib/queries';
+import { getBottomNavItems } from '@/lib/nav-config';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (pathname === '/' || pathname === '/login') return;
+    fetchUserProfile().then(setProfile).catch(() => {});
+  }, [pathname]);
 
   if (pathname === '/' || pathname === '/login') return null;
 
-  const links = [
-    { href: '/dashboard', label: 'Home', icon: Home },
-    { href: '/inventory', label: 'Stock', icon: Package },
-    { href: '/pos', label: 'Sale', icon: ShoppingCart },
-    { href: '/admin', label: 'Reports', icon: BarChart3 },
-    { href: '/profile', label: 'Staff', icon: User },
-  ];
+  const links = getBottomNavItems(profile?.role);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[45] h-[65px] bg-white border-t border-zinc-100 flex items-center justify-around px-2 pb-safe md:hidden shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-[45] h-[65px] bg-card border-t border-border flex items-center justify-around px-2 pb-safe md:hidden shadow-[0_-1px_10px_rgba(0,0,0,0.03)]"
+      aria-label="Quick navigation"
+    >
       {links.map((link) => {
         const Icon = link.icon;
         const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href));
@@ -28,9 +33,10 @@ export default function BottomNav() {
           <Link
             key={link.href}
             href={link.href}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200",
-              isActive ? "text-primary" : "text-[#7c7e8c] hover:text-[#44475b]"
+              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <div className="p-1">
@@ -38,9 +44,9 @@ export default function BottomNav() {
             </div>
             <span className={cn(
                 "text-[10px] font-medium transition-all duration-200",
-                isActive ? "text-primary" : "text-[#7c7e8c]"
+                isActive ? "text-primary font-bold" : "text-muted-foreground"
             )}>
-                {link.label}
+                {link.shortLabel}
             </span>
           </Link>
         );
