@@ -141,8 +141,16 @@ export async function fetchUserProfile() {
 
   if (error || !profile) return null;
 
-  // If super_admin, no fixed store
+  // If super_admin, read the selected store from cookie
   if (profile.role === 'super_admin') {
+    const match = typeof document !== 'undefined' ? document.cookie.match(/(^| )pillops_selected_store_id=([^;]+)/) : null;
+    const selectedStoreId = match ? match[2] : null;
+    
+    if (selectedStoreId) {
+      const { data: store } = await supabase.from('stores').select('*').eq('id', selectedStoreId).single();
+      return { ...profile, store_id: selectedStoreId, store, user };
+    }
+    
     return { ...profile, user };
   }
 

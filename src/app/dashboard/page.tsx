@@ -49,7 +49,12 @@ export default function Dashboard() {
         // 1. Get user profile to obtain store_id
         const profile = await fetchUserProfile();
         if (!profile?.store_id) {
-          setErrorMsg('Unable to determine your store. Please contact support.');
+          if (profile?.role === 'super_admin') {
+            setErrorMsg('Please select a pharmacy from the top bar to view its dashboard.');
+          } else {
+            setErrorMsg('Unable to determine your store. Please contact support.');
+          }
+          setLoading(false);
           return;
         }
 
