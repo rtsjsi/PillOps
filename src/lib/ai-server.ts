@@ -1,6 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import OpenAI from 'openai';
-
 // 1. The universal strict prompt string defined once
 export const PROMPT = `You are an expert pharmacy data extraction AI.
 Analyze this image of a distributor pharmaceutical invoice. Extract the tabular structured data perfectly.
@@ -36,9 +33,12 @@ Return ONLY a valid JSON object matching exactly this schema:
 }`;
 
 // --- TIER EXECUTORS ---
+// Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
+// initialization time (Error 1102 fix).
 
 export async function runGroq(imageBase64: string) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
+  const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
   const chatCompletion = await client.chat.completions.create({
     messages: [
@@ -54,6 +54,7 @@ export async function runGroq(imageBase64: string) {
 export async function runGemini(imageBase64: string, mimeType: string) {
   if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
   const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest", generationConfig: { responseMimeType: "application/json", temperature: 0.1 } });
   const result = await model.generateContent([PROMPT, { inlineData: { data: cleanBase64, mimeType: mimeType } }]);
@@ -63,6 +64,7 @@ export async function runGemini(imageBase64: string, mimeType: string) {
 
 export async function runGitHub(imageBase64: string) {
   if (!process.env.GITHUB_TOKEN) throw new Error("Missing GITHUB_TOKEN");
+  const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ baseURL: "https://models.inference.ai.azure.com", apiKey: process.env.GITHUB_TOKEN });
   const chatCompletion = await client.chat.completions.create({
     messages: [
@@ -74,8 +76,10 @@ export async function runGitHub(imageBase64: string) {
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
+
 export async function chatWithGroq(userPrompt: string, systemPrompt: string = "You are a helpful pharmacy assistant for the PillOps platform.") {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
+  const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
   const chatCompletion = await client.chat.completions.create({
     messages: [
