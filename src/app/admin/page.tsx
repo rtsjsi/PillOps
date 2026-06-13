@@ -295,7 +295,7 @@ function AdminDashboardContent() {
       {activeTab === 'stores' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Onboarding Form */}
-          <section className="lg:col-span-1 sticky top-24">
+          <section className="lg:col-span-1 lg:sticky lg:top-24">
             <Card className="border-none shadow-xl shadow-primary/5 bg-white overflow-hidden">
               <CardHeader className="bg-primary/5 border-b border-primary/5">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -418,7 +418,7 @@ function AdminDashboardContent() {
       {activeTab === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Create User Form */}
-          <section className="lg:col-span-1 sticky top-24">
+          <section className="lg:col-span-1 lg:sticky lg:top-24">
             <Card className="border-none shadow-xl shadow-indigo-500/5 bg-white overflow-hidden">
               <CardHeader className="bg-indigo-50 border-b border-indigo-100">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-indigo-600 flex items-center gap-2">
