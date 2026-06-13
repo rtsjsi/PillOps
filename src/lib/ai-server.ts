@@ -27,7 +27,7 @@ Return ONLY a valid JSON object matching exactly this schema:
       "discountPercent": number (default to 0),
       "mrp": number (Maximum Retail Price),
       "gstPercent": number (e.g. 5, 12, 18),
-      "expiryDate": string (format YYYY-MM. E.g if image says "07-27" convert to "2027-07". If "12/26" convert to "2026-12". This field is absolutely critical.),
+      "expiryDate": string (format MM-YYYY. E.g if image says "07-27" convert to "07-2027". If "12/26" convert to "12-2026". If not available, leave blank ""),
       "totalAmount": number (The final row amount for that item) 
     }
   ],

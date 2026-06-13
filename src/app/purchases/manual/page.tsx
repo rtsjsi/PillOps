@@ -149,10 +149,15 @@ export default function ManualPurchaseEntry() {
 
     try {
       const totals = calculateTotals();
+      const formattedItems = items.map(item => {
+         const [mm, yyyy] = item.expiryDate.split('-');
+         return { ...item, expiryDate: `${yyyy}-${mm}` };
+      });
+
       const finalData = {
         ...invoiceData,
         ...totals,
-        items
+        items: formattedItems
       };
 
       const profile = await fetchUserProfile();
@@ -161,7 +166,7 @@ export default function ManualPurchaseEntry() {
       const supabase = createClient();
       const { error } = await supabase.rpc('save_purchase_invoice', {
         purchase_data: { ...finalData, storeId: profile.store_id },
-        items: items,
+        items: formattedItems,
       });
 
       if (error) throw new Error(error.message);
@@ -262,9 +267,9 @@ export default function ManualPurchaseEntry() {
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM/YY)</Label><Input required placeholder="12/25" value={item.expiryDate} onChange={e=>{
-                       let v = e.target.value.replace(/\D/g, '').substring(0, 4);
-                       if (v.length >= 3) v = `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM-YYYY)</Label><Input required placeholder="12-2025" value={item.expiryDate} onChange={e=>{
+                       let v = e.target.value.replace(/\D/g, '').substring(0, 6);
+                       if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
                        handleItemChange(idx, 'expiryDate', v);
                     }} className="h-9"/></div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><Input required type="number" step="0.01" value={item.purchasePrice || ''} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9"/></div>

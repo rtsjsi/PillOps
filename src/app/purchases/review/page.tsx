@@ -117,13 +117,21 @@ export default function ReviewExtraction() {
     }
     
     for (const item of data.items) {
-      if (!item.medicineName || !item.batchNumber || !item.expiryDate || !item.quantity || !item.purchasePrice) {
-        setError("Please fill in all required fields for each item (Name, Batch, Expiry, Qty, Rate).");
+      if (
+          !item.medicineName || !item.batchNumber || !item.expiryDate ||
+          item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
+          item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
+          item.mrp === undefined || item.mrp === null || isNaN(item.mrp) ||
+          item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ||
+          item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ||
+          item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent)
+      ) {
+        setError("All columns are mandatory. Please fill in Name, Batch, Expiry, Qty, Rate, MRP, Disc%, Free Qty, and GST% for each item.");
         return;
       }
-      // Simple MM/YY format validation
-      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(item.expiryDate)) {
-        setError(`Invalid expiry format for ${item.medicineName || 'an item'}. Use MM/YY.`);
+      // Simple MM-YYYY format validation
+      if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
+        setError(`Invalid expiry format for ${item.medicineName || 'an item'}. Use MM-YYYY.`);
         return;
       }
     }
@@ -134,10 +142,16 @@ export default function ReviewExtraction() {
         const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
+        // Format MM-YYYY to YYYY-MM for the database
+        const formattedItems = data.items.map(item => {
+           const [mm, yyyy] = item.expiryDate.split('-');
+           return { ...item, expiryDate: `${yyyy}-${mm}` };
+        });
+
         const supabase = createClient();
         const { error } = await supabase.rpc('save_purchase_invoice', {
           purchase_data: { ...data, storeId: profile.store_id },
-          items: data.items,
+          items: formattedItems,
         });
 
         if (error) throw new Error(error.message);
@@ -264,9 +278,9 @@ export default function ReviewExtraction() {
                   <CardContent className="p-4 pt-0">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM/YY)</Label><Input placeholder="12/25" value={item.expiryDate} onChange={e=>{
-                         let v = e.target.value.replace(/\D/g, '').substring(0, 4);
-                         if (v.length >= 3) v = `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
+                         let v = e.target.value.replace(/\D/g, '').substring(0, 6);
+                         if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
                          handleItemChange(idx, 'expiryDate', v);
                       }} className="h-9 text-xs"/></div>
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
