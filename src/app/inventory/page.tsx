@@ -100,7 +100,7 @@ export default function Inventory() {
       </header>
 
       {/* Expiry Alerts Banner */}
-      <div className="sticky top-[70px] z-30 -mx-4 px-4 py-2 bg-background/80 backdrop-blur-md border-b border-border mb-2">
+      <div className="-mx-4 px-4 py-2 border-b border-border mb-2 bg-background">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2">
           <button 
             onClick={() => setExpiryFilter(expiryFilter === 'expired' ? null : 'expired')}
