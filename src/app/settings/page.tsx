@@ -139,9 +139,7 @@ export default function SettingsPage() {
                />
              </div>
 
-             <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                Email scheduling engine coming soon
-             </div>
+
           </CardContent>
         </Card>
       </div>
