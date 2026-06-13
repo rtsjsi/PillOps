@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
+import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
+import { fetchMedicines } from '@/lib/queries';
 
 export default function ReviewExtraction() {
   const router = useRouter();
@@ -43,11 +45,22 @@ export default function ReviewExtraction() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [medicines, setMedicines] = useState<any[]>([]);
 
-  const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any) => {
+  useEffect(() => {
+    fetchMedicines().then(setMedicines);
+  }, []);
+
+  const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any, fullItem?: any) => {
     if (!data) return;
     const newItems = [...data.items];
     newItems[idx] = { ...newItems[idx], [field]: value } as InvoiceItem;
+    
+    if (field === 'medicineName' && fullItem) {
+      if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
+      if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
+      if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
+    }
     
     // Auto-calc total
     if (['quantity', 'purchasePrice', 'discountPercent', 'gstPercent'].includes(field)) {
@@ -235,10 +248,10 @@ export default function ReviewExtraction() {
                       {idx + 1}
                     </span>
                     <div className="flex-1">
-                      <Input 
+                      <MedicineAutocomplete 
                         value={item.medicineName} 
-                        onChange={e => handleItemChange(idx, 'medicineName', e.target.value)} 
-                        className="h-10 font-bold bg-muted/50"
+                        onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
+                        medicines={medicines}
                       />
                     </div>
                     {data.items.length > 1 && (

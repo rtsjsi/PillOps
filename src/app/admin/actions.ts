@@ -353,3 +353,88 @@ export async function deleteUser(userId: string) {
 
   return { success: true };
 }
+
+// ═══════════════════════════════════════════════════════════
+// ITEM MASTER MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+export async function getAllGlobalItems() {
+  try {
+    await checkSuperAdmin();
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from('global_medicines')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw new Error(error.message);
+    
+    const mapped = (data ?? []).map(g => ({
+      ...g,
+      genericName: g.generic_name || g.genericName,
+      hsnCode: g.hsn_code || g.hsnCode,
+      gstPercent: g.gst_percent || g.gstPercent,
+    }));
+    return { data: mapped, error: null };
+  } catch (err: any) {
+    return { data: null, error: err.message || 'Failed to fetch global items' };
+  }
+}
+
+export async function createGlobalItem(itemData: any) {
+  await checkSuperAdmin();
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient
+    .from('global_medicines')
+    .insert({
+      name: itemData.name,
+      generic_name: itemData.genericName || '',
+      category: itemData.category || 'Tablet',
+      manufacturer: itemData.manufacturer || '',
+      hsn_code: itemData.hsnCode || '',
+      schedule: itemData.schedule || 'OTC',
+      gst_percent: itemData.gstPercent || 12,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateGlobalItem(id: string, itemData: any) {
+  await checkSuperAdmin();
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient
+    .from('global_medicines')
+    .update({
+      name: itemData.name,
+      generic_name: itemData.genericName || '',
+      category: itemData.category || 'Tablet',
+      manufacturer: itemData.manufacturer || '',
+      hsn_code: itemData.hsnCode || '',
+      schedule: itemData.schedule || 'OTC',
+      gst_percent: itemData.gstPercent || 12,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteGlobalItem(id: string) {
+  await checkSuperAdmin();
+  const adminClient = createAdminClient();
+  
+  // Notice: The foreign key from medicines to global_medicines has ON DELETE CASCADE.
+  // We should warn the admin before deleting, but if they confirm, it drops linked store medicines too.
+  const { error } = await adminClient
+    .from('global_medicines')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+  return { success: true };
+}

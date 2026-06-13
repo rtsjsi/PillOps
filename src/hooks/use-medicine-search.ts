@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { fetchGlobalMedicines } from '@/lib/queries';
 
 interface MedicineSearchResult {
   id: string;
@@ -43,7 +44,7 @@ export function useMedicineSearch({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(
-    (searchQuery: string) => {
+    async (searchQuery: string) => {
       if (!searchQuery.trim()) {
         setResults([]);
         setIsOpen(false);
@@ -51,17 +52,36 @@ export function useMedicineSearch({
       }
 
       const q = searchQuery.toLowerCase();
-      const matches = medicines
+      // 1. Search local medicines
+      const localMatches = medicines
         .filter(
           (m) =>
             m.name?.toLowerCase().includes(q) ||
             m.genericName?.toLowerCase().includes(q)
         )
         .slice(0, maxResults);
-
-      setResults(matches);
+        
+      // Show local matches instantly
+      setResults(localMatches);
       setSelectedIndex(-1);
-      setIsOpen(matches.length > 0);
+      setIsOpen(localMatches.length > 0);
+
+      // 2. Fetch global medicines (only if we need more results or always to enrich)
+      try {
+         const globalMatches = await fetchGlobalMedicines(searchQuery);
+         // Filter out ones we already have locally to avoid duplicates
+         const newGlobals = globalMatches.filter(g => !localMatches.some(l => l.name?.toLowerCase() === g.name?.toLowerCase()));
+         
+         if (newGlobals.length > 0) {
+            setResults(prev => {
+               const combined = [...prev, ...newGlobals].slice(0, maxResults * 2);
+               setIsOpen(combined.length > 0);
+               return combined;
+            });
+         }
+      } catch (err) {
+         console.error('Failed to fetch global medicines', err);
+      }
     },
     [medicines, maxResults]
   );

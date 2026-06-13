@@ -13,6 +13,17 @@ export type MedicineCategory =
 
 export type DrugSchedule = 'H' | 'H1' | 'X' | 'OTC';
 
+export interface GlobalMedicine {
+  id: string;
+  name: string;
+  genericName: string;
+  category: MedicineCategory;
+  manufacturer: string;
+  hsnCode: string;
+  schedule: DrugSchedule;
+  gstPercent: number;
+}
+
 export interface Batch {
   id: string;
   batchNumber: string;

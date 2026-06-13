@@ -22,7 +22,8 @@ import {
   ShieldAlert,
   Trash2,
   Edit,
-  Building
+  Building,
+  Database
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,12 +39,13 @@ import { useSearchParams } from 'next/navigation';
 
 function AdminDashboardContent() {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') as 'stores' | 'users' || 'stores';
-  const [activeTab, setActiveTab] = useState<'stores' | 'users'>(initialTab);
+  const initialTab = searchParams.get('tab') as 'stores' | 'users' | 'items' || 'stores';
+  const [activeTab, setActiveTab] = useState<'stores' | 'users' | 'items'>(initialTab);
   
   // Data states
   const [stores, setStores] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0 });
   const [loading, setLoading] = useState(true);
   
@@ -54,8 +56,11 @@ function AdminDashboardContent() {
   // Form states
   const [newStore, setNewStore] = useState({ name: '', address: '', phone: '', gstin: '' });
   const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '', role: 'staff', storeId: '' });
+  const [newItem, setNewItem] = useState({ name: '', genericName: '', category: 'Tablet', manufacturer: '', hsnCode: '', schedule: 'OTC', gstPercent: 12 });
   const [editStore, setEditStore] = useState<{ id: string; name: string; address: string; phone: string; gstin: string } | null>(null);
+  const [editItem, setEditItem] = useState<any | null>(null);
   const [isUpdatingStore, setIsUpdatingStore] = useState(false);
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false);
 
   // Reset password states
   const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
@@ -69,21 +74,25 @@ function AdminDashboardContent() {
   async function loadData() {
     try {
       setLoading(true);
-      const [storesRes, usersRes, statsRes] = await Promise.all([
+      const [storesRes, usersRes, itemsRes, statsRes] = await Promise.all([
         fetch('/api/admin?action=getAllStores').then(r => r.json()),
         fetch('/api/admin?action=getAllUsers').then(r => r.json()),
+        fetch('/api/admin?action=getAllGlobalItems').then(r => r.json()),
         fetch('/api/admin?action=getStoreStats').then(r => r.json())
       ]);
       
       if (storesRes.error) toast.error(storesRes.error);
       if (usersRes.error) toast.error(usersRes.error);
+      if (itemsRes.error) toast.error(itemsRes.error);
       if (statsRes.error) toast.error(statsRes.error);
 
       const storesData = storesRes.data || [];
       const usersData = usersRes.data || [];
+      const itemsData = itemsRes.data || [];
       
       setStores(storesData);
       setUsers(usersData);
+      setItems(itemsData);
       setStats(statsRes.data || { totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0, freeStores: 0 } as any);
       
     } catch (err: any) {
@@ -107,6 +116,14 @@ function AdminDashboardContent() {
       u.storeName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter(i => 
+      i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.genericName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.manufacturer?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [items, searchQuery]);
 
   // Handlers for Stores
   const handleCreateStore = async (e: React.FormEvent) => {
@@ -230,6 +247,58 @@ function AdminDashboardContent() {
     }
   };
 
+  // Handlers for Items
+  const handleCreateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+    try {
+      const res = await fetch('/api/admin', { method: 'POST', body: JSON.stringify({ action: 'createGlobalItem', data: newItem }) });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success('Global item created successfully');
+      setNewItem({ name: '', genericName: '', category: 'Tablet', manufacturer: '', hsnCode: '', schedule: 'OTC', gstPercent: 12 });
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Item creation failed');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleUpdateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    setIsUpdatingItem(true);
+    try {
+      const res = await fetch('/api/admin', { 
+        method: 'PUT', 
+        body: JSON.stringify({ action: 'updateGlobalItem', id: editItem.id, data: editItem }) 
+      });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success('Item updated successfully');
+      setEditItem(null);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update item');
+    } finally {
+      setIsUpdatingItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this global item? WARNING: This may also remove the item from all linked pharmacies.')) return;
+    try {
+      const res = await fetch('/api/admin?action=deleteGlobalItem&id=' + id, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      toast.success('Item deleted successfully');
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete item');
+    }
+  };
+
   if (loading) return <GlobalLoading />;
 
   return (
@@ -260,6 +329,16 @@ function AdminDashboardContent() {
             <Users size={16} className="inline-block mr-2" />
             Users
           </button>
+          <button 
+            onClick={() => setActiveTab('items')}
+            className={cn(
+              "px-6 py-2 rounded-xl text-sm font-bold transition-all",
+              activeTab === 'items' ? "bg-white text-primary shadow-sm ring-1 ring-black/5" : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <Database size={16} className="inline-block mr-2" />
+            Item Master
+          </button>
         </div>
       </header>
 
@@ -279,7 +358,7 @@ function AdminDashboardContent() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 mt-4">
         <h2 className="text-xl font-bold tracking-tight">
-          {activeTab === 'stores' ? 'Active Pharmacies' : 'System Users'}
+          {activeTab === 'stores' ? 'Active Pharmacies' : activeTab === 'users' ? 'System Users' : 'Global Item Master'}
         </h2>
         <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
@@ -581,6 +660,192 @@ function AdminDashboardContent() {
                   <div className="p-16 text-center text-muted-foreground bg-white rounded-2xl border border-dashed border-slate-200">
                       <Users size={32} className="mx-auto mb-4 opacity-20" />
                       <p className="font-medium">No users found.</p>
+                  </div>
+              )}
+          </section>
+        </div>
+      )}
+
+      {activeTab === 'items' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <section className="lg:col-span-1 lg:sticky lg:top-24">
+            <Card className="border-none shadow-xl shadow-amber-500/5 bg-white overflow-hidden">
+              <CardHeader className="bg-amber-50 border-b border-amber-100">
+                  <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
+                    <Database size={16} /> Add Global Item
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleCreateItem} className="flex flex-col gap-4">
+                  <div className="grid gap-1.5">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Medicine Name</Label>
+                    <Input required placeholder="E.g. Dolo 650mg" className="rounded-xl bg-slate-50 h-10"
+                        value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Generic Name</Label>
+                    <Input placeholder="E.g. Paracetamol" className="rounded-xl bg-slate-50 h-10"
+                        value={newItem.genericName} onChange={e => setNewItem({...newItem, genericName: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</Label>
+                      <Select value={newItem.category} onValueChange={(v) => setNewItem({...newItem, category: v || 'Tablet'})}>
+                        <SelectTrigger className="rounded-xl bg-slate-50 h-10 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tablet">Tablet</SelectItem>
+                          <SelectItem value="Capsule">Capsule</SelectItem>
+                          <SelectItem value="Syrup">Syrup</SelectItem>
+                          <SelectItem value="Injection">Injection</SelectItem>
+                          <SelectItem value="Ointment">Ointment</SelectItem>
+                          <SelectItem value="Drops">Drops</SelectItem>
+                          <SelectItem value="Inhaler">Inhaler</SelectItem>
+                          <SelectItem value="Sachet">Sachet</SelectItem>
+                          <SelectItem value="OTC">OTC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GST %</Label>
+                      <Input type="number" step="0.1" required className="rounded-xl bg-slate-50 h-10"
+                          value={newItem.gstPercent} onChange={e => setNewItem({...newItem, gstPercent: parseFloat(e.target.value)})} />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manufacturer</Label>
+                    <Input placeholder="E.g. Micro Labs" className="rounded-xl bg-slate-50 h-10"
+                        value={newItem.manufacturer} onChange={e => setNewItem({...newItem, manufacturer: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">HSN Code</Label>
+                    <Input placeholder="HSN Code" className="rounded-xl bg-slate-50 h-10"
+                        value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} />
+                  </div>
+                  <Button type="submit" disabled={isCreating} className="h-12 mt-2 font-bold rounded-xl bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
+                      {isCreating ? <Loader2 className="mr-2 animate-spin" /> : <Plus size={18} className="mr-2" />}
+                      Add Global Item
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </section>
+
+          <Dialog open={!!editItem} onOpenChange={(open) => !open && setEditItem(null)}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Global Item</DialogTitle>
+              </DialogHeader>
+              {editItem && (
+                <form onSubmit={handleUpdateItem} className="flex flex-col gap-4 mt-2">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Medicine Name</Label>
+                    <Input required className="rounded-xl h-10"
+                        value={editItem.name} onChange={e => setEditItem({...editItem, name: e.target.value})} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Generic Name</Label>
+                    <Input className="rounded-xl h-10"
+                        value={editItem.genericName} onChange={e => setEditItem({...editItem, genericName: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs font-bold text-slate-500">Category</Label>
+                      <Select value={editItem.category} onValueChange={(v) => setEditItem({...editItem, category: v || 'Tablet'})}>
+                        <SelectTrigger className="rounded-xl h-10 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tablet">Tablet</SelectItem>
+                          <SelectItem value="Capsule">Capsule</SelectItem>
+                          <SelectItem value="Syrup">Syrup</SelectItem>
+                          <SelectItem value="Injection">Injection</SelectItem>
+                          <SelectItem value="Ointment">Ointment</SelectItem>
+                          <SelectItem value="Drops">Drops</SelectItem>
+                          <SelectItem value="Inhaler">Inhaler</SelectItem>
+                          <SelectItem value="Sachet">Sachet</SelectItem>
+                          <SelectItem value="OTC">OTC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs font-bold text-slate-500">GST %</Label>
+                      <Input type="number" step="0.1" required className="rounded-xl h-10"
+                          value={editItem.gstPercent} onChange={e => setEditItem({...editItem, gstPercent: parseFloat(e.target.value)})} />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs font-bold text-slate-500">Manufacturer</Label>
+                    <Input className="rounded-xl h-10"
+                        value={editItem.manufacturer} onChange={e => setEditItem({...editItem, manufacturer: e.target.value})} />
+                  </div>
+                  <Button type="submit" disabled={isUpdatingItem} className="h-12 mt-2 font-bold rounded-xl bg-amber-600 hover:bg-amber-700">
+                      {isUpdatingItem ? <Loader2 className="mr-2 animate-spin" /> : <Edit className="mr-2" size={16} />}
+                      Save Changes
+                  </Button>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <section className="lg:col-span-2 space-y-4">
+              <div className="flex items-center justify-between px-2 mb-2 text-sm text-muted-foreground font-medium">
+                  <span>Displaying {filteredItems.length} items</span>
+              </div>
+              {filteredItems.map(item => (
+                  <Card key={item.id} className="hover:shadow-md transition-all border-slate-200 shadow-sm bg-white overflow-hidden">
+                    <CardContent className="p-0 flex flex-col sm:flex-row">
+                      <div className="p-5 flex-1 flex items-start gap-4">
+                          <div className="p-3 bg-amber-50 rounded-full text-amber-500 mt-1">
+                              <Database size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                              <div className="flex items-center mb-1">
+                                  <h3 className="font-bold text-base leading-tight truncate">{item.name}</h3>
+                              </div>
+                              <p className="text-xs font-medium text-slate-500 truncate">{item.genericName || 'No generic name'}</p>
+                              
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
+                                  <Badge variant="outline" className="text-[10px] font-bold text-amber-600 bg-amber-50 border-amber-200">
+                                      {item.category}
+                                  </Badge>
+                                  <span className="text-[10px] font-bold text-slate-400">
+                                      GST: {item.gstPercent}%
+                                  </span>
+                                  {item.manufacturer && (
+                                    <span className="text-[10px] font-medium text-slate-400 truncate">
+                                        Mfr: {item.manufacturer}
+                                    </span>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                      <div className="px-4 py-3 sm:py-4 border-t sm:border-t-0 sm:border-l border-slate-100 flex flex-row sm:flex-col items-center justify-center gap-2 bg-slate-50/50">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-xs font-bold h-8 border-slate-200 text-slate-600 hover:text-amber-600 hover:border-amber-200"
+                            onClick={() => setEditItem(item)}
+                          >
+                              <Edit size={14} className="mr-1.5" /> Edit
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full text-xs font-bold h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" 
+                            onClick={() => handleDeleteItem(item.id)}
+                          >
+                              <Trash2 size={14} className="mr-1.5" /> Remove
+                          </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+              ))}
+              {filteredItems.length === 0 && (
+                  <div className="p-16 text-center text-muted-foreground bg-white rounded-2xl border border-dashed border-slate-200">
+                      <Database size={32} className="mx-auto mb-4 opacity-20" />
+                      <p className="font-medium">No items found.</p>
                   </div>
               )}
           </section>

@@ -17,43 +17,58 @@ export async function fetchMedicines() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('medicines')
-    .select('*, batches(*)')
-    .order('name', { ascending: true });
+    .select('*, global_medicines(*), batches(*)');
 
   if (error) throw new Error(error.message);
   
-  return (data ?? []).map((med: any) => ({
-    ...med,
-    genericName: med.generic_name || med.genericName,
-    reorderLevel: med.reorder_level || med.reorderLevel,
-    hsnCode: med.hsn_code || med.hsnCode,
-    gstPercent: med.gst_percent || med.gstPercent,
-    batches: (med.batches || []).map((b: any) => ({
-      ...b,
-      batchNumber: b.batch_number || b.batchNumber,
-      expiryDate: b.expiry_date || b.expiryDate,
-      purchasePrice: b.purchase_price || b.purchasePrice,
-      receivedDate: b.received_date || b.receivedDate
-    }))
-  }));
+  const mappedData = (data ?? []).map((med: any) => {
+    const g = med.global_medicines || {};
+    return {
+      ...med,
+      name: g.name,
+      genericName: g.generic_name || g.genericName,
+      category: g.category,
+      manufacturer: g.manufacturer,
+      hsnCode: g.hsn_code || g.hsnCode,
+      schedule: g.schedule,
+      gstPercent: g.gst_percent || g.gstPercent,
+      reorderLevel: med.reorder_level || med.reorderLevel,
+      rack: med.rack,
+      batches: (med.batches || []).map((b: any) => ({
+        ...b,
+        batchNumber: b.batch_number || b.batchNumber,
+        expiryDate: b.expiry_date || b.expiryDate,
+        purchasePrice: b.purchase_price || b.purchasePrice,
+        receivedDate: b.received_date || b.receivedDate
+      }))
+    };
+  });
+
+  return mappedData.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function fetchMedicineById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('medicines')
-    .select('*, batches(*)')
+    .select('*, global_medicines(*), batches(*)')
     .eq('id', id)
     .single();
 
   if (error || !data) return null;
   
+  const g = data.global_medicines || {};
   return {
     ...data,
-    genericName: data.generic_name || data.genericName,
+    name: g.name,
+    genericName: g.generic_name || g.genericName,
+    category: g.category,
+    manufacturer: g.manufacturer,
+    hsnCode: g.hsn_code || g.hsnCode,
+    schedule: g.schedule,
+    gstPercent: g.gst_percent || g.gstPercent,
     reorderLevel: data.reorder_level || data.reorderLevel,
-    hsnCode: data.hsn_code || data.hsnCode,
-    gstPercent: data.gst_percent || data.gstPercent,
+    rack: data.rack,
     batches: (data.batches || []).map((b: any) => ({
       ...b,
       batchNumber: b.batch_number || b.batchNumber,
@@ -62,6 +77,25 @@ export async function fetchMedicineById(id: string) {
       receivedDate: b.received_date || b.receivedDate
     }))
   };
+}
+
+export async function fetchGlobalMedicines(searchQuery: string) {
+  if (!searchQuery) return [];
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('global_medicines')
+    .select('*')
+    .ilike('name', `%${searchQuery}%`)
+    .limit(20);
+
+  if (error) throw new Error(error.message);
+  
+  return (data ?? []).map((g: any) => ({
+    ...g,
+    genericName: g.generic_name || g.genericName,
+    hsnCode: g.hsn_code || g.hsnCode,
+    gstPercent: g.gst_percent || g.gstPercent,
+  }));
 }
 
 // ─── Invoices ──────────────────────────────────────────────
