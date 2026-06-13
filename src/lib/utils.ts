@@ -67,6 +67,7 @@ export function formatDate(date: Date | string) {
 }
 
 export function getDaysUntilExpiry(expiryDate: string) {
+  if (!expiryDate) return 0;
   // Input format: YYYY-MM
   const now = new Date();
   const [year, month] = expiryDate.split('-').map(Number);
@@ -84,6 +85,7 @@ export function getExpiryStatus(days: number) {
 }
 
 export function formatExpiryDate(date: string) {
+  if (!date) return 'N/A';
   // Input format: YYYY-MM
   const [year, month] = date.split('-');
   const d = new Date(Number(year), Number(month) - 1);
