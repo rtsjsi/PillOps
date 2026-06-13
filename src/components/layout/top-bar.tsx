@@ -25,7 +25,11 @@ export function TopBar() {
       setProfile(p);
       if (p?.role === 'super_admin') {
         const supabase = createClient();
-        supabase.from('stores').select('id, name').order('name').then(res => setStores(res.data || [])).catch(() => {});
+        const fetchStores = async () => {
+          const { data } = await supabase.from('stores').select('id, name').order('name');
+          setStores(data || []);
+        };
+        fetchStores();
         
         // Read cookie to set initial select value
         const match = document.cookie.match(new RegExp('(^| )pillops_selected_store_id=([^;]+)'));
