@@ -4,6 +4,11 @@ Analyze this image of a distributor pharmaceutical invoice. Extract the tabular 
 Pay close attention to table headers.
 Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date.
 
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items. If there are 20 items, you must return 20 objects in the "items" array.
+2. Carefully scroll/read through the entire image from top to bottom.
+3. Ensure you capture every detail on every line (quantity, batch, free quantity, GST, discount). If a field is blank, use 0 or "", but DO NOT omit the item itself.
+
 Return ONLY a valid JSON object matching exactly this schema:
 {
   "distributorName": string,
