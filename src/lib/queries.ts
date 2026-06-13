@@ -21,7 +21,21 @@ export async function fetchMedicines() {
     .order('name', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  
+  return (data ?? []).map((med: any) => ({
+    ...med,
+    genericName: med.generic_name || med.genericName,
+    reorderLevel: med.reorder_level || med.reorderLevel,
+    hsnCode: med.hsn_code || med.hsnCode,
+    gstPercent: med.gst_percent || med.gstPercent,
+    batches: (med.batches || []).map((b: any) => ({
+      ...b,
+      batchNumber: b.batch_number || b.batchNumber,
+      expiryDate: b.expiry_date || b.expiryDate,
+      purchasePrice: b.purchase_price || b.purchasePrice,
+      receivedDate: b.received_date || b.receivedDate
+    }))
+  }));
 }
 
 export async function fetchMedicineById(id: string) {
@@ -32,8 +46,22 @@ export async function fetchMedicineById(id: string) {
     .eq('id', id)
     .single();
 
-  if (error) return null;
-  return data;
+  if (error || !data) return null;
+  
+  return {
+    ...data,
+    genericName: data.generic_name || data.genericName,
+    reorderLevel: data.reorder_level || data.reorderLevel,
+    hsnCode: data.hsn_code || data.hsnCode,
+    gstPercent: data.gst_percent || data.gstPercent,
+    batches: (data.batches || []).map((b: any) => ({
+      ...b,
+      batchNumber: b.batch_number || b.batchNumber,
+      expiryDate: b.expiry_date || b.expiryDate,
+      purchasePrice: b.purchase_price || b.purchasePrice,
+      receivedDate: b.received_date || b.receivedDate
+    }))
+  };
 }
 
 // ─── Invoices ──────────────────────────────────────────────
@@ -46,7 +74,20 @@ export async function fetchInvoices() {
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((inv: any) => ({
+    ...inv,
+    invoiceNumber: inv.invoice_number || inv.invoiceNumber,
+    customerName: inv.customer_name || inv.customerName,
+    customerPhone: inv.customer_phone || inv.customerPhone,
+    gstAmount: inv.gst_amount || inv.gstAmount,
+    discountPercent: inv.discount_percent || inv.discountPercent,
+    discountAmount: inv.discount_amount || inv.discountAmount,
+    items: (inv.items || []).map((item: any) => ({
+      ...item,
+      expiryDate: item.expiry_date || item.expiryDate,
+      gstPercent: item.gst_percent || item.gstPercent,
+    }))
+  }));
 }
 
 export async function fetchInvoiceById(id: string) {
@@ -57,8 +98,21 @@ export async function fetchInvoiceById(id: string) {
     .eq('id', id)
     .single();
 
-  if (error) return null;
-  return data;
+  if (error || !data) return null;
+  return {
+    ...data,
+    invoiceNumber: data.invoice_number || data.invoiceNumber,
+    customerName: data.customer_name || data.customerName,
+    customerPhone: data.customer_phone || data.customerPhone,
+    gstAmount: data.gst_amount || data.gstAmount,
+    discountPercent: data.discount_percent || data.discountPercent,
+    discountAmount: data.discount_amount || data.discountAmount,
+    items: (data.items || []).map((item: any) => ({
+      ...item,
+      expiryDate: item.expiry_date || item.expiryDate,
+      gstPercent: item.gst_percent || item.gstPercent,
+    }))
+  };
 }
 
 // ─── Dashboard Stats (via RPC) ─────────────────────────────
@@ -109,7 +163,25 @@ export async function fetchPurchases() {
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((purch: any) => ({
+    ...purch,
+    distributorName: purch.distributor_name || purch.distributorName,
+    invoiceNumber: purch.invoice_number || purch.invoiceNumber,
+    invoiceDate: purch.invoice_date || purch.invoiceDate,
+    gstAmount: purch.gst_amount || purch.gstAmount,
+    discountAmount: purch.discount_amount || purch.discountAmount,
+    items: (purch.items || []).map((item: any) => ({
+      ...item,
+      medicineName: item.medicine_name || item.medicineName,
+      batchNumber: item.batch_number || item.batchNumber,
+      freeQuantity: item.free_quantity || item.freeQuantity,
+      purchasePrice: item.purchase_price || item.purchasePrice,
+      discountPercent: item.discount_percent || item.discountPercent,
+      gstPercent: item.gst_percent || item.gstPercent,
+      expiryDate: item.expiry_date || item.expiryDate,
+      totalAmount: item.total_amount || item.totalAmount
+    }))
+  }));
 }
 
 // ─── Store Settings ────────────────────────────────────────
