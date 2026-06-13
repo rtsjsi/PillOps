@@ -31,6 +31,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      document.cookie = 'pillops_selected_store_id=; path=/; max-age=0';
       router.push('/dashboard');
       router.refresh();
     }
