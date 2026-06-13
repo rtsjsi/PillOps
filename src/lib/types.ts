@@ -39,7 +39,7 @@ export interface GlobalMedicine {
   imageUrl?: string;
 }
 
-export interface Batch {
+export interface StoreInventoryBatch {
   id: string;
   batchNumber: string;
   quantity: number;
@@ -68,7 +68,7 @@ export interface Medicine {
   barcode?: string;
   imageUrl?: string;
   
-  batches: Batch[];
+  batches: StoreInventoryBatch[];
   reorderLevel: number;
   totalStock: number;
   rack: string;
@@ -82,7 +82,7 @@ export interface Medicine {
 export interface CartItem {
   medicineId: string;
   medicineName: string;
-  batchId: string;
+  storeInventoryBatchId: string;
   batchNumber: string;
   quantity: number;
   mrp: number;
@@ -111,7 +111,7 @@ export type ExpiryUrgency = 'expired' | 'critical' | 'warning' | 'watch' | 'safe
 export interface ExpiryItem {
   medicineId: string;
   medicineName: string;
-  batchId: string;
+  storeInventoryBatchId: string;
   batchNumber: string;
   quantity: number;
   mrp: number;

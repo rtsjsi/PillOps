@@ -359,7 +359,7 @@ export async function disposeBatch(batchId: string) {
   const adminDb = createAdminClient();
 
   const { error } = await adminDb
-    .from('batches')
+    .from('store_inventory_batches')
     .update({ quantity: 0 })
     .eq('id', batchId)
     .eq('store_id', storeId);

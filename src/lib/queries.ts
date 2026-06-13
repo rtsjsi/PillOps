@@ -17,7 +17,7 @@ export async function fetchMedicines() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('store_inventory')
-    .select('*, global_medicine_master(*), inventory_batches(*)');
+    .select('*, global_medicine_master(*), store_inventory_batches(*)');
 
   if (error) throw new Error(error.message);
   
@@ -35,7 +35,7 @@ export async function fetchMedicines() {
       reorderLevel: med.reorder_level || med.reorderLevel,
       totalStock: med.total_stock || med.totalStock || 0,
       rack: med.rack,
-      batches: (med.inventory_batches || []).map((b: any) => ({
+      batches: (med.store_inventory_batches || []).map((b: any) => ({
         ...b,
         batchNumber: b.batch_number || b.batchNumber,
         expiryDate: b.expiry_date || b.expiryDate,
@@ -52,7 +52,7 @@ export async function fetchMedicineById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('store_inventory')
-    .select('*, global_medicine_master(*), inventory_batches(*)')
+    .select('*, global_medicine_master(*), store_inventory_batches(*)')
     .eq('id', id)
     .single();
 
@@ -71,7 +71,7 @@ export async function fetchMedicineById(id: string) {
     reorderLevel: data.reorder_level || data.reorderLevel,
     totalStock: data.total_stock || data.totalStock || 0,
     rack: data.rack,
-    batches: (data.inventory_batches || []).map((b: any) => ({
+    batches: (data.store_inventory_batches || []).map((b: any) => ({
       ...b,
       batchNumber: b.batch_number || b.batchNumber,
       expiryDate: b.expiry_date || b.expiryDate,
@@ -130,7 +130,7 @@ export async function fetchInvoiceById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('sales_invoices')
-    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:inventory_batches(batch_number))')
+    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:store_inventory_batches(batch_number))')
     .eq('id', id)
     .single();
 

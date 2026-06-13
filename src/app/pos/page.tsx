@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { fetchMedicines, fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
 import { createClient } from '@/utils/supabase/client';
-import { CartItem, Batch } from '@/lib/types';
+import { CartItem, StoreInventoryBatch } from '@/lib/types';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -64,10 +64,10 @@ export default function POS() {
     }
   }, [loading, isSuccess]);
 
-  const getNextAvailableBatch = (medicine: any, cartQuantityForMed: number): Batch | null => {
+  const getNextAvailableBatch = (medicine: any, cartQuantityForMed: number): StoreInventoryBatch | null => {
     const sortedBatches = [...medicine.batches].sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
     for (const batch of sortedBatches) {
-        const cartQtyThisBatch = cart.find(c => c.batchId === batch.id)?.quantity || 0;
+        const cartQtyThisBatch = cart.find(c => c.storeInventoryBatchId === batch.id)?.quantity || 0;
         if (batch.quantity - cartQtyThisBatch > 0) {
             return batch as any;
         }
@@ -90,7 +90,7 @@ export default function POS() {
         return;
     }
 
-    const existingCartItemIndex = cart.findIndex(c => c.batchId === batchToUse.id);
+    const existingCartItemIndex = cart.findIndex(c => c.storeInventoryBatchId === batchToUse.id);
 
     if (existingCartItemIndex !== -1) {
         const newCart = [...cart];
@@ -100,7 +100,7 @@ export default function POS() {
         setCart([...cart, {
             medicineId: medicine.id,
             medicineName: medicine.name,
-            batchId: batchToUse.id,
+            storeInventoryBatchId: batchToUse.id,
             batchNumber: batchToUse.batchNumber,
             quantity: 1,
             mrp: batchToUse.mrp,
@@ -122,7 +122,7 @@ export default function POS() {
     const newCart = [...cart];
     const item = newCart[index];
     const medicine = medicines.find(m => m.id === item.medicineId);
-    const batch = medicine?.batches.find((b: any) => b.id === item.batchId);
+    const batch = medicine?.batches.find((b: any) => b.id === item.storeInventoryBatchId);
     
     if (batch && newQty > batch.quantity) {
         toast.error(`Only ${batch.quantity} limit for batch ${batch.batchNumber}`);
@@ -361,7 +361,7 @@ export default function POS() {
               </div>
           ) : (
               cart.map((item, i) => (
-                  <Card key={`${item.batchId}-${i}`} className="p-4 flex justify-between items-center border-border shadow-sm">
+                  <Card key={`${item.storeInventoryBatchId}-${i}`} className="p-4 flex justify-between items-center border-border shadow-sm">
                       <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-sm">{item.medicineName}</p>

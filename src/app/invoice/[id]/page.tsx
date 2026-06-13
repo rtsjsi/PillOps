@@ -129,7 +129,7 @@ export default function InvoicePage() {
                     {invoice.items.map((item: any, idx: number) => (
                         <tr key={idx} className="text-sm font-bold text-slate-700">
                             <td className="p-4">{item.medicine?.name || item.medicineId}</td>
-                            <td className="p-4 text-center text-slate-500 font-mono text-xs">{item.batch?.batch_number || item.batchId}</td>
+                            <td className="p-4 text-center text-slate-500 font-mono text-xs">{item.batch?.batch_number || item.storeInventoryBatchId}</td>
                             <td className="p-4 text-center text-slate-500 text-xs">{item.expiryDate}</td>
                             <td className="p-4 text-right">{item.quantity}</td>
                             <td className="p-4 text-right text-slate-500">₹{item.mrp.toFixed(2)}</td>

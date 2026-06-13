@@ -373,8 +373,8 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       id: generateId(),
       invoiceNumber: 'INV-20260420-001',
       items: [
-        { medicineId: 'med-001', medicineName: 'Paracetamol 500mg', batchId: 'b-001a', batchNumber: 'CP-2401', quantity: 10, mrp: 12, gstPercent: 12, expiryDate: monthsFromNow(14) },
-        { medicineId: 'med-004', medicineName: 'Cetirizine 10mg', batchId: 'b-004a', batchNumber: 'CP-7710', quantity: 5, mrp: 5, gstPercent: 12, expiryDate: monthsFromNow(20) },
+        { medicineId: 'med-001', medicineName: 'Paracetamol 500mg', storeInventoryBatchId: medicines[0].batches[0].id, batchNumber: 'CP-2401', quantity: 10, mrp: 12, gstPercent: 12, expiryDate: monthsFromNow(14) },
+        { medicineId: 'med-004', medicineName: 'Cetirizine 10mg', storeInventoryBatchId: 'b-004a', batchNumber: 'CP-7710', quantity: 5, mrp: 5, gstPercent: 12, expiryDate: monthsFromNow(20) },
       ],
       subtotal: 145,
       gstAmount: 17.40,
@@ -387,7 +387,7 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       id: generateId(),
       invoiceNumber: 'INV-20260420-002',
       items: [
-        { medicineId: 'med-002', medicineName: 'Azithromycin 500mg', batchId: 'b-002a', batchNumber: 'SP-8801', quantity: 3, mrp: 85, gstPercent: 12, expiryDate: monthsFromNow(18) },
+        { medicineId: 'med-002', medicineName: 'Azithromycin 500mg', storeInventoryBatchId: 'b-002a', batchNumber: 'SP-8801', quantity: 3, mrp: 85, gstPercent: 12, expiryDate: monthsFromNow(18) },
       ],
       subtotal: 255,
       gstAmount: 30.60,
@@ -400,9 +400,9 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       id: generateId(),
       invoiceNumber: 'INV-20260419-001',
       items: [
-        { medicineId: 'med-009', medicineName: 'Dolo 650mg', batchId: 'b-009a', batchNumber: 'ML-6601', quantity: 20, mrp: 15, gstPercent: 12, expiryDate: monthsFromNow(15) },
-        { medicineId: 'med-005', medicineName: 'Benadryl Cough Syrup 100ml', batchId: 'b-005a', batchNumber: 'JJ-4401', quantity: 1, mrp: 110, gstPercent: 12, expiryDate: monthsFromNow(12) },
-        { medicineId: 'med-013', medicineName: 'Betadine Ointment 20g', batchId: 'b-013a', batchNumber: 'WM-1101', quantity: 2, mrp: 65, gstPercent: 18, expiryDate: monthsFromNow(20) },
+        { medicineId: 'med-009', medicineName: 'Dolo 650mg', storeInventoryBatchId: 'b-009a', batchNumber: 'ML-6601', quantity: 20, mrp: 15, gstPercent: 12, expiryDate: monthsFromNow(15) },
+        { medicineId: 'med-005', medicineName: 'Benadryl Cough Syrup 100ml', storeInventoryBatchId: 'b-005a', batchNumber: 'JJ-4401', quantity: 1, mrp: 110, gstPercent: 12, expiryDate: monthsFromNow(12) },
+        { medicineId: 'med-013', medicineName: 'Betadine Ointment 20g', storeInventoryBatchId: 'b-013a', batchNumber: 'WM-1101', quantity: 2, mrp: 65, gstPercent: 18, expiryDate: monthsFromNow(20) },
       ],
       subtotal: 540,
       gstAmount: 59.40,
@@ -415,7 +415,7 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       id: generateId(),
       invoiceNumber: 'INV-20260418-001',
       items: [
-        { medicineId: 'med-006', medicineName: 'Insulin Glargine 100IU/ml', batchId: 'b-006a', batchNumber: 'SN-9901', quantity: 1, mrp: 890, gstPercent: 5, expiryDate: monthsFromNow(2) },
+        { medicineId: 'med-006', medicineName: 'Insulin Glargine 100IU/ml', storeInventoryBatchId: 'b-006a', batchNumber: 'SN-9901', quantity: 1, mrp: 890, gstPercent: 5, expiryDate: monthsFromNow(2) },
       ],
       subtotal: 890,
       gstAmount: 44.50,
@@ -428,8 +428,8 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       id: generateId(),
       invoiceNumber: 'INV-20260417-001',
       items: [
-        { medicineId: 'med-016', medicineName: 'Atorvastatin 10mg', batchId: 'b-016a', batchNumber: 'PF-5501', quantity: 30, mrp: 28, gstPercent: 12, expiryDate: monthsFromNow(17) },
-        { medicineId: 'med-024', medicineName: 'Amlodipine 5mg', batchId: 'b-024a', batchNumber: 'PF-9901', quantity: 30, mrp: 14, gstPercent: 12, expiryDate: monthsFromNow(18) },
+        { medicineId: 'med-016', medicineName: 'Atorvastatin 10mg', storeInventoryBatchId: 'b-016a', batchNumber: 'PF-5501', quantity: 30, mrp: 28, gstPercent: 12, expiryDate: monthsFromNow(17) },
+        { medicineId: 'med-024', medicineName: 'Amlodipine 5mg', storeInventoryBatchId: 'b-024a', batchNumber: 'PF-9901', quantity: 30, mrp: 14, gstPercent: 12, expiryDate: monthsFromNow(18) },
       ],
       subtotal: 1260,
       gstAmount: 151.20,
