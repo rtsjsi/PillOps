@@ -9,6 +9,9 @@ interface MedicineSearchResult {
   genericName: string;
   category: string;
   gstPercent: number;
+  reorderLevel: number;
+  totalStock?: number;
+  rack: string;
   batches: {
     id: string;
     batchNumber: string;

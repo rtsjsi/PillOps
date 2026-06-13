@@ -168,7 +168,7 @@ export default function Inventory() {
                  name: m.name,
                  generic: m.genericName,
                  category: m.category,
-                 stock: getTotalStock(m.batches),
+                 stock: m.totalStock,
                  status: m.overallExpiryStatus
                })), 'inventory_report')}
                className="flex items-center gap-2 font-bold p-3 rounded-xl cursor-pointer"
@@ -178,7 +178,7 @@ export default function Inventory() {
              </DropdownMenuItem>
              
              <InventoryPDFButton 
-                data={filteredMedicines.map(m => ({ ...m, totalQty: getTotalStock(m.batches) }))} 
+                data={filteredMedicines.map(m => ({ ...m, totalQty: m.totalStock }))} 
                 storeName={storeName} 
              />
           </DropdownMenuContent>
@@ -211,7 +211,7 @@ export default function Inventory() {
             </Card>
          ) : (
             filteredMedicines.map(med => {
-               const totalQty = getTotalStock(med.batches);
+               const totalQty = med.totalStock;
                const stockStatus = getStockStatus(totalQty, med.reorderLevel);
                const expiryStatus = med.overallExpiryStatus;
                

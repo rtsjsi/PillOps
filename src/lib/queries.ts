@@ -16,13 +16,13 @@ import { createClient } from '@/utils/supabase/client';
 export async function fetchMedicines() {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('medicines')
-    .select('*, global_medicines(*), batches(*)');
+    .from('store_inventory')
+    .select('*, global_medicine_master(*), inventory_batches(*)');
 
   if (error) throw new Error(error.message);
   
   const mappedData = (data ?? []).map((med: any) => {
-    const g = med.global_medicines || {};
+    const g = med.global_medicine_master || {};
     return {
       ...med,
       name: g.name,
@@ -33,8 +33,9 @@ export async function fetchMedicines() {
       schedule: g.schedule,
       gstPercent: g.gst_percent || g.gstPercent,
       reorderLevel: med.reorder_level || med.reorderLevel,
+      totalStock: med.total_stock || med.totalStock || 0,
       rack: med.rack,
-      batches: (med.batches || []).map((b: any) => ({
+      batches: (med.inventory_batches || []).map((b: any) => ({
         ...b,
         batchNumber: b.batch_number || b.batchNumber,
         expiryDate: b.expiry_date || b.expiryDate,
@@ -50,14 +51,14 @@ export async function fetchMedicines() {
 export async function fetchMedicineById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('medicines')
-    .select('*, global_medicines(*), batches(*)')
+    .from('store_inventory')
+    .select('*, global_medicine_master(*), inventory_batches(*)')
     .eq('id', id)
     .single();
 
   if (error || !data) return null;
   
-  const g = data.global_medicines || {};
+  const g = data.global_medicine_master || {};
   return {
     ...data,
     name: g.name,
@@ -68,8 +69,9 @@ export async function fetchMedicineById(id: string) {
     schedule: g.schedule,
     gstPercent: g.gst_percent || g.gstPercent,
     reorderLevel: data.reorder_level || data.reorderLevel,
+    totalStock: data.total_stock || data.totalStock || 0,
     rack: data.rack,
-    batches: (data.batches || []).map((b: any) => ({
+    batches: (data.inventory_batches || []).map((b: any) => ({
       ...b,
       batchNumber: b.batch_number || b.batchNumber,
       expiryDate: b.expiry_date || b.expiryDate,
@@ -83,7 +85,7 @@ export async function fetchGlobalMedicines(searchQuery: string) {
   if (!searchQuery) return [];
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('global_medicines')
+    .from('global_medicine_master')
     .select('*')
     .ilike('name', `%${searchQuery}%`)
     .limit(20);
@@ -128,7 +130,7 @@ export async function fetchInvoiceById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('invoices')
-    .select('*, items:invoice_items(*, medicine:medicines(name), batch:batches(batch_number))')
+    .select('*, items:invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:inventory_batches(batch_number))')
     .eq('id', id)
     .single();
 
@@ -192,8 +194,8 @@ export async function fetchSalesStats() {
 export async function fetchPurchases() {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('purchases')
-    .select('*, items:purchase_items(*)')
+    .from('purchase_invoices')
+    .select('*, items:purchase_invoice_items(*)')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);

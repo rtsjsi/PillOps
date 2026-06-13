@@ -77,7 +77,7 @@ export default function POS() {
 
   const handleAddToCart = (medicine: any) => {
     const totalCartQty = cart.filter(c => c.medicineId === medicine.id).reduce((sum, c) => sum + c.quantity, 0);
-    const totalAvailable = medicine.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+    const totalAvailable = medicine.totalStock;
 
     if (totalCartQty >= totalAvailable) {
         toast.error('Not enough stock available!');
@@ -227,7 +227,7 @@ export default function POS() {
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const selected = handleSearchKeyDown(e);
     if (selected) {
-      const totalStock = selected.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+      const totalStock = selected.totalStock || 0;
       if (totalStock > 0) {
         handleAddToCart(selected);
       } else {
@@ -304,7 +304,7 @@ export default function POS() {
                   ) : (
                       <div className="divide-y divide-border max-h-[300px] overflow-y-auto">
                         {searchedMedicines.map((med, index) => {
-                            const totalStock = med.batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+                            const totalStock = med.totalStock || 0;
                             return (
                                 <div 
                                     key={med.id} 

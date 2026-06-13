@@ -363,7 +363,7 @@ export async function getAllGlobalItems() {
     await checkSuperAdmin();
     const adminClient = createAdminClient();
     const { data, error } = await adminClient
-      .from('global_medicines')
+      .from('global_medicine_master')
       .select('*')
       .order('name', { ascending: true });
 
@@ -385,7 +385,7 @@ export async function createGlobalItem(itemData: any) {
   await checkSuperAdmin();
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
-    .from('global_medicines')
+    .from('global_medicine_master')
     .insert({
       name: itemData.name,
       generic_name: itemData.genericName || '',
@@ -406,7 +406,7 @@ export async function updateGlobalItem(id: string, itemData: any) {
   await checkSuperAdmin();
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
-    .from('global_medicines')
+    .from('global_medicine_master')
     .update({
       name: itemData.name,
       generic_name: itemData.genericName || '',
@@ -428,10 +428,10 @@ export async function deleteGlobalItem(id: string) {
   await checkSuperAdmin();
   const adminClient = createAdminClient();
   
-  // Notice: The foreign key from medicines to global_medicines has ON DELETE CASCADE.
+  // Notice: The foreign key from medicines to global_medicine_master has ON DELETE CASCADE.
   // We should warn the admin before deleting, but if they confirm, it drops linked store medicines too.
   const { error } = await adminClient
-    .from('global_medicines')
+    .from('global_medicine_master')
     .delete()
     .eq('id', id);
 

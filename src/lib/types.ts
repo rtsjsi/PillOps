@@ -44,6 +44,7 @@ export interface Medicine {
   schedule: DrugSchedule;
   batches: Batch[];
   reorderLevel: number;
+  totalStock: number;
   rack: string;
   gstPercent: number;
   createdAt: string;
