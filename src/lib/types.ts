@@ -13,6 +13,11 @@ export type MedicineCategory =
 
 export type DrugSchedule = 'H' | 'H1' | 'X' | 'OTC';
 
+export interface Ingredient {
+  salt: string;
+  strength: string;
+}
+
 export interface GlobalMedicine {
   id: string;
   name: string;
@@ -22,6 +27,16 @@ export interface GlobalMedicine {
   hsnCode: string;
   schedule: DrugSchedule;
   gstPercent: number;
+  // New Fields
+  packSize: string;
+  uom: string;
+  ingredients: Ingredient[];
+  substitutes?: string[];
+  storageConditions?: string;
+  isNarcotic: boolean;
+  prescriptionRequired: boolean;
+  barcode?: string;
+  imageUrl?: string;
 }
 
 export interface Batch {
@@ -42,6 +57,17 @@ export interface Medicine {
   manufacturer: string;
   hsnCode: string;
   schedule: DrugSchedule;
+  // New Fields
+  packSize: string;
+  uom: string;
+  ingredients: Ingredient[];
+  substitutes?: string[];
+  storageConditions?: string;
+  isNarcotic: boolean;
+  prescriptionRequired: boolean;
+  barcode?: string;
+  imageUrl?: string;
+  
   batches: Batch[];
   reorderLevel: number;
   totalStock: number;
