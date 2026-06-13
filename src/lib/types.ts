@@ -90,7 +90,7 @@ export interface CartItem {
   expiryDate: string;
 }
 
-export interface Invoice {
+export interface SalesInvoice {
   id: string;
   invoiceNumber: string;
   customerName?: string;
@@ -157,7 +157,7 @@ export interface PurchaseInvoice {
 
 export interface StoreData {
   medicines: Medicine[];
-  invoices: Invoice[];
+  salesInvoices: SalesInvoice[];
   purchases: PurchaseInvoice[];
   storeName: string;
   storeAddress: string;

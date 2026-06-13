@@ -127,11 +127,11 @@ export async function getAvailableStoresForSuperAdmin() {
 
 // ─── Sales / POS (mutations) ───────────────────────────────
 
-export async function createInvoice(invoiceData: any, items: any[]) {
+export async function saveSalesInvoice(invoiceData: any, items: any[]) {
   const storeId = await getStoreId();
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase.rpc('create_invoice', {
+  const { data, error } = await supabase.rpc('save_sales_invoice', {
     invoice_data: { ...invoiceData, storeId },
     items: items,
   });

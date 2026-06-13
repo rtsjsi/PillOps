@@ -105,8 +105,8 @@ export async function fetchGlobalMedicines(searchQuery: string) {
 export async function fetchInvoices() {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('invoices')
-    .select('*, items:invoice_items(*)')
+    .from('sales_invoices')
+    .select('*, items:sales_invoice_items(*)')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -129,8 +129,8 @@ export async function fetchInvoices() {
 export async function fetchInvoiceById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('invoices')
-    .select('*, items:invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:inventory_batches(batch_number))')
+    .from('sales_invoices')
+    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:inventory_batches(batch_number))')
     .eq('id', id)
     .single();
 
@@ -169,7 +169,7 @@ export async function fetchSalesStats() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const { data, error } = await supabase
-    .from('invoices')
+    .from('sales_invoices')
     .select('created_at, total')
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: true });

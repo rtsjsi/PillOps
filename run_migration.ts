@@ -15,7 +15,7 @@ async function run() {
     console.log('Connected to DB');
 
     const sql = fs.readFileSync(
-      path.join(process.cwd(), 'supabase', 'migrations', '20260613120000_global_master_fields.sql'),
+      path.join(process.cwd(), 'supabase', 'migrations', '20260613121000_rename_sales_invoices.sql'),
       'utf8'
     );
 

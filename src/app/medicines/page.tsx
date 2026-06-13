@@ -47,7 +47,7 @@ export default function MedicinesDirectoryPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <TopBar title="Medicine Directory" />
+      <TopBar />
       
       <main className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-5xl mx-auto space-y-6">

@@ -1,4 +1,4 @@
-import { Medicine, Invoice, Ingredient } from './types';
+import { Medicine, SalesInvoice, Ingredient } from './types';
 import { generateId } from './utils';
 
 // Helpers to create dates relative to "now" for realistic demo
@@ -20,7 +20,7 @@ function monthsAgo(months: number): string {
   return d.toISOString().split('T')[0];
 }
 
-export function getSeedData(): { medicines: Medicine[]; invoices: Invoice[] } {
+export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvoice[] } {
   const now = new Date().toISOString();
 
   const medicines: Medicine[] = [
@@ -368,7 +368,7 @@ export function getSeedData(): { medicines: Medicine[]; invoices: Invoice[] } {
 
   // ─── Seed Invoices (recent sales) ────────────────────────
 
-  const invoices: Invoice[] = [
+  const salesInvoices: SalesInvoice[] = [
     {
       id: generateId(),
       invoiceNumber: 'INV-20260420-001',
@@ -440,5 +440,5 @@ export function getSeedData(): { medicines: Medicine[]; invoices: Invoice[] } {
     },
   ];
 
-  return { medicines, invoices };
+  return { medicines, salesInvoices };
 }

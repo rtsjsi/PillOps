@@ -166,7 +166,7 @@ export default function POS() {
         };
 
         const supabase = createClient();
-        const { data: result, error } = await supabase.rpc('create_invoice', {
+        const { data: result, error } = await supabase.rpc('save_sales_invoice', {
             invoice_data: { ...invoiceData, storeId: profile.store_id },
             items: cart,
         });
