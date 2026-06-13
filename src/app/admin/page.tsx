@@ -104,22 +104,22 @@ function AdminDashboardContent() {
 
   const filteredStores = useMemo(() => {
     return stores.filter(s => 
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.gstin?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [stores, searchQuery]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
-      u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.storeName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
 
   const filteredItems = useMemo(() => {
     return items.filter(i => 
-      i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       i.genericName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       i.manufacturer?.toLowerCase().includes(searchQuery.toLowerCase())
     );

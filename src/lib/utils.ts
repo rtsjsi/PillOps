@@ -32,8 +32,9 @@ export function formatRelativeTime(date: string) {
   return past.toLocaleDateString();
 }
 
-export function fuzzyMatch(query: string, text: string) {
-  return text.toLowerCase().includes(query.toLowerCase());
+export function fuzzyMatch(query: string, text?: string) {
+  if (!text) return false;
+  return text.toLowerCase().includes(query?.toLowerCase() || '');
 }
 
 export function getTotalStock(batches: any[]) {
