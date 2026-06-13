@@ -44,7 +44,7 @@ export async function fetchMedicines() {
     };
   });
 
-  return mappedData.sort((a, b) => a.name.localeCompare(b.name));
+  return mappedData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 export async function fetchMedicineById(id: string) {
