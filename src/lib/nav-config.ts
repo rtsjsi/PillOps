@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   ArrowDownToLine,
   Clock,
+  Database,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +37,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Inventory',
     shortLabel: 'Stock',
     href: '/inventory',
+    showInBottomNav: true,
+  },
+  {
+    icon: Database,
+    label: 'Medicine Directory',
+    shortLabel: 'Medicines',
+    href: '/medicines',
     showInBottomNav: true,
   },
   {
