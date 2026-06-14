@@ -95,6 +95,8 @@ export interface SalesInvoice {
   invoiceNumber: string;
   customerName?: string;
   customerPhone?: string;
+  doctorName?: string;
+  area?: string;
   items: CartItem[];
   subtotal: number;
   gstAmount: number;

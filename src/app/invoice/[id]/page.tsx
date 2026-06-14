@@ -125,15 +125,15 @@ export default function InvoicePage() {
                       <span>Customer</span>
                       <span className="uppercase">: {invoice.customerName}</span>
                       <span>Doctor</span>
-                      <span className="uppercase">: WALK-IN</span>
+                      <span className="uppercase">: {invoice.doctorName || 'WALK-IN'}</span>
                   </div>
               </div>
               <div className="flex-1 p-2 border-r border-black print-border">
                   <div className="grid grid-cols-[40px_auto] gap-2">
                       <span>Area</span>
-                      <span className="uppercase">: LOCAL</span>
-                      <span>Area</span>
-                      <span>: </span>
+                      <span className="uppercase">: {invoice.area || 'LOCAL'}</span>
+                      <span>Mob</span>
+                      <span>: {invoice.customerPhone || ''}</span>
                   </div>
               </div>
               <div className="flex-1 p-2">

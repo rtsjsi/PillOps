@@ -25,6 +25,8 @@ export default function POS() {
   const [discountPercent, setDiscountPercent] = useState<number | string>(0);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [doctorName, setDoctorName] = useState('');
+  const [area, setArea] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastInvoiceId, setLastInvoiceId] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -158,6 +160,8 @@ export default function POS() {
             invoiceNumber: generateInvoiceNumber(),
             customerName: customerName.trim() || 'Walk-in Customer',
             customerPhone: customerPhone.trim(),
+            doctorName: doctorName.trim() || 'WALK-IN',
+            area: area.trim() || 'LOCAL',
             subtotal,
             gstAmount,
             discountPercent: currentDiscount,
@@ -183,6 +187,8 @@ export default function POS() {
         setDiscountPercent(0);
         setCustomerName('');
         setCustomerPhone('');
+        setDoctorName('');
+        setArea('');
         setLastInvoiceId(result?.id || result);
         setIsSuccess(true);
         toast.success('Sale completed successfully');
@@ -419,7 +425,7 @@ export default function POS() {
                   <CardContent className="p-4 flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-3">
                       <Input 
-                        placeholder="Name" 
+                        placeholder="Customer Name" 
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         className="bg-background h-10 text-sm"
@@ -428,6 +434,18 @@ export default function POS() {
                         placeholder="Phone" 
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="bg-background h-10 text-sm"
+                      />
+                      <Input 
+                        placeholder="Doctor Name" 
+                        value={doctorName}
+                        onChange={(e) => setDoctorName(e.target.value)}
+                        className="bg-background h-10 text-sm"
+                      />
+                      <Input 
+                        placeholder="Hospital / Area" 
+                        value={area}
+                        onChange={(e) => setArea(e.target.value)}
                         className="bg-background h-10 text-sm"
                       />
                     </div>
