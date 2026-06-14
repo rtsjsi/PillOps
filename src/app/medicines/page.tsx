@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Info, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Search, Info, AlertTriangle, ShieldAlert, Wand2, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { searchGlobalMedicines } from './actions';
+import { searchGlobalMedicines, autoEnrichMedicines } from './actions';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -25,6 +26,7 @@ export default function MedicinesDirectoryPage() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEnriching, setIsEnriching] = useState(false);
 
   const fetchMedicines = useCallback(async (q: string) => {
     setIsLoading(true);
@@ -44,6 +46,21 @@ export default function MedicinesDirectoryPage() {
     fetchMedicines(debouncedQuery);
   }, [debouncedQuery, fetchMedicines]);
 
+  const handleAutoEnrich = async () => {
+    setIsEnriching(true);
+    setError(null);
+    try {
+      const res = await autoEnrichMedicines();
+      if (res.error) throw new Error(res.error);
+      alert((res as any).message || `Successfully enriched ${res.count} medicines!`);
+      fetchMedicines(debouncedQuery);
+    } catch (err: any) {
+      setError(err.message || 'Failed to auto-enrich');
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       
@@ -53,14 +70,25 @@ export default function MedicinesDirectoryPage() {
           <h1 className="text-2xl font-bold tracking-tight">Global Medicine Master</h1>
           <p className="text-muted-foreground">Search and view details of all available medicines in the directory.</p>
         </div>
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by name or generic name..." 
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+          <Button 
+            variant="secondary" 
+            onClick={handleAutoEnrich} 
+            disabled={isEnriching}
+            className="w-full sm:w-auto"
+          >
+            {isEnriching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+            Auto-Enrich Data
+          </Button>
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search by name or generic name..." 
+              className="pl-9"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
