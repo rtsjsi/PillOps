@@ -114,7 +114,7 @@ export async function fetchInvoices() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('sales_invoices')
-    .select('*, items:sales_invoice_items(*)')
+    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:store_inventory_batches(batch_number))')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);

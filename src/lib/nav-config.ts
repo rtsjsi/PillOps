@@ -9,6 +9,7 @@ import {
   ArrowDownToLine,
   Clock,
   Database,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -65,6 +66,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Expiry Radar',
     shortLabel: 'Expiry',
     href: '/expiry',
+    showInBottomNav: true,
+  },
+  {
+    icon: FileText,
+    label: 'Reports',
+    shortLabel: 'Reports',
+    href: '/reports',
+    roles: ['owner', 'super_admin', 'staff'],
     showInBottomNav: true,
   },
   {
