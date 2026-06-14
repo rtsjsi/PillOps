@@ -17,11 +17,13 @@ import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { cn } from '@/lib/utils';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 export default function ManualPurchaseEntry() {
   const router = useRouter();
   const distributors = useDistinctValues('purchase_invoices', 'distributor_name');
+  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -36,6 +38,8 @@ export default function ManualPurchaseEntry() {
   const [items, setItems] = useState([
     {
       medicineName: '',
+      category: '',
+      manufacturer: '',
       batchNumber: '',
       expiryDate: '',
       quantity: 1,
@@ -105,6 +109,8 @@ export default function ManualPurchaseEntry() {
   const addItem = () => {
     setItems([...items, {
       medicineName: '',
+      category: '',
+      manufacturer: '',
       batchNumber: '',
       expiryDate: '',
       quantity: 1,
@@ -275,7 +281,20 @@ export default function ManualPurchaseEntry() {
                 </CardHeader>
                 
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Category</Label>
+                      <Select value={(item as any).category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Manufacturer</Label>
+                      <GenericAutocomplete placeholder="e.g. Cipla" value={(item as any).manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-9"/>
+                    </div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM-YYYY)</Label><Input required placeholder="12-2025" value={item.expiryDate} onChange={e=>{
                        let v = e.target.value.replace(/\D/g, '').substring(0, 6);

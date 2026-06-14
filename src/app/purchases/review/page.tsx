@@ -16,6 +16,9 @@ import { toast } from 'sonner';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
 
 export default function ReviewExtraction() {
   const router = useRouter();
@@ -51,6 +54,7 @@ export default function ReviewExtraction() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
+  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
 
   useEffect(() => {
     fetchMedicines().then(setMedicines);
@@ -341,7 +345,19 @@ export default function ReviewExtraction() {
                   
                   <CardContent className="p-4 pt-0">
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Category</Label><Input placeholder="Tablet" value={item.category || ''} onChange={e=>handleItemChange(idx, 'category', e.target.value)} className="h-9 text-xs"/></div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Category</Label>
+                        <Select value={item.category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Manufacturer</Label>
+                        <GenericAutocomplete placeholder="e.g. Cipla" value={item.manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-9 text-xs"/>
+                      </div>
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
                          let v = e.target.value.replace(/\D/g, '').substring(0, 6);
