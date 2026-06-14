@@ -284,7 +284,7 @@ export default function POS() {
     .slice(0, 5);
 
   return (
-    <div className="container py-8 flex flex-col gap-6">
+    <div className="container py-8 flex flex-col gap-6 pb-[400px] lg:pb-8">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold tracking-tight">New Sale</h1>
@@ -421,12 +421,12 @@ export default function POS() {
 
         {/* Right Side: Checkout Panel */}
         {cart.length > 0 && (
-            <div className="w-full lg:w-[400px] lg:sticky lg:top-8 z-40">
-              <Card className="bg-card/90 backdrop-blur-2xl border-border shadow-2xl shadow-black/10">
+            <div className="w-full lg:w-[400px] fixed bottom-0 left-0 right-0 p-4 lg:p-0 lg:sticky lg:top-8 z-40 bg-background/80 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none border-t lg:border-t-0 border-border lg:border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none animate-in slide-in-from-bottom-10 lg:animate-none">
+              <Card className="bg-card/95 backdrop-blur-2xl border-border shadow-2xl shadow-black/10">
                   <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer (Optional)</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4 flex flex-col gap-4">
+                  <CardContent className="p-3 lg:p-4 flex flex-col gap-3 lg:gap-4 max-h-[40vh] lg:max-h-none overflow-y-auto">
                     <div className="grid grid-cols-2 gap-3">
                       <Input 
                         placeholder="Customer Name" 
@@ -481,7 +481,7 @@ export default function POS() {
                     </div>
 
                     <Button 
-                        className="w-full h-14 text-xl font-bold rounded-2xl flex justify-between px-6 shadow-xl shadow-primary/20 transition-transform active:scale-[0.98]"
+                        className="w-full h-12 lg:h-14 text-lg lg:text-xl font-bold rounded-xl lg:rounded-2xl flex justify-between px-4 lg:px-6 shadow-xl shadow-primary/20 transition-transform active:scale-[0.98] shrink-0"
                         disabled={isCheckingOut}
                         onClick={handleCheckout}
                     >
