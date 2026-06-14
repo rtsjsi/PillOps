@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
+import { toast } from 'sonner';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
@@ -45,7 +46,8 @@ export default function ReviewExtraction() {
 
   const [data, setData] = useState<InvoiceData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [fatalError, setFatalError] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<{ header: string[], items: number[] }>({ header: [], items: [] });
   const [isSaving, setIsSaving] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -134,11 +136,11 @@ export default function ReviewExtraction() {
         enrichData(parsed);
 
       } catch (e) {
-        setError("Failed to parse extracted invoice data.");
+        setFatalError("Failed to parse extracted invoice data.");
         setIsEnriching(false);
       }
     } else {
-      setError("No invoice data found. Please scan an invoice first.");
+      setFatalError("No invoice data found. Please scan an invoice first.");
       setIsEnriching(false);
     }
   }, []);
@@ -146,13 +148,17 @@ export default function ReviewExtraction() {
   const handleConfirm = async () => {
     if (!data || isSaving) return;
 
+    setInvalidFields({ header: [], items: [] });
+    let headerErrors: string[] = [];
+    let itemErrors: number[] = [];
+
     // Validation
-    if (!data.distributorName || !data.invoiceNumber || !data.invoiceDate) {
-      setError("Please fill in all invoice details.");
-      return;
-    }
+    if (!data.distributorName) headerErrors.push('distributorName');
+    if (!data.invoiceNumber) headerErrors.push('invoiceNumber');
+    if (!data.invoiceDate) headerErrors.push('invoiceDate');
     
-    for (const item of data.items) {
+    data.items.forEach((item, idx) => {
+      let isInvalid = false;
       if (
           !item.medicineName || !item.batchNumber || !item.expiryDate ||
           item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
@@ -162,14 +168,23 @@ export default function ReviewExtraction() {
           item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ||
           item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent)
       ) {
-        setError("All columns are mandatory. Please fill in Name, Batch, Expiry, Qty, Rate, MRP, Disc%, Free Qty, and GST% for each item.");
-        return;
+        isInvalid = true;
       }
+      
       // Simple MM-YYYY format validation
       if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
-        setError(`Invalid expiry format for ${item.medicineName || 'an item'}. Use MM-YYYY.`);
-        return;
+        isInvalid = true;
       }
+
+      if (isInvalid) {
+        itemErrors.push(idx);
+      }
+    });
+
+    if (headerErrors.length > 0 || itemErrors.length > 0) {
+      setInvalidFields({ header: headerErrors, items: itemErrors });
+      toast.error("Please fill in all highlighted mandatory fields correctly.");
+      return;
     }
 
     setIsSaving(true);
@@ -199,19 +214,19 @@ export default function ReviewExtraction() {
         }, 2000);
     } catch (error: any) {
         console.error('Save failed:', error);
-        setError(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+        toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
     } finally {
         setIsSaving(false);
     }
   };
 
-  if (error) {
+  if (fatalError) {
      return (
         <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
            <AlertTriangle size={64} className="text-red-500 bg-red-500/10 p-4 rounded-full" />
            <div className="grid gap-2">
              <h2 className="text-2xl font-bold">Extraction Error</h2>
-             <p className="text-muted-foreground">{error}</p>
+             <p className="text-muted-foreground">{fatalError}</p>
            </div>
            <Button render={<Link href="/purchases/scan" />} size="lg" className="mt-4">
              Try Again
@@ -260,28 +275,28 @@ export default function ReviewExtraction() {
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
             <div className="space-y-1">
-               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Distributor</Label>
+               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
                <Input 
                  value={data.distributorName} 
                  onChange={e => setData({ ...data, distributorName: e.target.value })} 
-                 className="text-lg font-bold text-slate-900 bg-white"
+                 className={cn("text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
-               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Date</Label>
+               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('invoiceDate') && "text-rose-500")}>Date</Label>
                <Input 
                  type="date"
                  value={data.invoiceDate} 
                  onChange={e => setData({ ...data, invoiceDate: e.target.value })} 
-                 className="text-lg font-bold text-slate-900 bg-white text-right"
+                 className={cn("text-lg font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1">
-               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Invoice Number</Label>
+               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('invoiceNumber') && "text-rose-500")}>Invoice Number</Label>
                <Input 
                  value={data.invoiceNumber} 
                  onChange={e => setData({ ...data, invoiceNumber: e.target.value })} 
-                 className="text-lg font-bold text-primary bg-white"
+                 className={cn("text-lg font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
@@ -302,10 +317,12 @@ export default function ReviewExtraction() {
          </div>
          
          <div className="flex flex-col gap-4">
-             {data.items.map((item: any, idx: number) => (
-               <Card key={idx} className="transition-all ring-2 ring-primary/20 border-primary/30">
+             {data.items.map((item: any, idx: number) => {
+               const hasError = invalidFields.items.includes(idx);
+               return (
+                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", hasError ? "ring-rose-500/50 bg-rose-50/20" : "ring-primary/20")}>
                   <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
-                    <span className="bg-primary text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
+                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", hasError ? "bg-rose-500" : "bg-primary")}>
                       {idx + 1}
                     </span>
                     <div className="flex-1">
@@ -340,7 +357,8 @@ export default function ReviewExtraction() {
                     </div>
                   </CardContent>
                </Card>
-            ))}
+               );
+            })}
          </div>
       </div>
 
