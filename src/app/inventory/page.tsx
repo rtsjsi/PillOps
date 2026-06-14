@@ -28,6 +28,7 @@ export default function Inventory() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [storeName, setStoreName] = useState('My Pharmacy');
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [expiryFilter, setExpiryFilter] = useState<string | null>(null);
@@ -41,8 +42,9 @@ export default function Inventory() {
         ]);
         setMedicines(data);
         if (settings?.name) setStoreName(settings.name);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch data:', error);
+        setErrorMsg(error.message || String(error));
       } finally {
         setLoading(false);
       }
@@ -204,6 +206,18 @@ export default function Inventory() {
       </div>
 
       <div className="flex flex-col gap-4">
+         {errorMsg && (
+            <Card className="p-4 bg-red-500/10 border-red-500 text-red-600 font-medium">
+               Error: {errorMsg}
+            </Card>
+         )}
+         
+         {/* DEBUG INFO */}
+         <div className="text-xs font-mono bg-muted p-2 rounded">
+            DEBUG: Total Medicines: {medicines.length} | Filtered: {filteredMedicines.length} | 
+            Search: "{searchQuery}" | Category: "{selectedCategory}"
+         </div>
+
          {filteredMedicines.length === 0 ? (
             <Card className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/20 border-dashed">
                <PackageSearch size={48} className="opacity-20" />
