@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { fetchMedicines, fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
+import { fetchMedicines, fetchStoreSettings, fetchUserProfile, fetchInvoices } from '@/lib/queries';
 import { createClient } from '@/utils/supabase/client';
 import { CartItem, StoreInventoryBatch } from '@/lib/types';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, generateInvoiceNumber, cn } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Printer, PlusCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Printer, PlusCircle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import Link from 'next/link';
 
 export default function POS() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export default function POS() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastInvoiceId, setLastInvoiceId] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [recentSales, setRecentSales] = useState<any[]>([]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,9 +49,10 @@ export default function POS() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [medData, settings] = await Promise.all([fetchMedicines(), fetchStoreSettings()]);
+        const [medData, settings, sales] = await Promise.all([fetchMedicines(), fetchStoreSettings(), fetchInvoices(5)]);
         setMedicines(medData);
         setStoreSettings(settings);
+        setRecentSales(sales);
       } catch (error) {
         console.error('Failed to fetch POS data:', error);
       } finally {
@@ -193,9 +196,10 @@ export default function POS() {
         setIsSuccess(true);
         toast.success('Sale completed successfully');
         
-        // Refresh medicines data
-        const freshMeds = await fetchMedicines();
+        // Refresh medicines and recent sales data
+        const [freshMeds, freshSales] = await Promise.all([fetchMedicines(), fetchInvoices(5)]);
         setMedicines(freshMeds);
+        setRecentSales(freshSales);
     } catch (error: any) {
         console.error('Checkout failed:', error);
         toast.error(error.message || 'Checkout failed. Please try again.');
@@ -491,6 +495,35 @@ export default function POS() {
               </Card>
             </div>
         )}
+      </div>
+
+      {/* Recent Sales Section */}
+      <div className="flex flex-col gap-4 mt-4">
+        <div className="flex items-center gap-2">
+           <History size={20} className="text-muted-foreground" />
+           <h2 className="text-xl font-bold tracking-tight">Recent Sales</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          {recentSales.map((inv) => (
+             <Card key={inv.id} className="p-4 border-border shadow-sm flex flex-col gap-2">
+               <div className="flex justify-between items-start">
+                  <div className="font-bold text-sm line-clamp-1">{inv.customerName || 'Walk-in'}</div>
+                  <div className="text-emerald-600 font-extrabold text-sm">{formatCurrency(inv.total)}</div>
+               </div>
+               <div className="flex justify-between items-center text-xs text-muted-foreground font-medium mt-auto pt-2 border-t border-border/50">
+                  <div className="bg-muted px-1.5 py-0.5 rounded">#{inv.invoiceNumber}</div>
+                  <Button render={<Link href={`/invoice/${inv.id}`} />} variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold">
+                     <Printer size={12} className="mr-1" /> Print
+                  </Button>
+               </div>
+             </Card>
+          ))}
+          {recentSales.length === 0 && (
+            <div className="col-span-full p-8 text-center text-muted-foreground border-2 border-dashed rounded-xl border-border/50">
+              No recent sales found.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

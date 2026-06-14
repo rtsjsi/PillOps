@@ -110,12 +110,18 @@ export async function fetchGlobalMedicines(searchQuery: string) {
 
 // ─── Invoices ──────────────────────────────────────────────
 
-export async function fetchInvoices() {
+export async function fetchInvoices(limit?: number) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('sales_invoices')
     .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name)), batch:store_inventory_batches(batch_number))')
     .order('created_at', { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((inv: any) => ({
