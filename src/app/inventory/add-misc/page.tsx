@@ -10,10 +10,13 @@ import { ArrowLeft, Plus, Trash2, CheckCircle2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines, saveInventoryAdjustment } from '@/lib/queries';
+import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
 
 export default function AddMiscStock() {
   const router = useRouter();
   const [medicines, setMedicines] = useState<any[]>([]);
+  const reasons = useDistinctValues('inventory_adjustments', 'reason');
   
   // Fetch medicines on mount
   useEffect(() => {
@@ -148,7 +151,13 @@ export default function AddMiscStock() {
             </div>
             <div className="space-y-1.5">
                <Label>Reason / Note</Label>
-               <Input required placeholder="e.g. Opening Balance, Manual Correction" value={adjustmentData.reason} onChange={e => handleAdjustmentChange('reason', e.target.value)} />
+               <GenericAutocomplete 
+                 required 
+                 placeholder="e.g. Opening Balance, Manual Correction" 
+                 value={adjustmentData.reason} 
+                 onValueChange={v => handleAdjustmentChange('reason', v)} 
+                 options={reasons}
+               />
             </div>
           </CardContent>
         </Card>

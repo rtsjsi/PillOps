@@ -16,6 +16,8 @@ import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -40,6 +42,11 @@ export default function POS() {
   const [recentSales, setRecentSales] = useState<any[]>([]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const customerNames = useDistinctValues('sales_invoices', 'customer_name');
+  const customerPhones = useDistinctValues('sales_invoices', 'customer_phone');
+  const doctorNames = useDistinctValues('sales_invoices', 'doctor_name');
+  const areas = useDistinctValues('sales_invoices', 'area');
 
   const {
     query: searchQuery,
@@ -435,28 +442,32 @@ export default function POS() {
                   </CardHeader>
                   <CardContent className="p-3 lg:p-4 flex flex-col gap-3 lg:gap-4 max-h-[40vh] lg:max-h-none overflow-y-auto">
                     <div className="grid grid-cols-2 gap-3">
-                      <Input 
+                      <GenericAutocomplete 
                         placeholder="Customer Name" 
                         value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        onValueChange={setCustomerName}
+                        options={customerNames}
                         className="bg-background h-10 text-sm"
                       />
-                      <Input 
+                      <GenericAutocomplete 
                         placeholder="Phone" 
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        onValueChange={setCustomerPhone}
+                        options={customerPhones}
                         className="bg-background h-10 text-sm"
                       />
-                      <Input 
+                      <GenericAutocomplete 
                         placeholder="Doctor Name" 
                         value={doctorName}
-                        onChange={(e) => setDoctorName(e.target.value)}
+                        onValueChange={setDoctorName}
+                        options={doctorNames}
                         className="bg-background h-10 text-sm"
                       />
-                      <Input 
+                      <GenericAutocomplete 
                         placeholder="Hospital / Area" 
                         value={area}
-                        onChange={(e) => setArea(e.target.value)}
+                        onValueChange={setArea}
+                        options={areas}
                         className="bg-background h-10 text-sm"
                       />
                     </div>

@@ -14,11 +14,14 @@ import { useEffect, useRef } from 'react';
 import { fetchMedicines } from '@/lib/queries';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { cn } from '@/lib/utils';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
 
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 export default function ManualPurchaseEntry() {
   const router = useRouter();
+  const distributors = useDistinctValues('purchase_invoices', 'distributor_name');
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -225,7 +228,14 @@ export default function ManualPurchaseEntry() {
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
                <Label>Distributor Name</Label>
-               <Input autoFocus required placeholder="Enter distributor name" value={invoiceData.distributorName} onChange={e => handleInvoiceChange('distributorName', e.target.value)} />
+               <GenericAutocomplete 
+                 autoFocus 
+                 required 
+                 placeholder="Enter distributor name" 
+                 value={invoiceData.distributorName} 
+                 onValueChange={v => handleInvoiceChange('distributorName', v)} 
+                 options={distributors}
+               />
             </div>
             <div className="space-y-1.5">
                <Label>Invoice Number</Label>

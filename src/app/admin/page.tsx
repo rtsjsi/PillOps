@@ -34,6 +34,8 @@ import GlobalLoading from '@/app/loading';
 import { StatCard } from '@/components/ui/stat-card';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -48,6 +50,8 @@ function AdminDashboardContent() {
   const [items, setItems] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0 });
   const [loading, setLoading] = useState(true);
+  
+  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
   
   // UI states
   const [searchQuery, setSearchQuery] = useState('');
@@ -715,8 +719,8 @@ function AdminDashboardContent() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manufacturer</Label>
-                    <Input placeholder="E.g. Micro Labs" className="rounded-xl bg-slate-50 h-10"
-                        value={newItem.manufacturer} onChange={e => setNewItem({...newItem, manufacturer: e.target.value})} />
+                    <GenericAutocomplete placeholder="E.g. Micro Labs" className="rounded-xl bg-slate-50 h-10"
+                        value={newItem.manufacturer} onValueChange={v => setNewItem({...newItem, manufacturer: v})} options={manufacturers} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">HSN Code</Label>
@@ -777,8 +781,8 @@ function AdminDashboardContent() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs font-bold text-slate-500">Manufacturer</Label>
-                    <Input className="rounded-xl h-10"
-                        value={editItem.manufacturer} onChange={e => setEditItem({...editItem, manufacturer: e.target.value})} />
+                    <GenericAutocomplete className="rounded-xl h-10"
+                        value={editItem.manufacturer} onValueChange={v => setEditItem({...editItem, manufacturer: v})} options={manufacturers} />
                   </div>
                   <Button type="submit" disabled={isUpdatingItem} className="h-12 mt-2 font-bold rounded-xl bg-amber-600 hover:bg-amber-700">
                       {isUpdatingItem ? <Loader2 className="mr-2 animate-spin" /> : <Edit className="mr-2" size={16} />}
