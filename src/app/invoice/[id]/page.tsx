@@ -45,8 +45,8 @@ export default function InvoicePage() {
     return (
         <div className="container min-h-screen flex flex-col items-center justify-center gap-6">
             <p className="text-muted-foreground font-medium">Invoice not found.</p>
-            <Button asChild variant="outline">
-              <Link href="/pos">Back to POS</Link>
+            <Button render={<Link href="/pos" />} variant="outline">
+              Back to POS
             </Button>
         </div>
     );
@@ -84,8 +84,8 @@ export default function InvoicePage() {
 
       {/* Action Bar - Hidden during print */}
       <div className="max-w-[900px] mx-auto mb-6 flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm no-print">
-          <Button asChild variant="ghost" className="font-bold">
-              <Link href="/pos"><ArrowLeft size={16} className="mr-2" /> Back to POS</Link>
+          <Button render={<Link href="/pos" />} variant="ghost" className="font-bold">
+              <ArrowLeft size={16} className="mr-2" /> Back to POS
           </Button>
           <Button 
             className="font-bold shadow-lg"
