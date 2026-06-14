@@ -6,7 +6,8 @@ import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { fuzzyMatch, getTotalStock, getStockStatus, cn, getDaysUntilExpiry, getExpiryStatus } from '@/lib/utils';
-import { PackageSearch, Filter, AlertTriangle, Clock, ShieldCheck, XCircle, FileScan, Download, FileSpreadsheet, FilePieChart } from 'lucide-react';
+import { Package, Plus, AlertTriangle, Filter, Search, FileSpreadsheet, Download, Clock, XCircle, ShieldCheck, PackageSearch, FileScan, FilePieChart } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
 import { FAB } from '@/components/ui/fab';
@@ -96,9 +97,14 @@ export default function Inventory() {
 
   return (
     <div className="container py-8 flex flex-col gap-6 pb-24">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-        <p className="text-muted-foreground">Monitor and manage your medicine stock levels.</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground">Monitor and manage your medicine stock levels.</p>
+        </div>
+        <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex">
+            <Plus size={18} className="mr-2" /> Add Misc Stock
+        </Button>
       </header>
 
       {/* Expiry Alerts Banner */}

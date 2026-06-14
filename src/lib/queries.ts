@@ -302,3 +302,17 @@ export async function fetchStoreStaff() {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export async function saveInventoryAdjustment(adjustmentData: any, items: any[]) {
+  const supabase = createClient();
+  const profile = await fetchUserProfile();
+  if (!profile || !profile.store_id) throw new Error('Unauthorized');
+
+  const { data, error } = await supabase.rpc('save_inventory_adjustment', {
+    adjustment_data: { ...adjustmentData, storeId: profile.store_id },
+    items
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
