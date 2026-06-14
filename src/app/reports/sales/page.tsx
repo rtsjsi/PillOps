@@ -8,6 +8,7 @@ import { Receipt, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import { ExportButtons } from '@/components/ui/export-buttons';
 import dynamic from 'next/dynamic';
 
 const InvoicePDFWrapper = dynamic(
@@ -35,13 +36,32 @@ export default function SalesRegister() {
 
   if (loading) return <TableLoading />;
 
+  const exportData = invoices.map(inv => ({
+    date: inv.createdAt,
+    invoiceNo: inv.invoiceNumber,
+    customer: inv.customerName || 'Walk-in',
+    subtotal: inv.subtotal,
+    discount: inv.discountAmount,
+    total: inv.total
+  }));
+
+  const exportColumns = [
+    { header: 'Date', key: 'date', format: 'date' as const },
+    { header: 'Invoice No', key: 'invoiceNo' },
+    { header: 'Customer', key: 'customer' },
+    { header: 'Subtotal', key: 'subtotal', format: 'currency' as const },
+    { header: 'Discount', key: 'discount', format: 'currency' as const },
+    { header: 'Total', key: 'total', format: 'currency' as const },
+  ];
+
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
-      <header className="flex justify-between items-center">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sales Register</h1>
           <p className="text-muted-foreground font-medium mt-1">View all your historical sales invoices.</p>
         </div>
+        <ExportButtons data={exportData} columns={exportColumns} filename="sales_register" title="Sales Register" />
       </header>
 
       <section>

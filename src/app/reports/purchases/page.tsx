@@ -8,6 +8,7 @@ import { ArrowDownToLine, FileScan, Box } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import { ExportButtons } from '@/components/ui/export-buttons';
 
 export default function PurchaseRegister() {
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -29,13 +30,32 @@ export default function PurchaseRegister() {
 
   if (loading) return <TableLoading />;
 
+  const exportData = purchases.map(inv => ({
+    date: inv.invoiceDate,
+    invoiceNo: inv.invoiceNumber,
+    distributor: inv.distributorName,
+    subtotal: inv.subtotal,
+    gst: inv.gstAmount,
+    total: inv.total
+  }));
+
+  const exportColumns = [
+    { header: 'Date', key: 'date', format: 'date' as const },
+    { header: 'Invoice No', key: 'invoiceNo' },
+    { header: 'Distributor', key: 'distributor' },
+    { header: 'Subtotal', key: 'subtotal', format: 'currency' as const },
+    { header: 'GST', key: 'gst', format: 'currency' as const },
+    { header: 'Total', key: 'total', format: 'currency' as const },
+  ];
+
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
-      <header className="flex justify-between items-center">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Purchase Register</h1>
           <p className="text-muted-foreground font-medium mt-1">View all your historical inward bills and distributor invoices.</p>
         </div>
+        <ExportButtons data={exportData} columns={exportColumns} filename="purchase_register" title="Purchase Register" />
       </header>
 
       <section>

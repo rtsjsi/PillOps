@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Package, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import TableLoading from '@/components/ui/tableLoading';
+import { ExportButtons } from '@/components/ui/export-buttons';
 
 export default function InventoryReport() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -37,6 +38,23 @@ export default function InventoryReport() {
     return sum + medValue;
   }, 0);
 
+  const exportData = filtered.map(med => {
+    const medValue = (med.batches || []).reduce((sum: number, b: any) => sum + (b.quantity * b.purchasePrice), 0);
+    return {
+      name: med.name,
+      category: med.category,
+      stock: med.totalStock,
+      value: medValue
+    };
+  });
+
+  const exportColumns = [
+    { header: 'Medicine', key: 'name' },
+    { header: 'Category', key: 'category' },
+    { header: 'Stock Qty', key: 'stock', format: 'number' as const },
+    { header: 'Est. Value', key: 'value', format: 'currency' as const }
+  ];
+
   if (loading) return <TableLoading />;
 
   return (
@@ -52,14 +70,17 @@ export default function InventoryReport() {
         </div>
       </header>
 
-      <div className="relative max-w-md">
-         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-         <Input 
-           placeholder="Search stock..." 
-           value={search}
-           onChange={(e) => setSearch(e.target.value)}
-           className="pl-10 bg-white dark:bg-slate-900 border-border/50"
-         />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative w-full max-w-md">
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+           <Input 
+             placeholder="Search stock..." 
+             value={search}
+             onChange={(e) => setSearch(e.target.value)}
+             className="pl-10 bg-white dark:bg-slate-900 border-border/50"
+           />
+        </div>
+        <ExportButtons data={exportData} columns={exportColumns} filename="inventory_report" title="Inventory Report" />
       </div>
 
       <section>
