@@ -61,7 +61,7 @@ export async function autoEnrichMedicines() {
     // 1. Fetch up to 10 medicines that need enrichment
     const { data: incompleteMedicines, error: fetchError } = await supabase
       .from('global_medicine_master')
-      .select('id, name, manufacturer')
+      .select('id, name, manufacturer, category')
       .or('ingredients.is.null,ingredients.eq."[]"')
       .limit(10);
 
@@ -87,12 +87,16 @@ export async function autoEnrichMedicines() {
 
     // 3. Update the database in a loop
     let updatedCount = 0;
+    const { createAdminClient } = await import('@/utils/supabase/admin');
+    const adminDb = createAdminClient();
+
     for (const med of enrichedData.medicines) {
-      const { id, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
+      const { id, category, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
       
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminDb
         .from('global_medicine_master')
         .update({
+          category: category || undefined,
           manufacturer: manufacturer || undefined,
           ingredients: ingredients || [],
           substitutes: substitutes || [],
@@ -103,6 +107,7 @@ export async function autoEnrichMedicines() {
         .eq('id', id);
         
       if (!updateError) updatedCount++;
+      else console.error('Error updating medicine:', updateError);
     }
 
     return { count: updatedCount, error: null };
