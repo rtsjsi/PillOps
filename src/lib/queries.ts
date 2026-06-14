@@ -22,7 +22,17 @@ export async function fetchMedicines() {
   if (error) throw new Error(error.message);
   
   const mappedData = (data ?? []).map((med: any) => {
-    const g = med.global_medicine_master || {};
+    const gObj = med.global_medicine_master;
+    const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
+    
+    const batches = (med.store_inventory_batches || []).map((b: any) => ({
+      ...b,
+      batchNumber: b.batch_number || b.batchNumber,
+      expiryDate: b.expiry_date || b.expiryDate,
+      purchasePrice: b.purchase_price || b.purchasePrice,
+      receivedDate: b.received_date || b.receivedDate
+    }));
+
     return {
       ...med,
       name: g.name,
@@ -33,15 +43,9 @@ export async function fetchMedicines() {
       schedule: g.schedule,
       gstPercent: g.gst_percent || g.gstPercent,
       reorderLevel: med.reorder_level || med.reorderLevel,
-      totalStock: med.total_stock || med.totalStock || 0,
+      totalStock: med.total_stock !== undefined ? med.total_stock : (med.totalStock || 0),
       rack: med.rack,
-      batches: (med.store_inventory_batches || []).map((b: any) => ({
-        ...b,
-        batchNumber: b.batch_number || b.batchNumber,
-        expiryDate: b.expiry_date || b.expiryDate,
-        purchasePrice: b.purchase_price || b.purchasePrice,
-        receivedDate: b.received_date || b.receivedDate
-      }))
+      batches
     };
   });
 
@@ -58,7 +62,17 @@ export async function fetchMedicineById(id: string) {
 
   if (error || !data) return null;
   
-  const g = data.global_medicine_master || {};
+  const gObj = data.global_medicine_master;
+  const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
+  
+  const batches = (data.store_inventory_batches || []).map((b: any) => ({
+    ...b,
+    batchNumber: b.batch_number || b.batchNumber,
+    expiryDate: b.expiry_date || b.expiryDate,
+    purchasePrice: b.purchase_price || b.purchasePrice,
+    receivedDate: b.received_date || b.receivedDate
+  }));
+
   return {
     ...data,
     name: g.name,
@@ -69,15 +83,9 @@ export async function fetchMedicineById(id: string) {
     schedule: g.schedule,
     gstPercent: g.gst_percent || g.gstPercent,
     reorderLevel: data.reorder_level || data.reorderLevel,
-    totalStock: data.total_stock || data.totalStock || 0,
+    totalStock: data.total_stock !== undefined ? data.total_stock : (data.totalStock || 0),
     rack: data.rack,
-    batches: (data.store_inventory_batches || []).map((b: any) => ({
-      ...b,
-      batchNumber: b.batch_number || b.batchNumber,
-      expiryDate: b.expiry_date || b.expiryDate,
-      purchasePrice: b.purchase_price || b.purchasePrice,
-      receivedDate: b.received_date || b.receivedDate
-    }))
+    batches
   };
 }
 

@@ -131,9 +131,14 @@ export async function saveSalesInvoice(invoiceData: any, items: any[]) {
   const storeId = await getStoreId();
   const supabase = createAdminClient();
 
+  const itemsPayload = items.map(item => ({
+    ...item,
+    batchId: item.storeInventoryBatchId || item.batchId
+  }));
+
   const { data, error } = await supabase.rpc('save_sales_invoice', {
     invoice_data: { ...invoiceData, storeId },
-    items: items,
+    items: itemsPayload,
   });
 
   if (error) throw new Error(error.message);

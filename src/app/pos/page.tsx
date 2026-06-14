@@ -166,9 +166,15 @@ export default function POS() {
         };
 
         const supabase = createClient();
+        
+        const itemsPayload = cart.map(item => ({
+            ...item,
+            batchId: item.storeInventoryBatchId
+        }));
+
         const { data: result, error } = await supabase.rpc('save_sales_invoice', {
             invoice_data: { ...invoiceData, storeId: profile.store_id },
-            items: cart,
+            items: itemsPayload,
         });
         
         if (error) throw error;
