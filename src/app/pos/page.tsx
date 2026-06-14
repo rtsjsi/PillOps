@@ -17,6 +17,12 @@ import { toast } from 'sonner';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const InvoicePDFWrapper = dynamic(
+  () => import('@/components/invoice/invoice-pdf-wrapper').then((mod) => mod.InvoicePDFWrapper),
+  { ssr: false }
+);
 
 export default function POS() {
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -266,10 +272,11 @@ export default function POS() {
               </div>
               
               <div className="flex flex-col gap-3 w-full max-w-sm">
-                  <Button size="lg" className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" onClick={() => window.open(`/invoice/${lastInvoiceId}`, '_blank')}>
-                    <Printer className="mr-2" size={20} />
-                    View & Print Invoice
-                  </Button>
+                  <InvoicePDFWrapper 
+                    invoiceId={lastInvoiceId} 
+                    size="lg" 
+                    className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
+                  />
                   <Button variant="outline" size="lg" className="w-full h-12" onClick={() => { setIsSuccess(false); setLastInvoiceId(null); }}>
                     New Sale (F2)
                   </Button>

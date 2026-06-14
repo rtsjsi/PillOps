@@ -8,6 +8,12 @@ import { Receipt, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import dynamic from 'next/dynamic';
+
+const InvoicePDFWrapper = dynamic(
+  () => import('@/components/invoice/invoice-pdf-wrapper').then((mod) => mod.InvoicePDFWrapper),
+  { ssr: false }
+);
 
 export default function SalesRegister() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -70,9 +76,12 @@ export default function SalesRegister() {
                            </div>
                            <div>{formatDate(inv.created_at)}</div>
                          </div>
-                         <Button render={<Link href={`/invoice/${inv.id}`} />} variant="outline" size="sm" className="h-8 font-bold text-xs bg-muted/50 border-border/50">
-                             <Printer size={14} className="mr-2" /> View Bill
-                         </Button>
+                         <InvoicePDFWrapper 
+                             invoiceId={inv.id} 
+                             variant="outline" 
+                             size="sm" 
+                             className="h-8 font-bold text-xs bg-muted/50 border-border/50" 
+                         />
                       </div>
 
                       {inv.items && inv.items.length > 0 && (
