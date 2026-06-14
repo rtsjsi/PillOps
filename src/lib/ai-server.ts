@@ -97,14 +97,15 @@ export async function chatWithGroq(userPrompt: string, systemPrompt: string = "Y
   return chatCompletion.choices[0]?.message?.content || 'I could not generate a response.';
 }
 
-export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: string}[]) {
+export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: string, manufacturer?: string}[]) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
   
   const systemPrompt = `You are a strict Indian pharmaceutical data AI. 
-You will be given a JSON array of medicines containing 'id' and 'name'.
+You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer'.
 For each medicine, return detailed clinical information including:
+- manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
 - ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
 - substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
 - storageConditions: String describing how to store it (e.g. "Store below 30°C, protect from light").
@@ -116,6 +117,7 @@ Return ONLY a valid JSON object with the following schema:
   "medicines": [
     {
       "id": "original-id",
+      "manufacturer": "string",
       "ingredients": [{"salt": "string", "strength": "string"}],
       "substitutes": ["string"],
       "storageConditions": "string",
