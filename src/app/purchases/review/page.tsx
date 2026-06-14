@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines } from '@/lib/queries';
+import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
 
 export default function ReviewExtraction() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ReviewExtraction() {
     quantity: number;
     freeQuantity: number;
     manufacturer?: string;
+    category?: string;
     hsnCode?: string;
     gstPercent?: number;
     totalAmount?: number;
@@ -45,6 +47,7 @@ export default function ReviewExtraction() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
 
   useEffect(() => {
@@ -98,12 +101,45 @@ export default function ReviewExtraction() {
     if (rawData) {
       try {
         const parsed = JSON.parse(rawData);
-        setData(parsed);
+        
+        // Background AI Enrichment & Data merging
+        const enrichData = async (invoiceData: InvoiceData) => {
+          try {
+            const medNames = invoiceData.items.map(item => item.medicineName).filter(Boolean);
+            const { data: enrichmentMap, error: enrichErr } = await checkAndEnrichInvoiceMedicines(medNames);
+            
+            if (!enrichErr && enrichmentMap) {
+               invoiceData.items = invoiceData.items.map(item => {
+                 const enrichment = enrichmentMap[item.medicineName];
+                 if (enrichment) {
+                   return {
+                     ...item,
+                     category: item.category || enrichment.category,
+                     manufacturer: item.manufacturer || enrichment.manufacturer,
+                     hsnCode: item.hsnCode || enrichment.hsnCode,
+                     gstPercent: item.gstPercent || enrichment.gstPercent || 12,
+                   };
+                 }
+                 return item;
+               });
+            }
+          } catch (e) {
+            console.error('Enrichment failed in review page:', e);
+          } finally {
+            setData(invoiceData);
+            setIsEnriching(false);
+          }
+        };
+
+        enrichData(parsed);
+
       } catch (e) {
         setError("Failed to parse extracted invoice data.");
+        setIsEnriching(false);
       }
     } else {
       setError("No invoice data found. Please scan an invoice first.");
+      setIsEnriching(false);
     }
   }, []);
 
@@ -184,7 +220,18 @@ export default function ReviewExtraction() {
      );
   }
 
-  if (!data) return <GenericTableLoading />;
+  if (isEnriching || !data) {
+    return (
+       <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
+          <Sparkles size={64} className="text-primary animate-pulse" />
+          <div className="grid gap-2">
+            <h2 className="text-2xl font-bold">Enriching Medicine Data...</h2>
+            <p className="text-muted-foreground">Checking Global Medicine Master and AI for missing details to save your time.</p>
+          </div>
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mt-4" />
+       </div>
+    );
+  }
 
   if (isSuccess) {
       return (
@@ -276,7 +323,8 @@ export default function ReviewExtraction() {
                   </CardHeader>
                   
                   <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Category</Label><Input placeholder="Tablet" value={item.category || ''} onChange={e=>handleItemChange(idx, 'category', e.target.value)} className="h-9 text-xs"/></div>
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
                       <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
                          let v = e.target.value.replace(/\D/g, '').substring(0, 6);

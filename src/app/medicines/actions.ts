@@ -115,3 +115,130 @@ export async function autoEnrichMedicines() {
     return { count: 0, error: err.message || 'Failed to auto-enrich medicines' };
   }
 }
+
+export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
+  try {
+    if (!medicineNames || medicineNames.length === 0) return { data: {}, error: null };
+    
+    // De-duplicate names
+    const uniqueNames = Array.from(new Set(medicineNames.filter(n => typeof n === 'string' && n.trim() !== '')));
+    if (uniqueNames.length === 0) return { data: {}, error: null };
+
+    const supabase = await createClient();
+    const { createAdminClient } = await import('@/utils/supabase/admin');
+    const adminDb = createAdminClient();
+
+    // 1. Check which medicines already exist
+    const { data: existing, error: fetchError } = await supabase
+      .from('global_medicine_master')
+      .select('id, name, manufacturer, category, ingredients, substitutes, storage_conditions, is_narcotic, prescription_required, hsn_code, gst_percent')
+      .in('name', uniqueNames);
+
+    if (fetchError) throw new Error(fetchError.message);
+
+    const existingMap = new Map((existing || []).map(m => [m.name, m]));
+    
+    // 2. Filter missing or incomplete medicines
+    const toEnrich: { id?: string, name: string, manufacturer?: string, category?: string }[] = [];
+    
+    for (const name of uniqueNames) {
+      const med = existingMap.get(name);
+      if (!med) {
+        // Completely missing
+        toEnrich.push({ name });
+      } else if (!med.category || !med.ingredients || med.ingredients.length === 0 || med.ingredients === '[]') {
+        // Exists but incomplete
+        toEnrich.push({ id: med.id, name: med.name, manufacturer: med.manufacturer, category: med.category });
+      }
+    }
+
+    // 3. Enrich missing/incomplete ones
+    if (toEnrich.length > 0) {
+      const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+      
+      // Batch in chunks of 15 to respect AI limits/timeouts
+      const CHUNK_SIZE = 15;
+      for (let i = 0; i < toEnrich.length; i += CHUNK_SIZE) {
+        const chunk = toEnrich.slice(i, i + CHUNK_SIZE);
+        
+        // Ensure ID is generated for completely missing ones so AI returns it
+        const chunkWithIds = chunk.map(c => ({
+          ...c,
+          id: c.id || crypto.randomUUID()
+        }));
+
+        try {
+          const aiResponseString = await enrichMedicineBatchWithGroq(chunkWithIds);
+          const enrichedData = JSON.parse(aiResponseString);
+          
+          if (enrichedData?.medicines && Array.isArray(enrichedData.medicines)) {
+            for (const aiMed of enrichedData.medicines) {
+              const originalChunkItem = chunkWithIds.find(c => c.id === aiMed.id);
+              if (!originalChunkItem) continue;
+
+              const { category, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = aiMed;
+              const isNew = !originalChunkItem.id || chunk.find(c => c.name === originalChunkItem.name && !c.id);
+
+              if (isNew) {
+                // INSERT NEW
+                const { data: newMed } = await adminDb
+                  .from('global_medicine_master')
+                  .insert({
+                    name: originalChunkItem.name,
+                    category: category || null,
+                    manufacturer: manufacturer || null,
+                    ingredients: ingredients || [],
+                    substitutes: substitutes || [],
+                    storage_conditions: storageConditions || null,
+                    is_narcotic: isNarcotic || false,
+                    prescription_required: prescriptionRequired || false
+                  })
+                  .select()
+                  .single();
+                  
+                if (newMed) existingMap.set(newMed.name, newMed);
+              } else {
+                // UPDATE EXISTING
+                const { data: updatedMed } = await adminDb
+                  .from('global_medicine_master')
+                  .update({
+                    category: category || undefined,
+                    manufacturer: manufacturer || undefined,
+                    ingredients: ingredients || [],
+                    substitutes: substitutes || [],
+                    storage_conditions: storageConditions || null,
+                    is_narcotic: isNarcotic || false,
+                    prescription_required: prescriptionRequired || false
+                  })
+                  .eq('id', originalChunkItem.id)
+                  .select()
+                  .single();
+                  
+                if (updatedMed) existingMap.set(updatedMed.name, updatedMed);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Enrichment batch failed:', err);
+        }
+      }
+    }
+
+    // 4. Return the enriched mapping
+    const finalMap: Record<string, any> = {};
+    for (const [name, med] of Array.from(existingMap.entries())) {
+      finalMap[name] = {
+        category: med.category,
+        manufacturer: med.manufacturer,
+        hsnCode: med.hsn_code,
+        gstPercent: med.gst_percent,
+        isNarcotic: med.is_narcotic,
+        prescriptionRequired: med.prescription_required
+      };
+    }
+
+    return { data: finalMap, error: null };
+  } catch (err: any) {
+    return { data: null, error: err.message || 'Failed to check and enrich medicines' };
+  }
+}
