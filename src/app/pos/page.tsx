@@ -274,7 +274,7 @@ export default function POS() {
     .slice(0, 5);
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-32">
+    <div className="container py-8 flex flex-col gap-6">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold tracking-tight">New Sale</h1>
@@ -291,183 +291,189 @@ export default function POS() {
         )}
       </header>
 
-      <div className="relative z-50">
-          <SearchBar 
-            ref={searchInputRef}
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-            onClear={clearSearch}
-            onKeyDown={onSearchKeyDown}
-            onFocus={() => setIsOpen(true)}
-            placeholder="Search by name, generic... (Autofocus enabled)"
-            data-search-input="true"
-          />
-          
-          {isOpen && searchQuery && (
-              <Card className="absolute top-full left-0 right-0 mt-2 shadow-2xl border-border overflow-hidden bg-card/95 backdrop-blur-xl">
-                  {searchedMedicines.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground font-medium">No medicines found.</div>
-                  ) : (
-                      <div className="divide-y divide-border max-h-[300px] overflow-y-auto">
-                        {searchedMedicines.map((med, index) => {
-                            const totalStock = med.totalStock || 0;
-                            return (
-                                <div 
-                                    key={med.id} 
-                                    onClick={() => {
-                                      if (totalStock > 0) handleAddToCart(med);
-                                    }}
-                                    className={cn(
-                                      "p-4 flex justify-between items-center transition-colors",
-                                      totalStock > 0 ? "cursor-pointer hover:bg-muted" : "opacity-50 cursor-not-allowed",
-                                      index === selectedIndex && totalStock > 0 ? "bg-muted" : ""
-                                    )}
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                          <p className="font-bold">{med.name}</p>
-                                          <Badge variant="secondary" className="text-[9px] h-4 px-1 uppercase">{med.category}</Badge>
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Side: Search and Cart Items */}
+        <div className="flex-1 w-full flex flex-col gap-6">
+          <div className="relative z-50">
+              <SearchBar 
+                ref={searchInputRef}
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                onClear={clearSearch}
+                onKeyDown={onSearchKeyDown}
+                onFocus={() => setIsOpen(true)}
+                placeholder="Search by name, generic... (Autofocus enabled)"
+                data-search-input="true"
+              />
+              
+              {isOpen && searchQuery && (
+                  <Card className="absolute top-full left-0 right-0 mt-2 shadow-2xl border-border overflow-hidden bg-card/95 backdrop-blur-xl">
+                      {searchedMedicines.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground font-medium">No medicines found.</div>
+                      ) : (
+                          <div className="divide-y divide-border max-h-[300px] overflow-y-auto">
+                            {searchedMedicines.map((med, index) => {
+                                const totalStock = med.totalStock || 0;
+                                return (
+                                    <div 
+                                        key={med.id} 
+                                        onClick={() => {
+                                          if (totalStock > 0) handleAddToCart(med);
+                                        }}
+                                        className={cn(
+                                          "p-4 flex justify-between items-center transition-colors",
+                                          totalStock > 0 ? "cursor-pointer hover:bg-muted" : "opacity-50 cursor-not-allowed",
+                                          index === selectedIndex && totalStock > 0 ? "bg-muted" : ""
+                                        )}
+                                    >
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                              <p className="font-bold">{med.name}</p>
+                                              <Badge variant="secondary" className="text-[9px] h-4 px-1 uppercase">{med.category}</Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                                                {totalStock} in stock • MRP: ₹{med.batches[0]?.mrp || 0}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                            {totalStock} in stock • MRP: ₹{med.batches[0]?.mrp || 0}
-                                        </p>
+                                        <PlusCircle size={24} className="text-primary" />
                                     </div>
-                                    <PlusCircle size={24} className="text-primary" />
-                                </div>
-                            );
-                        })}
-                      </div>
-                  )}
-              </Card>
-          )}
-          
-          {/* Quick Add Chips (when empty search) */}
-          {cart.length === 0 && !searchQuery && recentItems.length > 0 && (
-            <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">Quick Add:</span>
-              {recentItems.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => handleAddToCart(item)}
-                  className="shrink-0 text-xs font-bold bg-muted/50 hover:bg-muted text-foreground border border-border px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
-                >
-                  <Plus size={12} />
-                  {item.name}
-                </button>
-              ))}
-            </div>
-          )}
-      </div>
-
-      <div className="flex flex-col gap-3">
-          {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground bg-muted/20 rounded-3xl border-2 border-dashed border-border/50">
-                  <ShoppingCart size={48} className="opacity-20" />
-                  <p className="font-medium">Cart is empty. Search to add items.</p>
-              </div>
-          ) : (
-              cart.map((item, i) => (
-                  <Card key={`${item.storeInventoryBatchId}-${i}`} className="p-4 flex justify-between items-center border-border shadow-sm">
-                      <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-sm">{item.medicineName}</p>
+                                );
+                            })}
                           </div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-                            Batch: {item.batchNumber} • MRP: ₹{item.mrp}
-                          </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-6">
-                          <div className="flex items-center bg-muted/30 rounded-lg border border-border p-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(i, item.quantity - 1)}>
-                                  <Minus size={14} />
-                              </Button>
-                              <Input 
-                                type="number" 
-                                value={item.quantity || ''}
-                                onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 0)}
-                                className="w-12 h-7 text-center font-bold border-none bg-transparent shadow-none focus-visible:ring-0 p-0"
-                                min={0}
-                              />
-                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(i, item.quantity + 1)}>
-                                  <Plus size={14} />
-                              </Button>
-                          </div>
-                          <div className="font-bold text-sm w-20 text-right">
-                              {formatCurrency(item.quantity * item.mrp)}
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => updateQuantity(i, 0)}>
-                              <Trash2 size={16} />
-                          </Button>
-                      </div>
+                      )}
                   </Card>
-              ))
-          )}
-      </div>
-
-      {cart.length > 0 && (
-          <div className="fixed bottom-6 left-4 right-4 z-40 lg:left-auto lg:right-6 lg:w-[400px]">
-            <Card className="bg-card/90 backdrop-blur-2xl border-border shadow-2xl shadow-black/10">
-                <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer (Optional)</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 flex flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input 
-                      placeholder="Name" 
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="bg-background h-10 text-sm"
-                    />
-                    <Input 
-                      placeholder="Phone" 
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="bg-background h-10 text-sm"
-                    />
-                  </div>
-
-                  <div className="flex justify-between items-end gap-4 border-t border-dashed border-border pt-4">
-                      <div className="flex flex-col gap-2 flex-1">
-                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Discount</span>
-                          <div className="flex items-center gap-1">
-                              {[0, 5, 10].map(d => (
-                                  <Button key={d} variant={currentDiscount === d ? 'default' : 'outline'} size="sm" className="h-8 px-2 flex-1" onClick={() => setDiscountPercent(d)}>{d}%</Button>
-                              ))}
-                              <div className="relative flex-1">
-                                <Input 
-                                  type="number" 
-                                  value={discountPercent} 
-                                  onChange={(e) => setDiscountPercent(e.target.value)} 
-                                  className="h-8 pr-6 text-sm"
-                                  placeholder="Cust."
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-
-                  <div className="flex justify-between items-center mb-1 text-sm font-medium pt-2 border-t border-border">
-                      <span className="text-muted-foreground">Subtotal ({cart.reduce((sum, c)=>sum+c.quantity, 0)} items)</span>
-                      <span>{formatCurrency(subtotal)}</span>
-                  </div>
-
-                  <Button 
-                      className="w-full h-14 text-xl font-bold rounded-2xl flex justify-between px-6 shadow-xl shadow-primary/20 transition-transform active:scale-[0.98]"
-                      disabled={isCheckingOut}
-                      onClick={handleCheckout}
-                  >
-                      <span>{isCheckingOut ? 'Wait...' : 'Checkout'}</span>
-                      <div className="flex items-center gap-2">
-                        <strong>{formatCurrency(total)}</strong>
-                        <kbd className="hidden sm:inline-flex ml-2 text-[10px] font-mono bg-primary-foreground/20 text-primary-foreground px-1.5 py-0.5 rounded">F5</kbd>
-                      </div>
-                  </Button>
-                </CardContent>
-            </Card>
+              )}
+              
+              {/* Quick Add Chips (when empty search) */}
+              {cart.length === 0 && !searchQuery && recentItems.length > 0 && (
+                <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">Quick Add:</span>
+                  {recentItems.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleAddToCart(item)}
+                      className="shrink-0 text-xs font-bold bg-muted/50 hover:bg-muted text-foreground border border-border px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                    >
+                      <Plus size={12} />
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
-      )}
+
+          <div className="flex flex-col gap-3">
+              {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground bg-muted/20 rounded-3xl border-2 border-dashed border-border/50">
+                      <ShoppingCart size={48} className="opacity-20" />
+                      <p className="font-medium">Cart is empty. Search to add items.</p>
+                  </div>
+              ) : (
+                  cart.map((item, i) => (
+                      <Card key={`${item.storeInventoryBatchId}-${i}`} className="p-4 flex justify-between items-center border-border shadow-sm">
+                          <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-sm">{item.medicineName}</p>
+                              </div>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+                                Batch: {item.batchNumber} • MRP: ₹{item.mrp}
+                              </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-6">
+                              <div className="flex items-center bg-muted/30 rounded-lg border border-border p-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(i, item.quantity - 1)}>
+                                      <Minus size={14} />
+                                  </Button>
+                                  <Input 
+                                    type="number" 
+                                    value={item.quantity || ''}
+                                    onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 0)}
+                                    className="w-12 h-7 text-center font-bold border-none bg-transparent shadow-none focus-visible:ring-0 p-0"
+                                    min={0}
+                                  />
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(i, item.quantity + 1)}>
+                                      <Plus size={14} />
+                                  </Button>
+                              </div>
+                              <div className="font-bold text-sm w-20 text-right">
+                                  {formatCurrency(item.quantity * item.mrp)}
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => updateQuantity(i, 0)}>
+                                  <Trash2 size={16} />
+                              </Button>
+                          </div>
+                      </Card>
+                  ))
+              )}
+          </div>
+        </div>
+
+        {/* Right Side: Checkout Panel */}
+        {cart.length > 0 && (
+            <div className="w-full lg:w-[400px] lg:sticky lg:top-8 z-40">
+              <Card className="bg-card/90 backdrop-blur-2xl border-border shadow-2xl shadow-black/10">
+                  <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer (Optional)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input 
+                        placeholder="Name" 
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="bg-background h-10 text-sm"
+                      />
+                      <Input 
+                        placeholder="Phone" 
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="bg-background h-10 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-end gap-4 border-t border-dashed border-border pt-4">
+                        <div className="flex flex-col gap-2 flex-1">
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Discount</span>
+                            <div className="flex items-center gap-1">
+                                {[0, 5, 10].map(d => (
+                                    <Button key={d} variant={currentDiscount === d ? 'default' : 'outline'} size="sm" className="h-8 px-2 flex-1" onClick={() => setDiscountPercent(d)}>{d}%</Button>
+                                ))}
+                                <div className="relative flex-1">
+                                  <Input 
+                                    type="number" 
+                                    value={discountPercent} 
+                                    onChange={(e) => setDiscountPercent(e.target.value)} 
+                                    className="h-8 pr-6 text-sm"
+                                    placeholder="Cust."
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-1 text-sm font-medium pt-2 border-t border-border">
+                        <span className="text-muted-foreground">Subtotal ({cart.reduce((sum, c)=>sum+c.quantity, 0)} items)</span>
+                        <span>{formatCurrency(subtotal)}</span>
+                    </div>
+
+                    <Button 
+                        className="w-full h-14 text-xl font-bold rounded-2xl flex justify-between px-6 shadow-xl shadow-primary/20 transition-transform active:scale-[0.98]"
+                        disabled={isCheckingOut}
+                        onClick={handleCheckout}
+                    >
+                        <span>{isCheckingOut ? 'Wait...' : 'Checkout'}</span>
+                        <div className="flex items-center gap-2">
+                          <strong>{formatCurrency(total)}</strong>
+                          <kbd className="hidden sm:inline-flex ml-2 text-[10px] font-mono bg-primary-foreground/20 text-primary-foreground px-1.5 py-0.5 rounded">F5</kbd>
+                        </div>
+                    </Button>
+                  </CardContent>
+              </Card>
+            </div>
+        )}
+      </div>
     </div>
   );
 }

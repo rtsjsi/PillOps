@@ -3,11 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { fetchInvoiceById, fetchStoreSettings } from '@/lib/queries';
-import { formatCurrency } from '@/lib/utils';
-import { Printer, ArrowLeft, Pill, CheckCircle2, Loader2 } from 'lucide-react';
+import { formatExpiryDate, numberToWords } from '@/lib/utils';
+import { Printer, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 export default function InvoicePage() {
   const { id } = useParams<{ id: string }>();
@@ -46,23 +45,50 @@ export default function InvoicePage() {
     return (
         <div className="container min-h-screen flex flex-col items-center justify-center gap-6">
             <p className="text-muted-foreground font-medium">Invoice not found.</p>
-            <Button render={<Link href="/pos" />} variant="outline">
-              Back to POS
+            <Button asChild variant="outline">
+              <Link href="/pos">Back to POS</Link>
             </Button>
         </div>
     );
   }
 
+  const invoiceDate = new Date(invoice.createdAt).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
+  const totalQty = invoice.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const netAmount = Math.round(invoice.total);
+  const roundOff = (netAmount - invoice.total).toFixed(2);
+  const words = numberToWords(netAmount);
+
   return (
-    <div className="container py-10 max-w-4xl mx-auto flex flex-col gap-8 pb-32">
-      
+    <div className="min-h-screen bg-slate-100 py-10 print:bg-white print:py-0">
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page { size: A4 portrait; margin: 0.5cm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
+          .no-print { display: none !important; }
+          .print-border { border-color: black !important; }
+          .print-text { color: black !important; }
+        }
+        .retail-table th, .retail-table td {
+          border-right: 1px solid black;
+          padding: 2px 4px;
+        }
+        .retail-table th:last-child, .retail-table td:last-child {
+          border-right: none;
+        }
+      `}} />
+
       {/* Action Bar - Hidden during print */}
-      <div className="flex justify-between items-center bg-card border border-border p-4 rounded-2xl shadow-sm no-print">
-          <Button render={<Link href="/pos" />} variant="ghost" className="font-bold">
-              <ArrowLeft size={16} className="mr-2" /> Back to POS
+      <div className="max-w-[900px] mx-auto mb-6 flex justify-between items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm no-print">
+          <Button asChild variant="ghost" className="font-bold">
+              <Link href="/pos"><ArrowLeft size={16} className="mr-2" /> Back to POS</Link>
           </Button>
           <Button 
-            className="font-bold shadow-lg shadow-primary/20"
+            className="font-bold shadow-lg"
             onClick={() => window.print()}
           >
             <Printer size={16} className="mr-2" /> Print Invoice
@@ -70,118 +96,140 @@ export default function InvoicePage() {
       </div>
 
       {/* Actual Invoice Body */}
-      <Card className="border-none shadow-2xl bg-white text-black overflow-hidden print:shadow-none print:border print:m-0">
-        <CardContent className="p-10 print:p-0">
-          {/* Header */}
-          <header className="flex justify-between items-start mb-12">
-              <div>
-                  <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-primary p-2 rounded-xl text-white shadow-lg shadow-primary/20">
-                          <Pill size={24} />
-                      </div>
-                      <h1 className="text-2xl font-black tracking-tighter text-slate-900">{storeInfo?.name}</h1>
-                  </div>
-                  <div className="text-xs font-bold text-slate-500 max-w-[280px] leading-relaxed uppercase tracking-wider">
-                      {storeInfo?.address}<br />
-                      Ph: {storeInfo?.phone}<br />
-                      GSTIN: {storeInfo?.gstin}
+      <div className="max-w-[900px] mx-auto bg-white text-black font-sans text-[11px] leading-tight print:w-full print:max-w-none print:shadow-none print:m-0 border border-black print-border">
+          
+          {/* Header Row 1 */}
+          <div className="flex border-b border-black print-border">
+              <div className="flex-[2] p-2 border-r border-black print-border">
+                  <h1 className="text-[16px] font-bold uppercase">{storeInfo?.name || 'MEDICAL STORE'}</h1>
+                  <p className="uppercase mt-1">{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</p>
+              </div>
+              <div className="flex-1 p-2 border-r border-black print-border flex flex-col justify-between">
+                  <div className="uppercase">BILL OF SUPPLY</div>
+                  <div className="flex justify-between mt-4">
+                      <span>ORIGINAL</span>
+                      <span>Page : 1 of 1</span>
                   </div>
               </div>
-              <div className="text-right">
-                  <h2 className="text-5xl font-black text-slate-100 mb-2 tracking-tighter print:text-slate-200">INVOICE</h2>
-                  <div className="font-bold text-slate-900"># {invoice.invoiceNumber}</div>
-                  <div className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                    {new Date(invoice.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </div>
+              <div className="flex-1 p-2 flex flex-col justify-between">
+                  <div>MO. {storeInfo?.phone || 'N/A'}</div>
+                  <div className="mt-1">D.L NO. {storeInfo?.drugLicense || ''}</div>
+                  {storeInfo?.gstin && <div className="mt-1">GSTIN: {storeInfo?.gstin}</div>}
               </div>
-          </header>
+          </div>
 
-          {/* Customer Details */}
-          <div className="grid grid-cols-2 gap-8 mb-12 p-8 bg-slate-50 rounded-3xl print:bg-slate-50">
-              <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Billed To</p>
-                  <p className="font-black text-xl text-slate-900">{invoice.customerName}</p>
-                  <p className="text-sm font-bold text-slate-500 mt-1">{invoice.customerPhone}</p>
+          {/* Header Row 2 - Customer Info */}
+          <div className="flex border-b border-black print-border">
+              <div className="flex-[2] p-2 border-r border-black print-border">
+                  <div className="grid grid-cols-[60px_auto] gap-2">
+                      <span>Customer</span>
+                      <span className="uppercase">: {invoice.customerName}</span>
+                      <span>Doctor</span>
+                      <span className="uppercase">: WALK-IN</span>
+                  </div>
               </div>
-              <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Status</p>
-                  <div className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20">
-                    <CheckCircle2 size={14} />
-                    Paid in Full
+              <div className="flex-1 p-2 border-r border-black print-border">
+                  <div className="grid grid-cols-[40px_auto] gap-2">
+                      <span>Area</span>
+                      <span className="uppercase">: LOCAL</span>
+                      <span>Area</span>
+                      <span>: </span>
+                  </div>
+              </div>
+              <div className="flex-1 p-2">
+                  <div className="grid grid-cols-[50px_auto] gap-2">
+                      <span>Bill No</span>
+                      <span className="font-bold">: {invoice.invoiceNumber} <span className="float-right ml-4">{invoiceDate}</span></span>
+                      <span>Mobile</span>
+                      <span>: {invoice.customerPhone}</span>
                   </div>
               </div>
           </div>
 
           {/* Table */}
-          <div className="overflow-hidden rounded-2xl border border-slate-100 mb-12">
-            <table className="w-full text-left border-collapse">
-                <thead>
-                    <tr className="bg-slate-900 text-white uppercase tracking-widest text-[10px] font-black">
-                        <th className="p-4">Item Description</th>
-                        <th className="p-4 text-center">Batch</th>
-                        <th className="p-4 text-center">Expiry</th>
-                        <th className="p-4 text-right">Qty</th>
-                        <th className="p-4 text-right">MRP</th>
-                        <th className="p-4 text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                    {invoice.items.map((item: any, idx: number) => (
-                        <tr key={idx} className="text-sm font-bold text-slate-700">
-                            <td className="p-4">{item.medicine?.name || item.medicineId}</td>
-                            <td className="p-4 text-center text-slate-500 font-mono text-xs">{item.batch?.batch_number || item.storeInventoryBatchId}</td>
-                            <td className="p-4 text-center text-slate-500 text-xs">{item.expiryDate}</td>
-                            <td className="p-4 text-right">{item.quantity}</td>
-                            <td className="p-4 text-right text-slate-500">₹{item.mrp.toFixed(2)}</td>
-                            <td className="p-4 text-right text-slate-900 font-black">₹{(item.quantity * item.mrp).toFixed(2)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+          <div className="min-h-[300px]">
+              <table className="w-full text-left retail-table border-b border-black print-border">
+                  <thead>
+                      <tr className="border-b border-black print-border bg-slate-50 print:bg-transparent">
+                          <th className="w-[30px] text-center">Sr.</th>
+                          <th>Description</th>
+                          <th className="w-[40px]">Pack</th>
+                          <th className="w-[60px]">HSN</th>
+                          <th className="w-[80px]">BatchNo</th>
+                          <th className="w-[50px]">ExpDt</th>
+                          <th className="w-[40px] text-right">Qty</th>
+                          <th className="w-[50px] text-right">MRP</th>
+                          <th className="w-[60px] text-right">Revised<br/>MRP</th>
+                          <th className="w-[40px] text-right">Disc</th>
+                          <th className="w-[60px] text-right">Amount</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {invoice.items.map((item: any, idx: number) => {
+                          const amount = item.quantity * item.mrp;
+                          const expDt = item.expiryDate ? formatExpiryDate(item.expiryDate).split(' ').join('/') : '';
+                          const hsn = item.medicine?.hsnCode || '30049099';
+                          const pack = item.medicine?.pack || 'TAB';
+                          const disc = invoice.discountPercent > 0 ? invoice.discountPercent.toFixed(2) : '0.00';
+                          
+                          // Revised MRP logic (simplified approximation based on discount)
+                          const revisedMrp = item.mrp * (1 - (invoice.discountPercent / 100));
+
+                          return (
+                              <tr key={idx} className="align-top">
+                                  <td className="text-center">{idx + 1}</td>
+                                  <td className="uppercase">{item.medicine?.name || item.medicineName}</td>
+                                  <td className="uppercase text-xs">{pack}</td>
+                                  <td>{hsn}</td>
+                                  <td className="uppercase">{item.batchNumber || item.batch?.batch_number}</td>
+                                  <td>{expDt.substring(0, 5)}</td> {/* e.g. 06/27 */}
+                                  <td className="text-right">{item.quantity}</td>
+                                  <td className="text-right">{item.mrp.toFixed(2)}</td>
+                                  <td className="text-right">{revisedMrp.toFixed(2)}</td>
+                                  <td className="text-right">{disc}</td>
+                                  <td className="text-right">{amount.toFixed(2)}</td>
+                              </tr>
+                          );
+                      })}
+                  </tbody>
+              </table>
           </div>
 
-          {/* Totals */}
-          <div className="flex justify-end">
-              <div className="w-full max-w-[320px] flex flex-col gap-3">
-                  <div className="flex justify-between text-sm font-bold text-slate-500">
-                      <span>Subtotal</span>
-                      <span>{formatCurrency(invoice.subtotal)}</span>
+          {/* Footer Area */}
+          <div className="flex border-b border-black print-border">
+              <div className="flex-[3] p-2 border-r border-black print-border flex flex-col justify-end pb-1">
+                  <div>PAN NO. {storeInfo?.panNo || ''}</div>
+                  <div className="mt-4 uppercase">MSG-BROKEN & CUTTING STRIPS WILL BE NOT TAKEN BACK.</div>
+                  <div className="mt-1">Rupees {words} Only</div>
+              </div>
+              <div className="flex-1">
+                  <div className="flex justify-between border-b border-black print-border px-2 py-1">
+                      <span className="font-bold">{totalQty}</span>
+                      <span></span>
+                      <span className="font-bold">{invoice.subtotal.toFixed(2)}</span>
                   </div>
-                  {invoice.gstAmount !== null && (
-                    <div className="flex justify-between text-sm font-bold text-slate-400 italic">
-                        <span>GST (Included)</span>
-                        <span>{formatCurrency(invoice.gstAmount)}</span>
-                    </div>
-                  )}
-                  {invoice.discountAmount !== null && invoice.discountAmount > 0 && (
-                      <div className="flex justify-between text-sm font-black text-emerald-600">
-                          <span>Discount ({invoice.discountPercent}%)</span>
-                          <span>-{formatCurrency(invoice.discountAmount)}</span>
-                      </div>
-                  )}
-                  <div className="flex justify-between items-center pt-4 mt-2 border-t-2 border-slate-900">
-                      <span className="text-lg font-black text-slate-900 tracking-tighter">NET TOTAL</span>
-                      <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(invoice.total)}</span>
+                  <div className="flex justify-between border-b border-black print-border px-2 py-1">
+                      <span>OTHER +/-</span>
+                      <span>0.00</span>
+                  </div>
+                  <div className="flex justify-between border-b border-black print-border px-2 py-1">
+                      <span>ROUND OFF</span>
+                      <span>{roundOff}</span>
+                  </div>
+                  <div className="flex justify-between px-2 py-1 items-center bg-slate-50 print:bg-transparent">
+                      <span className="text-lg font-bold">NET</span>
+                      <span className="text-lg font-bold">{netAmount.toFixed(2)}</span>
                   </div>
               </div>
           </div>
 
-          {/* Footer info */}
-          <div className="mt-20 pt-10 border-t-4 border-slate-900 flex justify-between gap-10">
-              <div className="max-w-[400px] text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
-                  <p className="text-slate-900 mb-2 font-black">Terms & Conditions:</p>
-                  1. Medicines once sold will not be taken back or exchanged.<br />
-                  2. Please consult your physician before using any scheduled drug.<br />
-                  3. Keep all medicines out of reach of children.
-              </div>
-              <div className="text-right flex flex-col justify-end">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">For {storeInfo?.name || 'Authorized Pharmacy'}</p>
-                  <div className="h-20"></div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-t border-slate-200 pt-2">Authorized Signatory</p>
-              </div>
+          {/* Bottom Info */}
+          <div className="flex justify-between px-2 py-1 text-[9px] text-slate-600 print:text-black">
+              <div>(G2).Software by PILLOPS : Customer Care No: +91 XXXXXXXXXX</div>
+              <div>USER: ADMIN</div>
+              <div>E. & O. E.</div>
           </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
