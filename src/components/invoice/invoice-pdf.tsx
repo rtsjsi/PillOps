@@ -52,7 +52,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A5" style={styles.page}>
         <View style={styles.borderAll}>
           
           {/* Header Row 1 */}
