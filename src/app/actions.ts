@@ -194,6 +194,11 @@ export async function updatePassword(password: string) {
   if (error) throw new Error(error.message);
 }
 
+export async function logoutUser() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+}
+
 // ─── Store Settings (mutations) ─────────────────────────────
 
 export async function updateStoreSettings(data: { name: string, address: string, phone: string, gstin: string }) {

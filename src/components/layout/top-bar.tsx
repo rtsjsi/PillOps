@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchUserProfile } from '@/lib/queries';
+import { logoutUser } from '@/app/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MobileSidebar } from '@/components/layout/mobile-sidebar';
 
@@ -55,8 +56,7 @@ export function TopBar() {
     if (signingOut) return;
     setSigningOut(true);
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      await logoutUser();
       window.location.replace('/login');
     } catch {
       toast.error('Logout failed');
