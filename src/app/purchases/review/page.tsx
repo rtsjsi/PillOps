@@ -117,15 +117,16 @@ export default function ReviewExtraction() {
             if (!enrichErr && enrichmentMap) {
                invoiceData.items = invoiceData.items.map(item => {
                  const enrichment = enrichmentMap[item.medicineName];
-                 if (enrichment) {
-                   return {
-                     ...item,
-                     category: item.category || enrichment.category,
-                     manufacturer: item.manufacturer || enrichment.manufacturer,
-                     hsnCode: item.hsnCode || enrichment.hsnCode,
-                     gstPercent: item.gstPercent || enrichment.gstPercent || 12,
-                   };
-                 }
+                  if (enrichment) {
+                    return {
+                      ...item,
+                      medicineName: enrichment.name || item.medicineName,
+                      category: item.category || enrichment.category,
+                      manufacturer: item.manufacturer || enrichment.manufacturer,
+                      hsnCode: item.hsnCode || enrichment.hsnCode,
+                      gstPercent: item.gstPercent || enrichment.gstPercent || 12,
+                    };
+                  }
                  return item;
                });
             }

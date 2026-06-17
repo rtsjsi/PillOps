@@ -2,6 +2,41 @@
 
 import { createClient } from '@/utils/supabase/server';
 
+function getSimilarity(s1: string, s2: string) {
+  let longer = s1;
+  let shorter = s2;
+  if (s1.length < s2.length) {
+    longer = s2;
+    shorter = s1;
+  }
+  let longerLength = longer.length;
+  if (longerLength == 0) return 1.0;
+  return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength.toString());
+}
+
+function editDistance(s1: string, s2: string) {
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
+  let costs = new Array();
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i == 0) costs[j] = j;
+      else {
+        if (j > 0) {
+          let newValue = costs[j - 1];
+          if (s1.charAt(i - 1) != s2.charAt(j - 1))
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+          costs[j - 1] = lastValue;
+          lastValue = newValue;
+        }
+      }
+    }
+    if (i > 0) costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
+
 export async function searchGlobalMedicines(query: string = '') {
   try {
     const supabase = await createClient();
@@ -128,27 +163,64 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
     const { createAdminClient } = await import('@/utils/supabase/admin');
     const adminDb = createAdminClient();
 
-    // 1. Check which medicines already exist
-    const { data: existing, error: fetchError } = await supabase
+    // 1. Fetch Candidates (Exact + Fuzzy)
+    const candidates: any[] = [];
+    const { data: exactMatches, error: fetchError } = await supabase
       .from('global_medicine_master')
       .select('id, name, manufacturer, category, ingredients, substitutes, storage_conditions, is_narcotic, prescription_required, hsn_code, gst_percent')
       .in('name', uniqueNames);
 
     if (fetchError) throw new Error(fetchError.message);
+    if (exactMatches) candidates.push(...exactMatches);
 
-    const existingMap = new Map((existing || []).map(m => [m.name, m]));
-    
-    // 2. Filter missing or incomplete medicines
+    const exactNames = new Set(exactMatches?.map(m => m.name.toLowerCase()) || []);
+    const missingForFuzzy = uniqueNames.filter(n => !exactNames.has(n.toLowerCase()));
+
+    if (missingForFuzzy.length > 0) {
+       const searchTokens = missingForFuzzy.map(n => n.split(/[\s-]+/)[0].replace(/[^a-zA-Z0-9]/g, '')).filter(t => t.length > 2);
+       if (searchTokens.length > 0) {
+          const { data: fuzzyCandidates } = await supabase
+             .from('global_medicine_master')
+             .select('id, name, manufacturer, category, ingredients, substitutes, storage_conditions, is_narcotic, prescription_required, hsn_code, gst_percent')
+             .or(searchTokens.map(t => `name.ilike.%${t}%`).join(','));
+             
+          if (fuzzyCandidates) {
+             const candidateIds = new Set(candidates.map(c => c.id));
+             for (const fc of fuzzyCandidates) {
+                if (!candidateIds.has(fc.id)) candidates.push(fc);
+             }
+          }
+       }
+    }
+
+    const existingMap = new Map();
     const toEnrich: { id?: string, name: string, manufacturer?: string, category?: string }[] = [];
-    
+
+    // 2. Map OCR names to the best candidate
     for (const name of uniqueNames) {
-      const med = existingMap.get(name);
-      if (!med) {
-        // Completely missing
-        toEnrich.push({ name });
-      } else if (!med.category || !med.ingredients || med.ingredients.length === 0 || med.ingredients === '[]') {
-        // Exists but incomplete
-        toEnrich.push({ id: med.id, name: med.name, manufacturer: med.manufacturer, category: med.category });
+      let bestMatch = null;
+      let highestSim = 0;
+
+      for (const candidate of candidates) {
+        if (candidate.name.toLowerCase() === name.toLowerCase()) {
+           bestMatch = candidate;
+           highestSim = 1;
+           break;
+        }
+        const sim = getSimilarity(name.toLowerCase(), candidate.name.toLowerCase());
+        if (sim > highestSim) {
+           highestSim = sim;
+           bestMatch = candidate;
+        }
+      }
+
+      if (bestMatch && highestSim > 0.8) {
+         existingMap.set(name, bestMatch);
+         if (!bestMatch.category || !bestMatch.ingredients || bestMatch.ingredients.length === 0 || bestMatch.ingredients === '[]') {
+            toEnrich.push({ id: bestMatch.id, name: name, manufacturer: bestMatch.manufacturer, category: bestMatch.category });
+         }
+      } else {
+         toEnrich.push({ name });
       }
     }
 
@@ -179,29 +251,43 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
               const { category, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = aiMed;
               const isNew = !originalChunkItem.id || chunk.find(c => c.name === originalChunkItem.name && !c.id);
 
+              const correctedName = aiMed.correctedName || originalChunkItem.name;
+
               if (isNew) {
-                // INSERT NEW
-                const { data: newMed } = await adminDb
-                  .from('global_medicine_master')
-                  .insert({
-                    name: originalChunkItem.name,
-                    category: category || null,
-                    manufacturer: manufacturer || null,
-                    ingredients: ingredients || [],
-                    substitutes: substitutes || [],
-                    storage_conditions: storageConditions || null,
-                    is_narcotic: isNarcotic || false,
-                    prescription_required: prescriptionRequired || false
-                  })
-                  .select()
-                  .single();
-                  
-                if (newMed) existingMap.set(newMed.name, newMed);
+                // Check if the corrected name already exists (e.g. AI fixed a typo, and the correct name is in DB)
+                let { data: existingCorrected } = await adminDb
+                   .from('global_medicine_master')
+                   .select('id, name, manufacturer, category, ingredients, substitutes, storage_conditions, is_narcotic, prescription_required, hsn_code, gst_percent')
+                   .eq('name', correctedName)
+                   .maybeSingle();
+
+                if (existingCorrected) {
+                   existingMap.set(originalChunkItem.name, existingCorrected);
+                } else {
+                   // INSERT NEW
+                   const { data: newMed } = await adminDb
+                     .from('global_medicine_master')
+                     .insert({
+                       name: correctedName,
+                       category: category || null,
+                       manufacturer: manufacturer || null,
+                       ingredients: ingredients || [],
+                       substitutes: substitutes || [],
+                       storage_conditions: storageConditions || null,
+                       is_narcotic: isNarcotic || false,
+                       prescription_required: prescriptionRequired || false
+                     })
+                     .select()
+                     .single();
+                     
+                   if (newMed) existingMap.set(originalChunkItem.name, newMed);
+                }
               } else {
                 // UPDATE EXISTING
                 const { data: updatedMed } = await adminDb
                   .from('global_medicine_master')
                   .update({
+                    name: correctedName, // Update the name to the AI corrected one
                     category: category || undefined,
                     manufacturer: manufacturer || undefined,
                     ingredients: ingredients || [],
@@ -214,7 +300,7 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
                   .select()
                   .single();
                   
-                if (updatedMed) existingMap.set(updatedMed.name, updatedMed);
+                if (updatedMed) existingMap.set(originalChunkItem.name, updatedMed);
               }
             }
           }
@@ -226,8 +312,9 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
 
     // 4. Return the enriched mapping
     const finalMap: Record<string, any> = {};
-    for (const [name, med] of Array.from(existingMap.entries())) {
-      finalMap[name] = {
+    for (const [originalName, med] of Array.from(existingMap.entries())) {
+      finalMap[originalName] = {
+        name: med.name, // Pass the corrected/matched name back to the UI
         category: med.category,
         manufacturer: med.manufacturer,
         hsnCode: med.hsn_code,

@@ -107,6 +107,7 @@ export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: 
 You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
 For each medicine, return detailed clinical information including:
 - category: String. The dosage form (e.g., "Tablet", "Capsule", "Syrup", "Injection", "Ointment", "Cream", "Drops", "Powder"). Infer this from the name if possible.
+- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "Dolo 650 Tablet" or "Crocin Advance"). Fix any abbreviations or typos.
 - manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
 - ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
 - substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
@@ -119,6 +120,7 @@ Return ONLY a valid JSON object with the following schema:
   "medicines": [
     {
       "id": "original-id",
+      "correctedName": "string",
       "category": "string",
       "manufacturer": "string",
       "ingredients": [{"salt": "string", "strength": "string"}],
