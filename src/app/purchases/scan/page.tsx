@@ -37,6 +37,35 @@ export default function AIInvoiceScanner() {
           if (!ctx) return resolve(e.target?.result as string); // fallback
           
           ctx.drawImage(img, 0, 0, width, height);
+          
+          // Image Preprocessing: Grayscale + High Contrast Binarization
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const data = imageData.data;
+          
+          let totalBrightness = 0;
+          for (let i = 0; i < data.length; i += 4) {
+             const r = data[i];
+             const g = data[i + 1];
+             const b = data[i + 2];
+             totalBrightness += (0.299 * r + 0.587 * g + 0.114 * b);
+          }
+          const avgBrightness = totalBrightness / (width * height);
+          const threshold = avgBrightness * 0.95; // Threshold dynamically adjusted to lighting
+
+          for (let i = 0; i < data.length; i += 4) {
+             const r = data[i];
+             const g = data[i + 1];
+             const b = data[i + 2];
+             const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+             
+             // Binarize
+             const color = brightness > threshold ? 255 : 0;
+             data[i] = color;     // r
+             data[i + 1] = color; // g
+             data[i + 2] = color; // b
+          }
+          ctx.putImageData(imageData, 0, 0);
+
           resolve(canvas.toDataURL('image/jpeg', 0.8)); // 80% quality JPEG compression
         };
         img.onerror = () => reject(new Error('Failed to load image for compression'));

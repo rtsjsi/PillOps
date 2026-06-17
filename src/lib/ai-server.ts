@@ -1,16 +1,17 @@
-// 1. The universal strict prompt string defined once
 export const PROMPT = `You are an expert pharmacy data extraction AI.
 Analyze this image of a distributor pharmaceutical invoice. Extract the tabular structured data perfectly.
 Pay close attention to table headers.
 Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date.
 
 CRITICAL INSTRUCTIONS:
-1. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items. If there are 20 items, you must return 20 objects in the "items" array.
-2. Carefully scroll/read through the entire image from top to bottom.
-3. Ensure you capture every detail on every line (quantity, batch, free quantity, GST, discount). If a field is blank, use 0 or "", but DO NOT omit the item itself.
+1. Chain of Thought: First, in the "rawTranscription" field, write out a literal transcription of the entire items table exactly as you see it row-by-row. This scratchpad helps you maintain spatial alignment.
+2. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items. If there are 20 items, you must return 20 objects in the "items" array.
+3. Carefully scroll/read through the entire image from top to bottom.
+4. Ensure you capture every detail on every line (quantity, batch, free quantity, GST, discount). If a field is blank, use 0 or "", but DO NOT omit the item itself.
 
 Return ONLY a valid JSON object matching exactly this schema:
 {
+  "rawTranscription": "string (The literal row-by-row transcription of the invoice table)",
   "distributorName": string,
   "invoiceNumber": string,
   "invoiceDate": string (format YYYY-MM-DD, try to parse from the image),
