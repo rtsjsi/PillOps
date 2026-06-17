@@ -107,8 +107,11 @@ export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: 
 You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
 For each medicine, return detailed clinical information including:
 - category: String. The dosage form (e.g., "Tablet", "Capsule", "Syrup", "Injection", "Ointment", "Cream", "Drops", "Powder"). Infer this from the name if possible.
-- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "Dolo 650 Tablet" or "Crocin Advance"). Fix any abbreviations or typos.
+- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "DOLO 650 TABLET" or "CROCIN ADVANCE"). This MUST BE ENTIRELY IN UPPERCASE. Fix any abbreviations or typos.
 - manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
+- packSize: String or null. The standard packaging size (e.g. "10 Tablets", "100 ml", "15 gm"). Infer if possible, otherwise null.
+- hsnCode: String or null. The applicable Indian HSN Code for this medicine (typically 3004xxxx).
+- gstPercent: Number or null. The applicable GST percentage for this medicine (e.g. 5, 12, 18).
 - ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
 - substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
 - storageConditions: String describing how to store it (e.g. "Store below 30°C, protect from light").
@@ -123,6 +126,9 @@ Return ONLY a valid JSON object with the following schema:
       "correctedName": "string",
       "category": "string",
       "manufacturer": "string",
+      "packSize": "string",
+      "hsnCode": "string",
+      "gstPercent": 12,
       "ingredients": [{"salt": "string", "strength": "string"}],
       "substitutes": ["string"],
       "storageConditions": "string",

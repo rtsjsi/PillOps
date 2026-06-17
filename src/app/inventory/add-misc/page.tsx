@@ -48,13 +48,14 @@ export default function AddMiscStock() {
   const handleItemChange = (index: number, field: string, value: any, fullItemData?: any) => {
     setItems(prev => {
       const newItems = [...prev];
-      newItems[index] = { ...newItems[index], [field]: value };
+      const finalValue = field === 'medicineName' && typeof value === 'string' ? value.toUpperCase() : value;
+      newItems[index] = { ...newItems[index], [field]: finalValue };
       
       // Auto-fill from catalog if selected
       if (fullItemData) {
          newItems[index] = {
            ...newItems[index],
-           medicineName: fullItemData.name,
+           medicineName: (fullItemData.name || '').toUpperCase(),
          };
       }
       return newItems;

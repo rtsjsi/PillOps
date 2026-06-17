@@ -126,19 +126,28 @@ export async function autoEnrichMedicines() {
     const adminDb = createAdminClient();
 
     for (const med of enrichedData.medicines) {
-      const { id, category, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
+      const { id, correctedName, category, manufacturer, packSize, hsnCode, gstPercent, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
       
-      const { error: updateError } = await adminDb
-        .from('global_medicine_master')
-        .update({
+      const updatePayload: any = {
           category: category || undefined,
           manufacturer: manufacturer || undefined,
+          pack_size: packSize || undefined,
+          hsn_code: hsnCode || undefined,
+          gst_percent: gstPercent || undefined,
           ingredients: ingredients || [],
           substitutes: substitutes || [],
           storage_conditions: storageConditions || null,
           is_narcotic: isNarcotic || false,
           prescription_required: prescriptionRequired || false
-        })
+      };
+
+      if (correctedName) {
+         updatePayload.name = correctedName.toUpperCase();
+      }
+
+      const { error: updateError } = await adminDb
+        .from('global_medicine_master')
+        .update(updatePayload)
         .eq('id', id);
         
       if (!updateError) updatedCount++;
@@ -155,8 +164,8 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
   try {
     if (!medicineNames || medicineNames.length === 0) return { data: {}, error: null };
     
-    // De-duplicate names
-    const uniqueNames = Array.from(new Set(medicineNames.filter(n => typeof n === 'string' && n.trim() !== '')));
+    // De-duplicate names and force UPPERCASE
+    const uniqueNames = Array.from(new Set(medicineNames.filter(n => typeof n === 'string' && n.trim() !== '').map(n => n.toUpperCase())));
     if (uniqueNames.length === 0) return { data: {}, error: null };
 
     const supabase = await createClient();
@@ -248,10 +257,10 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
               const originalChunkItem = chunkWithIds.find(c => c.id === aiMed.id);
               if (!originalChunkItem) continue;
 
-              const { category, manufacturer, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = aiMed;
+              const { category, manufacturer, packSize, hsnCode, gstPercent, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = aiMed;
               const isNew = !originalChunkItem.id || chunk.find(c => c.name === originalChunkItem.name && !c.id);
 
-              const correctedName = aiMed.correctedName || originalChunkItem.name;
+              const correctedName = (aiMed.correctedName || originalChunkItem.name).toUpperCase();
 
               if (isNew) {
                 // Check if the corrected name already exists (e.g. AI fixed a typo, and the correct name is in DB)
@@ -271,6 +280,9 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
                        name: correctedName,
                        category: category || null,
                        manufacturer: manufacturer || null,
+                       pack_size: packSize || null,
+                       hsn_code: hsnCode || null,
+                       gst_percent: gstPercent || 12,
                        ingredients: ingredients || [],
                        substitutes: substitutes || [],
                        storage_conditions: storageConditions || null,
@@ -287,9 +299,12 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
                 const { data: updatedMed } = await adminDb
                   .from('global_medicine_master')
                   .update({
-                    name: correctedName, // Update the name to the AI corrected one
+                    name: correctedName, // Update the name to the AI corrected one in uppercase
                     category: category || undefined,
                     manufacturer: manufacturer || undefined,
+                    pack_size: packSize || undefined,
+                    hsn_code: hsnCode || undefined,
+                    gst_percent: gstPercent || undefined,
                     ingredients: ingredients || [],
                     substitutes: substitutes || [],
                     storage_conditions: storageConditions || null,

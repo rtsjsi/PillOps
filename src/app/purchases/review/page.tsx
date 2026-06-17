@@ -63,7 +63,8 @@ export default function ReviewExtraction() {
   const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any, fullItem?: any) => {
     if (!data) return;
     const newItems = [...data.items];
-    newItems[idx] = { ...newItems[idx], [field]: value } as InvoiceItem;
+    const finalValue = field === 'medicineName' && typeof value === 'string' ? value.toUpperCase() : value;
+    newItems[idx] = { ...newItems[idx], [field]: finalValue } as InvoiceItem;
     
     if (field === 'medicineName' && fullItem) {
       if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
