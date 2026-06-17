@@ -73,7 +73,7 @@ export function useMedicineSearch({
       try {
          const globalMatches = await fetchGlobalMedicines(searchQuery);
          // Filter out ones we already have locally to avoid duplicates
-         const newGlobals = globalMatches.filter(g => !localMatches.some(l => l.name?.toLowerCase() === g.name?.toLowerCase()));
+         const newGlobals = globalMatches.filter((g: any) => !localMatches.some((l: any) => l.name?.toLowerCase() === g.name?.toLowerCase()));
          
          if (newGlobals.length > 0) {
             setResults(prev => {

@@ -93,10 +93,7 @@ export async function fetchGlobalMedicines(searchQuery: string) {
   if (!searchQuery) return [];
   const supabase = createClient();
   const { data, error } = await supabase
-    .from('global_medicine_master')
-    .select('*')
-    .ilike('name', `%${searchQuery}%`)
-    .limit(20);
+    .rpc('search_medicines', { search_term: searchQuery });
 
   if (error) throw new Error(error.message);
   
