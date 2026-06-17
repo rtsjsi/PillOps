@@ -218,15 +218,7 @@ export default function Inventory() {
             </Card>
          )}
          
-         {/* DEBUG INFO */}
-         <div className="text-xs font-mono bg-muted p-2 rounded">
-            DEBUG: Total Medicines: {medicines.length} | Filtered: {filteredMedicines.length} | 
-            Search: "{searchQuery}" | Category: "{selectedCategory}"
-            <br/>
-            First Med Name: {String(medicines[0]?.name)} | Generic: {String(medicines[0]?.genericName)}
-            <br/>
-            Raw gObj: {JSON.stringify(medicines[0]?.global_medicine_master)}
-         </div>
+
 
          {filteredMedicines.length === 0 ? (
             <Card className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/20 border-dashed">
