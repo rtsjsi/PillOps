@@ -45,18 +45,25 @@ export async function searchGlobalMedicines(query: string = '') {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Unauthorized');
 
-    let queryBuilder = supabase
-      .from('global_medicine_master')
-      .select('*')
-      .order('name', { ascending: true })
-      .limit(50);
-
+    let data: any[] | null = null;
+    let error: any = null;
+    
     if (query.trim() !== '') {
-      // Use ilike for case-insensitive partial matching on name or generic_name
-      queryBuilder = queryBuilder.or(`name.ilike.%${query}%,generic_name.ilike.%${query}%`);
+      // Use the smarter RPC function for fuzzy searching across multiple columns
+      const result = await supabase
+        .rpc('search_medicines', { search_term: query });
+      data = result.data;
+      error = result.error;
+    } else {
+      // Default to basic query for empty searches
+      const result = await supabase
+        .from('global_medicine_master')
+        .select('*')
+        .order('name', { ascending: true })
+        .limit(50);
+      data = result.data;
+      error = result.error;
     }
-
-    const { data, error } = await queryBuilder;
 
     if (error) throw new Error(error.message);
 
