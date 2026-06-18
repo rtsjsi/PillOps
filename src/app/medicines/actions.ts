@@ -58,7 +58,7 @@ export async function searchGlobalMedicines(query: string = '') {
       // Default to basic query for empty searches
       const result = await supabase
         .from('global_medicine_master')
-        .select('*')
+        .select('id, name, generic_name, category, manufacturer, hsn_code, schedule, gst_percent, pack_size, uom, ingredients, substitutes, storage_conditions, is_narcotic, prescription_required')
         .order('name', { ascending: true })
         .limit(50);
       data = result.data;
@@ -84,8 +84,6 @@ export async function searchGlobalMedicines(query: string = '') {
       storageConditions: g.storage_conditions,
       isNarcotic: g.is_narcotic,
       prescriptionRequired: g.prescription_required,
-      barcode: g.barcode,
-      imageUrl: g.image_url,
     }));
 
     return { data: mapped, error: null };

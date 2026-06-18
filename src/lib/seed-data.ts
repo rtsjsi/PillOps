@@ -30,7 +30,6 @@ export function getSeedData(): { medicines: Medicine[]; salesInvoices: SalesInvo
       schedule: 'OTC', gstPercent: 12, reorderLevel: 50, totalStock: 0, rack: 'A1-S1',
       packSize: '15', uom: 'Strip', ingredients: [{ salt: 'Paracetamol', strength: '500mg' }],
       storageConditions: 'Store below 30°C', isNarcotic: false, prescriptionRequired: false,
-      barcode: '8901111111111',
       batches: [
         { id: 'b-001a', batchNumber: 'CP-2401', quantity: 100, purchasePrice: 8, mrp: 12, expiryDate: monthsFromNow(14), receivedDate: monthsAgo(3) },
         { id: 'b-001b', batchNumber: 'CP-2390', quantity: 30, purchasePrice: 7.5, mrp: 11, expiryDate: monthsFromNow(0), receivedDate: monthsAgo(10) },

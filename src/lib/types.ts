@@ -35,8 +35,6 @@ export interface GlobalMedicine {
   storageConditions?: string;
   isNarcotic: boolean;
   prescriptionRequired: boolean;
-  barcode?: string;
-  imageUrl?: string;
 }
 
 export interface StoreInventoryBatch {
@@ -65,8 +63,6 @@ export interface Medicine {
   storageConditions?: string;
   isNarcotic: boolean;
   prescriptionRequired: boolean;
-  barcode?: string;
-  imageUrl?: string;
   
   batches: StoreInventoryBatch[];
   reorderLevel: number;
