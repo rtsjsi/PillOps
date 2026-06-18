@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
+import { getMatchScore } from '@/hooks/use-medicine-search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
@@ -42,7 +43,7 @@ export default function ReviewExtraction() {
     hsnCode?: string;
     gstPercent?: number;
     totalAmount?: number;
-    isUnmatched?: boolean;
+    matchStatus?: 'exact' | 'probable' | 'none';
   }
 
   interface InvoiceData {
@@ -63,7 +64,6 @@ export default function ReviewExtraction() {
   const [isDrafting, setIsDrafting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
-  const [hasAutoMatched, setHasAutoMatched] = useState(false);
   const manufacturers = useDistinctValues('manufacturers', 'name', true);
   const distributors = useDistinctValues('distributors', 'name', false);
   
@@ -87,9 +87,9 @@ export default function ReviewExtraction() {
           if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
           if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
           if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
-          newItems[idx].isUnmatched = false;
+          newItems[idx].matchStatus = 'exact';
        } else {
-          newItems[idx].isUnmatched = true;
+          newItems[idx].matchStatus = 'none';
        }
     }
     
@@ -173,74 +173,70 @@ export default function ReviewExtraction() {
 
     const rawData = sessionStorage.getItem('pillops_extracted_invoice');
     if (rawData) {
-      try {
-        const parsed = JSON.parse(rawData);
-        
-        // Map the parsed items to store the original extracted name
-        // Also clear out any OCR-extracted category or manufacturer
-        parsed.items = parsed.items.map((item: any) => ({
-           ...item,
-           extractedName: item.medicineName,
-           category: '',
-           manufacturer: '',
-        }));
-        
-        setData(parsed);
-        setIsEnriching(false);
-
-      } catch (e) {
-        setFatalError("Failed to parse extracted invoice data.");
-        setIsEnriching(false);
-      }
+      const processInvoice = async () => {
+        try {
+          const parsed = JSON.parse(rawData);
+          
+          const enrichedItems = await Promise.all(parsed.items.map(async (item: any) => {
+             const extracted = item.medicineName;
+             let enrichedItem = {
+               ...item,
+               extractedName: extracted,
+               matchStatus: 'none' as 'exact' | 'probable' | 'none',
+             };
+             
+             if (extracted) {
+                try {
+                   const globals = await fetchGlobalMedicines(extracted);
+                   if (globals && globals.length > 0) {
+                      const scored = globals.map((m: any) => {
+                         const nScore = getMatchScore(extracted, m.name);
+                         const gScore = getMatchScore(extracted, m.genericName || '');
+                         return { item: m, score: Math.max(nScore, gScore) };
+                      }).sort((a: any, b: any) => b.score - a.score);
+                      
+                      const bestMatch = scored[0];
+                      if (bestMatch && bestMatch.score > 0) {
+                         enrichedItem.medicineName = bestMatch.item.name;
+                         enrichedItem.category = bestMatch.item.category || '';
+                         enrichedItem.manufacturer = bestMatch.item.manufacturer || '';
+                         // We DO NOT override hsnCode and gstPercent from global master
+                         // We respect whatever was extracted (or undefined)
+                         enrichedItem.matchStatus = bestMatch.score === 100 ? 'exact' : 'probable';
+                      } else {
+                         // No good match, clear category/manufacturer to force manual entry
+                         enrichedItem.category = '';
+                         enrichedItem.manufacturer = '';
+                      }
+                   } else {
+                      enrichedItem.category = '';
+                      enrichedItem.manufacturer = '';
+                   }
+                } catch (e) {
+                   enrichedItem.category = '';
+                   enrichedItem.manufacturer = '';
+                }
+             } else {
+                enrichedItem.category = '';
+                enrichedItem.manufacturer = '';
+             }
+             return enrichedItem;
+          }));
+          
+          parsed.items = enrichedItems;
+          setData(parsed);
+        } catch (e) {
+          setFatalError("Failed to parse extracted invoice data.");
+        } finally {
+          setIsEnriching(false);
+        }
+      };
+      processInvoice();
     } else {
       setFatalError("No invoice data found. Please scan an invoice first.");
       setIsEnriching(false);
     }
   }, []);
-
-  const getBestMedicineMatch = (query: string, allMedicines: any[]) => {
-     if (!query) return null;
-     const q = query.toLowerCase().trim();
-     let match = allMedicines.find(m => m.name.toLowerCase().trim() === q);
-     if (match) return match;
-     match = allMedicines.find(m => m.name.toLowerCase().trim().startsWith(q) || q.startsWith(m.name.toLowerCase().trim()));
-     if (match) return match;
-     match = allMedicines.find(m => m.name.toLowerCase().trim().includes(q) || q.includes(m.name.toLowerCase().trim()));
-     return match || null;
-  };
-
-  useEffect(() => {
-    if (!hasAutoMatched && data?.items && medicines.length > 0 && !draftId) {
-      const runAutoMatch = async () => {
-         const newItems = await Promise.all(data.items.map(async (item: any) => {
-            if (item.medicineName === item.extractedName && item.extractedName) {
-               try {
-                  const globals = await fetchGlobalMedicines(item.extractedName);
-                  if (globals && globals.length > 0) {
-                     const match = getBestMedicineMatch(item.extractedName, globals) || globals[0];
-                     return {
-                        ...item,
-                        medicineName: match.name,
-                        category: match.category || '',
-                        manufacturer: match.manufacturer || '',
-                        hsnCode: item.hsnCode || match.hsnCode,
-                        gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
-                        isUnmatched: false,
-                     }
-                  }
-               } catch (e) {
-                  // ignore
-               }
-               return { ...item, isUnmatched: true };
-            }
-            return item;
-         }));
-         setData({ ...data, items: newItems });
-         setHasAutoMatched(true);
-      };
-      runAutoMatch();
-    }
-  }, [data, medicines, draftId, hasAutoMatched]);
 
   const handleConfirm = async (status: 'draft' | 'completed' = 'completed') => {
     if (!data || isSaving || isDrafting) return;
@@ -467,12 +463,32 @@ export default function ReviewExtraction() {
          <div className="flex flex-col gap-4">
               {data.items.map((item: any, idx: number) => {
                 const hasError = invalidFields.items.includes(idx);
-                const showHighlight = hasError || item.isUnmatched;
+                
+                let cardStyle = "ring-primary/20";
+                let badgeStyle = "bg-primary";
+                let statusMsg = null;
+                
+                if (hasError) {
+                   cardStyle = "ring-rose-500/80 bg-rose-50/50";
+                   badgeStyle = "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]";
+                } else if (item.matchStatus === 'none') {
+                   cardStyle = "ring-rose-500/80 bg-rose-50/50";
+                   badgeStyle = "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]";
+                   statusMsg = <span className="text-rose-500 font-bold bg-rose-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> No Match Found</span>;
+                } else if (item.matchStatus === 'probable') {
+                   cardStyle = "ring-amber-500/80 bg-amber-50/50";
+                   badgeStyle = "bg-amber-500";
+                   statusMsg = <span className="text-amber-600 font-bold bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> Probable Match</span>;
+                } else if (item.matchStatus === 'exact') {
+                   cardStyle = "ring-emerald-500/50 bg-emerald-50/30";
+                   badgeStyle = "bg-emerald-500";
+                   statusMsg = <span className="text-emerald-600 font-bold bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={12} /> Exact Match</span>;
+                }
 
                return (
-                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", showHighlight ? "ring-rose-500/80 bg-rose-50/50" : "ring-primary/20")}>
+                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", cardStyle)}>
                   <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
-                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", showHighlight ? "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-primary")}>
+                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", badgeStyle)}>
                       {idx + 1}
                     </span>
                     <div className="flex-1 flex flex-col gap-1">
@@ -481,7 +497,7 @@ export default function ReviewExtraction() {
                              {item.extractedName ? (
                                <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
                              ) : 'Item Details'}
-                             {item.isUnmatched && <span className="text-rose-500 font-bold bg-rose-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> No Global Match Found</span>}
+                             {statusMsg}
                           </div>
                        </div>
                       <MedicineAutocomplete 
