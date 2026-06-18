@@ -204,30 +204,24 @@ export default function ReviewExtraction() {
     if (!hasAutoMatched && data?.items && medicines.length > 0 && !draftId) {
       const runAutoMatch = async () => {
          const newItems = await Promise.all(data.items.map(async (item: any) => {
-            if (item.medicineName === item.extractedName) {
-               let match = getBestMedicineMatch(item.extractedName, medicines);
-               
-               if (!match) {
-                  try {
-                     const globals = await fetchGlobalMedicines(item.extractedName);
-                     if (globals && globals.length > 0) {
-                        match = getBestMedicineMatch(item.extractedName, globals) || globals[0];
+            if (item.medicineName === item.extractedName && item.extractedName) {
+               try {
+                  const globals = await fetchGlobalMedicines(item.extractedName);
+                  if (globals && globals.length > 0) {
+                     const match = getBestMedicineMatch(item.extractedName, globals) || globals[0];
+                     return {
+                        ...item,
+                        medicineName: match.name,
+                        category: match.category || item.category,
+                        manufacturer: match.manufacturer || item.manufacturer,
+                        hsnCode: item.hsnCode || match.hsnCode,
+                        gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
                      }
-                  } catch (e) {
-                     // ignore
                   }
+               } catch (e) {
+                  // ignore
                }
 
-               if (match) {
-                  return {
-                     ...item,
-                     medicineName: match.name,
-                     category: match.category || item.category,
-                     manufacturer: match.manufacturer || item.manufacturer,
-                     hsnCode: item.hsnCode || match.hsnCode,
-                     gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
-                  }
-               }
             }
             return item;
          }));
