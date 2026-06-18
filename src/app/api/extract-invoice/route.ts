@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     let textResponse = "";
     
     const runners = [
+      { id: 'groq', name: 'Groq', run: () => runGroq(imageBase64) },
       { id: 'github', name: 'GitHub Models', run: () => runGitHub(imageBase64) },
-      { id: 'gemini', name: 'Gemini', run: () => runGemini(imageBase64, mimeType) },
-      { id: 'groq', name: 'Groq', run: () => runGroq(imageBase64) }
+      { id: 'gemini', name: 'Gemini', run: () => runGemini(imageBase64, mimeType) }
     ];
 
     if (preferredModel !== 'auto') {
