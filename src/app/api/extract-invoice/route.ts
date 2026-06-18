@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGroq, runGemini, runGitHub } from '@/lib/ai-server';
+import { createClient } from '@/utils/supabase/server';
+import { fetchUserProfile } from '@/lib/queries';
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,6 +88,39 @@ export async function POST(req: NextRequest) {
     
     if (validationWarnings.length > 0) {
        parsedData.validationWarnings = validationWarnings;
+    }
+
+    // Duplicate Check
+    try {
+        if (parsedData.distributorName && parsedData.invoiceNumber && parsedData.invoiceDate) {
+            const profile = await fetchUserProfile();
+            if (profile?.store_id) {
+                const supabase = await createClient();
+                
+                // Parse the OCR date (DD-MM-YYYY) into YYYY-MM-DD for PG comparison
+                let ocrDateStr = parsedData.invoiceDate;
+                if (/^\d{2}-\d{2}-\d{4}$/.test(ocrDateStr)) {
+                   const [dd, mm, yyyy] = ocrDateStr.split('-');
+                   ocrDateStr = `${yyyy}-${mm}-${dd}`;
+                }
+
+                const { data: existing } = await supabase
+                   .from('purchase_invoices')
+                   .select('id')
+                   .eq('store_id', profile.store_id)
+                   .ilike('distributor_name', parsedData.distributorName)
+                   .eq('invoice_number', parsedData.invoiceNumber)
+                   .eq('invoice_date', ocrDateStr)
+                   .limit(1)
+                   .maybeSingle();
+
+                if (existing) {
+                   return NextResponse.json({ error: `Duplicate invoice detected: Invoice #${parsedData.invoiceNumber} from ${parsedData.distributorName} dated ${parsedData.invoiceDate} already exists in your inventory.` }, { status: 409 });
+                }
+            }
+        }
+    } catch (e: any) {
+        console.warn("[OCR] Could not perform duplicate check:", e.message);
     }
 
     return NextResponse.json(parsedData);
