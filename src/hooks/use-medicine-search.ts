@@ -63,6 +63,20 @@ export function getMatchScore(query: string, target: string) {
   return 0;
 }
 
+export function expandMedicineAbbreviations(name: string): string {
+  if (!name) return '';
+  let expanded = name.toUpperCase();
+  expanded = expanded.replace(/\bSYP\b/g, 'SYRUP');
+  expanded = expanded.replace(/\bTAB\b/g, 'TABLET');
+  expanded = expanded.replace(/\bCAP\b/g, 'CAPSULE');
+  expanded = expanded.replace(/\bINJ\b/g, 'INJECTION');
+  expanded = expanded.replace(/\bOINT\b/g, 'OINTMENT');
+  expanded = expanded.replace(/\bSUSP\b/g, 'SUSPENSION');
+  expanded = expanded.replace(/\bDRP\b/g, 'DROPS');
+  expanded = expanded.replace(/\bCRM\b/g, 'CREAM');
+  return expanded;
+}
+
 export function useMedicineSearch({
   medicines,
   debounceMs = 150,
@@ -150,10 +164,12 @@ export function useMedicineSearch({
   );
 
   const handleQueryChange = useCallback(
-    (value: string) => {
+    (value: string, skipSearch = false) => {
       setQuery(value);
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => search(value), debounceMs);
+      if (!skipSearch) {
+        timerRef.current = setTimeout(() => search(value), debounceMs);
+      }
     },
     [search, debounceMs]
   );

@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
-import { getMatchScore } from '@/hooks/use-medicine-search';
+import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine-search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
@@ -187,11 +187,20 @@ export default function ReviewExtraction() {
              
              if (extracted) {
                 try {
-                   const globals = await fetchGlobalMedicines(extracted);
+                   const cleanExtracted = expandMedicineAbbreviations(extracted);
+                   let globals = await fetchGlobalMedicines(cleanExtracted);
+                   
+                   if (!globals || globals.length === 0) {
+                      const firstWord = cleanExtracted.split(' ')[0];
+                      if (firstWord && firstWord.length > 2) {
+                         globals = await fetchGlobalMedicines(firstWord);
+                      }
+                   }
+
                    if (globals && globals.length > 0) {
                       const scored = globals.map((m: any) => {
-                         const nScore = getMatchScore(extracted, m.name);
-                         const gScore = getMatchScore(extracted, m.genericName || '');
+                         const nScore = getMatchScore(cleanExtracted, m.name);
+                         const gScore = getMatchScore(cleanExtracted, m.genericName || '');
                          return { item: m, score: Math.max(nScore, gScore) };
                       }).sort((a: any, b: any) => b.score - a.score);
                       

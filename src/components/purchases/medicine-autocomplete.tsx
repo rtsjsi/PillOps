@@ -54,7 +54,7 @@ export function MedicineAutocomplete({
   // Sync external value into the search query (e.g. when parent sets it)
   useEffect(() => {
     if (value && value !== query) {
-      setQuery(value);
+      setQuery(value, true);
     }
   }, [value]);
 
@@ -81,7 +81,7 @@ export function MedicineAutocomplete({
 
   const handleSelect = (item: any) => {
     onChange(item.name, item);
-    setQuery(item.name);
+    setQuery(item.name, true);
     setIsOpen(false);
   };
 
