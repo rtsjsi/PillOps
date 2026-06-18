@@ -62,6 +62,7 @@ export default function ReviewExtraction() {
   const [isDrafting, setIsDrafting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [hasAutoMatched, setHasAutoMatched] = useState(false);
   const manufacturers = useDistinctValues('manufacturers', 'name', true);
   const distributors = useDistinctValues('distributors', 'name', false);
   
@@ -186,6 +187,40 @@ export default function ReviewExtraction() {
       setIsEnriching(false);
     }
   }, []);
+
+  const getBestMedicineMatch = (query: string, allMedicines: any[]) => {
+     if (!query) return null;
+     const q = query.toLowerCase().trim();
+     let match = allMedicines.find(m => m.name.toLowerCase().trim() === q);
+     if (match) return match;
+     match = allMedicines.find(m => m.name.toLowerCase().trim().startsWith(q) || q.startsWith(m.name.toLowerCase().trim()));
+     if (match) return match;
+     match = allMedicines.find(m => m.name.toLowerCase().trim().includes(q) || q.includes(m.name.toLowerCase().trim()));
+     return match || null;
+  };
+
+  useEffect(() => {
+    if (!hasAutoMatched && data?.items && medicines.length > 0 && !draftId) {
+      const newItems = data.items.map(item => {
+         if (item.medicineName === item.extractedName) {
+            const match = getBestMedicineMatch(item.extractedName, medicines);
+            if (match) {
+               return {
+                  ...item,
+                  medicineName: match.name,
+                  category: match.category || item.category,
+                  manufacturer: match.manufacturer || item.manufacturer,
+                  hsnCode: item.hsnCode || match.hsnCode,
+                  gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
+               }
+            }
+         }
+         return item;
+      });
+      setData({ ...data, items: newItems });
+      setHasAutoMatched(true);
+    }
+  }, [data, medicines, draftId, hasAutoMatched]);
 
   const handleConfirm = async (status: 'draft' | 'completed' = 'completed') => {
     if (!data || isSaving || isDrafting) return;
@@ -420,11 +455,8 @@ export default function ReviewExtraction() {
                 const qty = item.quantity || 0;
                 const rate = item.purchasePrice || 0;
                 const gst = item.gstPercent || 0;
-                const discount = item.discountPercent || 0;
                 const expectedTotal = qty * rate * (1 + gst / 100);
-                const diff = Math.abs(expectedTotal - (item.totalAmount || 0));
-                const isMathMismatch = expectedTotal > 0 && item.totalAmount > 0 && (diff > expectedTotal * 0.1 || diff > 10);
-                const showHighlight = hasError || isMathMismatch;
+                const showHighlight = hasError;
 
                return (
                 <Card key={idx} className={cn("transition-all ring-2 border-primary/30", showHighlight ? "ring-rose-500/80 bg-rose-50/50" : "ring-primary/20")}>
@@ -490,24 +522,54 @@ export default function ReviewExtraction() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-2xl">
-         <div className="container max-w-4xl flex gap-4">
-           <Button 
-              variant="secondary"
-              className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
-              disabled={isSaving || isDrafting}
-              onClick={() => handleConfirm('draft')}
-           >
-              {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-              {isDrafting ? 'Saving...' : 'Save as Draft'}
-           </Button>
-           <Button 
-              className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
-              disabled={isSaving || isDrafting}
-              onClick={() => handleConfirm('completed')}
-           >
-              {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
-              {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
-           </Button>
+         <div className="container max-w-4xl flex flex-col gap-4">
+           {(() => {
+              const itemTotal = data.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.purchasePrice || 0)), 0);
+              const gstTotal = data.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.purchasePrice || 0) * ((item.gstPercent || 0) / 100)), 0);
+              const calculatedTotal = itemTotal + gstTotal;
+              const isTotalMismatch = Math.abs(calculatedTotal - data.total) > 1;
+
+              return (
+                 <div className="bg-white/50 rounded-2xl p-4 shadow-sm border border-border flex justify-between items-center text-sm md:text-base">
+                    <div className="flex gap-6">
+                       <div><span className="text-muted-foreground font-bold">Item Total:</span> <span className="font-black">{formatCurrency(itemTotal)}</span></div>
+                       <div><span className="text-muted-foreground font-bold">GST Total:</span> <span className="font-black">{formatCurrency(gstTotal)}</span></div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="text-right">
+                          <span className="text-muted-foreground font-bold mr-2">Calculated Total:</span>
+                          <span className={cn("font-black text-lg", isTotalMismatch ? "text-rose-500" : "text-emerald-600")}>
+                             {formatCurrency(calculatedTotal)}
+                          </span>
+                       </div>
+                       {isTotalMismatch && (
+                          <div className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse">
+                             <AlertTriangle size={14} /> Mismatch with Net Amount!
+                          </div>
+                       )}
+                    </div>
+                 </div>
+              );
+           })()}
+           <div className="flex gap-4">
+             <Button 
+                variant="secondary"
+                className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
+                disabled={isSaving || isDrafting}
+                onClick={() => handleConfirm('draft')}
+             >
+                {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+                {isDrafting ? 'Saving...' : 'Save as Draft'}
+             </Button>
+             <Button 
+                className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
+                disabled={isSaving || isDrafting}
+                onClick={() => handleConfirm('completed')}
+             >
+                {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
+                {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
+             </Button>
+           </div>
          </div>
       </div>
 
