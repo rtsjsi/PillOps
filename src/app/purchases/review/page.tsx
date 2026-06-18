@@ -42,6 +42,7 @@ export default function ReviewExtraction() {
     hsnCode?: string;
     gstPercent?: number;
     totalAmount?: number;
+    isUnmatched?: boolean;
   }
 
   interface InvoiceData {
@@ -80,11 +81,16 @@ export default function ReviewExtraction() {
     const finalValue = field === 'medicineName' && typeof value === 'string' ? value.toUpperCase() : value;
     newItems[idx] = { ...newItems[idx], [field]: finalValue } as InvoiceItem;
     
-    if (field === 'medicineName' && fullItem) {
-      if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
-      if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
-      if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
-      if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
+    if (field === 'medicineName') {
+       if (fullItem) {
+          if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
+          if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
+          if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
+          if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
+          newItems[idx].isUnmatched = false;
+       } else {
+          newItems[idx].isUnmatched = true;
+       }
     }
     
     if (field === 'mrp' || field === 'purchasePrice') {
@@ -219,12 +225,13 @@ export default function ReviewExtraction() {
                         manufacturer: match.manufacturer || '',
                         hsnCode: item.hsnCode || match.hsnCode,
                         gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
+                        isUnmatched: false,
                      }
                   }
                } catch (e) {
                   // ignore
                }
-
+               return { ...item, isUnmatched: true };
             }
             return item;
          }));
@@ -460,7 +467,7 @@ export default function ReviewExtraction() {
          <div className="flex flex-col gap-4">
               {data.items.map((item: any, idx: number) => {
                 const hasError = invalidFields.items.includes(idx);
-                const showHighlight = hasError;
+                const showHighlight = hasError || item.isUnmatched;
 
                return (
                 <Card key={idx} className={cn("transition-all ring-2 border-primary/30", showHighlight ? "ring-rose-500/80 bg-rose-50/50" : "ring-primary/20")}>
@@ -470,10 +477,11 @@ export default function ReviewExtraction() {
                     </span>
                     <div className="flex-1 flex flex-col gap-1">
                       <div className="flex justify-between items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-1">
-                          <div>
+                          <div className="flex items-center gap-2">
                              {item.extractedName ? (
                                <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
                              ) : 'Item Details'}
+                             {item.isUnmatched && <span className="text-rose-500 font-bold bg-rose-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> No Global Match Found</span>}
                           </div>
                        </div>
                       <MedicineAutocomplete 
