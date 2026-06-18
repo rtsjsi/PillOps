@@ -268,6 +268,7 @@ export default function ManualPurchaseEntry() {
                     {idx + 1}
                   </span>
                   <MedicineAutocomplete 
+                    required
                     value={item.medicineName} 
                     onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
                     medicines={medicines}

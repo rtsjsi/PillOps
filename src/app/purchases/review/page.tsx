@@ -485,6 +485,7 @@ export default function ReviewExtraction() {
                           </div>
                        </div>
                       <MedicineAutocomplete 
+                        required
                         value={item.medicineName} 
                         onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
                         medicines={medicines}

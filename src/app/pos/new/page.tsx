@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
+import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
@@ -48,16 +49,8 @@ export default function POS() {
   const doctorNames = useDistinctValues('sales_invoices', 'doctor_name');
   const areas = useDistinctValues('sales_invoices', 'area');
 
-  const {
-    query: searchQuery,
-    setQuery: setSearchQuery,
-    results: searchedMedicines,
-    selectedIndex,
-    isOpen,
-    setIsOpen,
-    handleKeyDown: handleSearchKeyDown,
-    clear: clearSearch,
-  } = useMedicineSearch({ medicines, maxResults: 8 });
+  const [searchValue, setSearchValue] = useState('');
+  const [selectedMedicine, setSelectedMedicine] = useState<any>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -126,7 +119,7 @@ export default function POS() {
             expiryDate: batchToUse.expiryDate
         }]);
     }
-    clearSearch();
+    setSearchValue('');
     searchInputRef.current?.focus();
   };
 
@@ -226,7 +219,7 @@ export default function POS() {
     setCustomerName('');
     setCustomerPhone('');
     setDiscountPercent(0);
-    clearSearch();
+    setSearchValue('');
     searchInputRef.current?.focus();
   };
 
@@ -253,15 +246,16 @@ export default function POS() {
     }
   ]);
 
-  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const selected = handleSearchKeyDown(e);
-    if (selected) {
-      const totalStock = selected.totalStock || 0;
+  const onMedicineSelect = (name: string, item?: any) => {
+    if (item) {
+      const totalStock = item.totalStock || 0;
       if (totalStock > 0) {
-        handleAddToCart(selected);
+        handleAddToCart(item);
       } else {
         toast.error('Out of stock');
       }
+    } else {
+      setSearchValue(name);
     }
   };
 
@@ -324,57 +318,18 @@ export default function POS() {
         {/* Left Side: Search and Cart Items */}
         <div className="flex-1 w-full flex flex-col gap-6">
           <div className="relative z-50">
-              <SearchBar 
-                ref={searchInputRef}
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
-                onClear={clearSearch}
-                onKeyDown={onSearchKeyDown}
-                onFocus={() => setIsOpen(true)}
+              <MedicineAutocomplete
+                inputRef={searchInputRef}
+                value={searchValue}
+                onChange={onMedicineSelect}
+                medicines={medicines}
                 placeholder="Search by name, generic... (Autofocus enabled)"
-                data-search-input="true"
+                autoFocus
+                className="font-bold border border-border bg-background shadow-md h-14 text-lg"
               />
               
-              {isOpen && searchQuery && (
-                  <Card className="absolute top-full left-0 right-0 mt-2 shadow-2xl border-border overflow-hidden bg-card/95 backdrop-blur-xl">
-                      {searchedMedicines.length === 0 ? (
-                          <div className="p-8 text-center text-muted-foreground font-medium">No medicines found.</div>
-                      ) : (
-                          <div className="divide-y divide-border max-h-[300px] overflow-y-auto">
-                            {searchedMedicines.map((med, index) => {
-                                const totalStock = med.totalStock || 0;
-                                return (
-                                    <div 
-                                        key={med.id} 
-                                        onClick={() => {
-                                          if (totalStock > 0) handleAddToCart(med);
-                                        }}
-                                        className={cn(
-                                          "p-4 flex justify-between items-center transition-colors",
-                                          totalStock > 0 ? "cursor-pointer hover:bg-muted" : "opacity-50 cursor-not-allowed",
-                                          index === selectedIndex && totalStock > 0 ? "bg-muted" : ""
-                                        )}
-                                    >
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                              <p className="font-bold">{med.name}</p>
-                                              <Badge variant="secondary" className="text-[9px] h-4 px-1 uppercase">{med.category}</Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                                {totalStock} in stock • MRP: ₹{med.batches[0]?.mrp || 0}
-                                            </p>
-                                        </div>
-                                        <PlusCircle size={24} className="text-primary" />
-                                    </div>
-                                );
-                            })}
-                          </div>
-                      )}
-                  </Card>
-              )}
-              
               {/* Quick Add Chips (when empty search) */}
-              {cart.length === 0 && !searchQuery && recentItems.length > 0 && (
+              {cart.length === 0 && !searchValue && recentItems.length > 0 && (
                 <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0">Quick Add:</span>
                   {recentItems.map(item => (
