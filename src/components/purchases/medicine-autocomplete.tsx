@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
+import { Loader2 } from 'lucide-react';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +15,7 @@ export function MedicineAutocomplete({
   onChange: (val: string, fullItem?: any) => void; 
   medicines: any[] 
 }) {
-  const { query, setQuery, results, isOpen, setIsOpen, selectedIndex, handleKeyDown } = useMedicineSearch({ medicines });
+  const { query, setQuery, results, isOpen, setIsOpen, isLoading, selectedIndex, handleKeyDown } = useMedicineSearch({ medicines });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Sync initial value
@@ -58,7 +59,7 @@ export function MedicineAutocomplete({
         }}
         className="font-bold border-none bg-slate-50 shadow-inner h-12 text-lg w-full" 
       />
-      {isOpen && results.length > 0 && (
+      {(isOpen && (results.length > 0 || isLoading)) && (
         <div className="absolute z-50 top-full left-0 w-full bg-white border shadow-xl rounded-xl mt-1 max-h-60 overflow-y-auto">
           {results.map((r, i) => (
             <div 
@@ -74,6 +75,12 @@ export function MedicineAutocomplete({
               <div className="text-xs text-muted-foreground">{r.genericName}</div>
             </div>
           ))}
+          {isLoading && (
+             <div className={cn("px-4 py-3 flex items-center justify-center gap-2 text-muted-foreground text-sm", results.length > 0 && "border-t bg-slate-50/50")}>
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>Searching global master...</span>
+             </div>
+          )}
         </div>
       )}
     </div>

@@ -85,6 +85,7 @@ export function useMedicineSearch({
   const [results, setResults] = useState<MedicineSearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(
@@ -115,6 +116,7 @@ export function useMedicineSearch({
       // 2. Fetch global medicines (only if we need more results or always to enrich)
       // Only fetch if query is at least 3 characters to save network/db load
       if (searchQuery.trim().length >= 3) {
+         setIsLoading(true);
          try {
             const globalMatches = await fetchGlobalMedicines(searchQuery);
             
@@ -141,6 +143,8 @@ export function useMedicineSearch({
             }
          } catch (err) {
             console.error('Failed to fetch global medicines', err);
+         } finally {
+            setIsLoading(false);
          }
       }
     },
@@ -214,6 +218,7 @@ export function useMedicineSearch({
     selectedIndex,
     isOpen,
     setIsOpen,
+    isLoading,
     handleKeyDown,
     clear,
   };
