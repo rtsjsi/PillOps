@@ -97,25 +97,23 @@ export async function POST(req: NextRequest) {
             if (profile?.store_id) {
                 const supabase = await createClient();
                 
-                // Parse the OCR date (DD-MM-YYYY) into YYYY-MM-DD for PG comparison
-                let ocrDateStr = parsedData.invoiceDate;
-                if (/^\d{2}-\d{2}-\d{4}$/.test(ocrDateStr)) {
-                   const [dd, mm, yyyy] = ocrDateStr.split('-');
-                   ocrDateStr = `${yyyy}-${mm}-${dd}`;
-                }
-
-                const { data: existing } = await supabase
+                const { data: existing, error: dbError } = await supabase
                    .from('purchase_invoices')
-                   .select('id')
+                   .select('id, invoice_date')
                    .eq('store_id', profile.store_id)
-                   .ilike('distributor_name', parsedData.distributorName)
-                   .eq('invoice_number', parsedData.invoiceNumber)
-                   .eq('invoice_date', ocrDateStr)
+                   .ilike('distributor_name', parsedData.distributorName.trim())
+                   .ilike('invoice_number', parsedData.invoiceNumber.trim())
                    .limit(1)
                    .maybeSingle();
 
+                if (dbError) {
+                   console.warn("[OCR] DB Error checking duplicate:", dbError);
+                }
+
                 if (existing) {
-                   return NextResponse.json({ error: `Duplicate invoice detected: Invoice #${parsedData.invoiceNumber} from ${parsedData.distributorName} dated ${parsedData.invoiceDate} already exists in your inventory.` }, { status: 409 });
+                   // We consider it a duplicate if Distributor and Invoice Number match. 
+                   // Date format from OCR is too unreliable to include in the strict DB query.
+                   return NextResponse.json({ error: `Duplicate invoice detected: Invoice #${parsedData.invoiceNumber} from ${parsedData.distributorName} already exists in your inventory.` }, { status: 409 });
                 }
             }
         }
