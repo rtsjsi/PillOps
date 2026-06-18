@@ -171,9 +171,12 @@ export default function ReviewExtraction() {
         const parsed = JSON.parse(rawData);
         
         // Map the parsed items to store the original extracted name
+        // Also clear out any OCR-extracted category or manufacturer
         parsed.items = parsed.items.map((item: any) => ({
            ...item,
            extractedName: item.medicineName,
+           category: '',
+           manufacturer: '',
         }));
         
         setData(parsed);
@@ -212,8 +215,8 @@ export default function ReviewExtraction() {
                      return {
                         ...item,
                         medicineName: match.name,
-                        category: match.category || item.category,
-                        manufacturer: match.manufacturer || item.manufacturer,
+                        category: match.category || '',
+                        manufacturer: match.manufacturer || '',
                         hsnCode: item.hsnCode || match.hsnCode,
                         gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
                      }
