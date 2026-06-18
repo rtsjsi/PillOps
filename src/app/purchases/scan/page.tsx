@@ -137,7 +137,7 @@ export default function AIInvoiceScanner() {
       <div className="flex-1 flex flex-col gap-4">
         <div className="bg-card p-4 rounded-xl border mb-2">
            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
-           <Select value={selectedModel} onValueChange={setSelectedModel}>
+           <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
               <SelectTrigger className="w-full h-12 text-md font-bold">
                  <SelectValue placeholder="Select Model" />
               </SelectTrigger>
