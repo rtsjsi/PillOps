@@ -78,7 +78,7 @@ function getMatchScore(query: string, target: string) {
 
 export function useMedicineSearch({
   medicines,
-  debounceMs = 150,
+  debounceMs = 300,
   maxResults = 8,
 }: UseMedicineSearchOptions) {
   const [query, setQuery] = useState('');
@@ -113,32 +113,35 @@ export function useMedicineSearch({
       setIsOpen(localMatches.length > 0);
 
       // 2. Fetch global medicines (only if we need more results or always to enrich)
-      try {
-         const globalMatches = await fetchGlobalMedicines(searchQuery);
-         
-         const scoredGlobals = globalMatches
-            .map((m: any) => {
-               const nameScore = getMatchScore(searchQuery, m.name);
-               const genScore = getMatchScore(searchQuery, m.genericName);
-               return { item: m, score: Math.max(nameScore, genScore) };
-            })
-            .filter((m: any) => m.score > 0)
-            .sort((a: any, b: any) => b.score - a.score);
+      // Only fetch if query is at least 3 characters to save network/db load
+      if (searchQuery.trim().length >= 3) {
+         try {
+            const globalMatches = await fetchGlobalMedicines(searchQuery);
+            
+            const scoredGlobals = globalMatches
+               .map((m: any) => {
+                  const nameScore = getMatchScore(searchQuery, m.name);
+                  const genScore = getMatchScore(searchQuery, m.genericName);
+                  return { item: m, score: Math.max(nameScore, genScore) };
+               })
+               .filter((m: any) => m.score > 0)
+               .sort((a: any, b: any) => b.score - a.score);
 
-         // Filter out ones we already have locally to avoid duplicates
-         const newGlobals = scoredGlobals
-            .map((m: any) => m.item)
-            .filter((g: any) => !localMatches.some((l: any) => l.name?.toLowerCase() === g.name?.toLowerCase()));
-         
-         if (newGlobals.length > 0) {
-            setResults(prev => {
-               const combined = [...prev, ...newGlobals].slice(0, maxResults * 2);
-               setIsOpen(combined.length > 0);
-               return combined;
-            });
+            // Filter out ones we already have locally to avoid duplicates
+            const newGlobals = scoredGlobals
+               .map((m: any) => m.item)
+               .filter((g: any) => !localMatches.some((l: any) => l.name?.toLowerCase() === g.name?.toLowerCase()));
+            
+            if (newGlobals.length > 0) {
+               setResults(prev => {
+                  const combined = [...prev, ...newGlobals].slice(0, maxResults * 2);
+                  setIsOpen(combined.length > 0);
+                  return combined;
+               });
+            }
+         } catch (err) {
+            console.error('Failed to fetch global medicines', err);
          }
-      } catch (err) {
-         console.error('Failed to fetch global medicines', err);
       }
     },
     [medicines, maxResults]

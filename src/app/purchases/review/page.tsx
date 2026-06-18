@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
-import { fetchMedicines } from '@/lib/queries';
+import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
@@ -84,6 +84,7 @@ export default function ReviewExtraction() {
       if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
       if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
       if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
+      if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
     }
     
     if (field === 'mrp' || field === 'purchasePrice') {
@@ -201,24 +202,39 @@ export default function ReviewExtraction() {
 
   useEffect(() => {
     if (!hasAutoMatched && data?.items && medicines.length > 0 && !draftId) {
-      const newItems = data.items.map(item => {
-         if (item.medicineName === item.extractedName) {
-            const match = getBestMedicineMatch(item.extractedName, medicines);
-            if (match) {
-               return {
-                  ...item,
-                  medicineName: match.name,
-                  category: match.category || item.category,
-                  manufacturer: match.manufacturer || item.manufacturer,
-                  hsnCode: item.hsnCode || match.hsnCode,
-                  gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
+      const runAutoMatch = async () => {
+         const newItems = await Promise.all(data.items.map(async (item: any) => {
+            if (item.medicineName === item.extractedName) {
+               let match = getBestMedicineMatch(item.extractedName, medicines);
+               
+               if (!match) {
+                  try {
+                     const globals = await fetchGlobalMedicines(item.extractedName);
+                     if (globals && globals.length > 0) {
+                        match = getBestMedicineMatch(item.extractedName, globals) || globals[0];
+                     }
+                  } catch (e) {
+                     // ignore
+                  }
+               }
+
+               if (match) {
+                  return {
+                     ...item,
+                     medicineName: match.name,
+                     category: match.category || item.category,
+                     manufacturer: match.manufacturer || item.manufacturer,
+                     hsnCode: item.hsnCode || match.hsnCode,
+                     gstPercent: item.gstPercent !== undefined && item.gstPercent !== null ? item.gstPercent : match.gstPercent,
+                  }
                }
             }
-         }
-         return item;
-      });
-      setData({ ...data, items: newItems });
-      setHasAutoMatched(true);
+            return item;
+         }));
+         setData({ ...data, items: newItems });
+         setHasAutoMatched(true);
+      };
+      runAutoMatch();
     }
   }, [data, medicines, draftId, hasAutoMatched]);
 
