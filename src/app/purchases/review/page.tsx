@@ -521,7 +521,7 @@ export default function ReviewExtraction() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="med-category" className="text-xs uppercase tracking-wider font-bold">Category</Label>
-              <Select value={newMedicine.category} onValueChange={(v) => setNewMedicine({ ...newMedicine, category: v })}>
+              <Select value={newMedicine.category} onValueChange={(v) => setNewMedicine({ ...newMedicine, category: v || 'Tablet' })}>
                 <SelectTrigger id="med-category">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
