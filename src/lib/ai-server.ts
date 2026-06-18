@@ -1,41 +1,42 @@
 export const PROMPT = `You are an expert pharmacy data extraction AI.
 Analyze this image of a distributor pharmaceutical invoice. Extract the tabular structured data perfectly.
 Pay close attention to table headers.
-Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date.
+Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date, 'Qty' or 'Billed' means Quantity.
 
 CRITICAL INSTRUCTIONS:
 1. Chain of Thought: First, in the "rawTranscription" field, write out a literal transcription of the entire items table exactly as you see it row-by-row. This scratchpad helps you maintain spatial alignment.
-2. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items. If there are 20 items, you must return 20 objects in the "items" array.
-3. Carefully scroll/read through the entire image from top to bottom.
-4. Ensure you capture every detail on every line (quantity, batch, free quantity, GST, discount). If a field is blank, use 0 or "", but DO NOT omit the item itself.
+2. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items.
+3. ZERO HALLUCINATION POLICY: DO NOT guess or default to 1 for quantities. Find the exact column for 'Qty', 'Billed Qty', or 'Act' and extract the exact number.
+4. OCR PRECISION: Pay extreme attention to similar-looking characters in Batch Numbers (e.g., 6 vs 8, 0 vs O, B vs 8, D vs 0). Double-check the image pixels carefully.
+5. EXPIRY FORMATS: Look for the 'Exp' column. Indian invoices typically use MM/YY or MM-YY (e.g., "08/26" or "08-26"). Read the digits carefully.
 
 Return ONLY a valid JSON object matching exactly this schema:
 {
-  "rawTranscription": "string (The literal row-by-row transcription of the invoice table)",
-  "distributorName": string,
-  "invoiceNumber": string,
-  "invoiceDate": string (format YYYY-MM-DD, try to parse from the image),
+  "rawTranscription": "string (The literal row-by-row transcription)",
+  "distributorName": "string",
+  "invoiceNumber": "string",
+  "invoiceDate": "string (format YYYY-MM-DD)",
   "items": [
     {
-      "medicineName": string,
-      "pack": string (e.g. "100G", "10T", "100 ml"),
-      "hsnCode": string (usually a 4 to 8 digit number),
-      "manufacturer": string (e.g. "WS", "ZDef", often under "Mfr"),
-      "batchNumber": string,
-      "quantity": number,
-      "freeQuantity": number (default to 0 if not present, often marked as "FQ" or "Scheme"),
-      "purchasePrice": number (the rate or price per unit, BEFORE tax/discount),
-      "discountPercent": number (default to 0),
-      "mrp": number (Maximum Retail Price),
-      "gstPercent": number (e.g. 5, 12, 18),
-      "expiryDate": string (format MM-YYYY. E.g if image says "07-27" convert to "07-2027". If "12/26" convert to "12-2026". If not available, leave blank ""),
-      "totalAmount": number (The final row amount for that item) 
+      "medicineName": "string",
+      "pack": "string",
+      "hsnCode": "string",
+      "manufacturer": "string",
+      "batchNumber": "string (Look closely at 6 vs 8, 0 vs O)",
+      "quantity": number (DO NOT default to 1. Find the Qty/Billed column. Must be exact.),
+      "freeQuantity": number (default to 0, often "FQ" or "Scheme"),
+      "purchasePrice": number (the Rate/price per unit BEFORE tax/discount),
+      "discountPercent": number,
+      "mrp": number,
+      "gstPercent": number,
+      "expiryDate": "string (format MM-YYYY. Convert MM/YY to MM-YYYY. Look very closely at the digits)",
+      "totalAmount": number 
     }
   ],
-  "subtotal": number (The taxable amount or gross total before GST),
+  "subtotal": number,
   "discountAmount": number,
-  "gstAmount": number (Total CGST+SGST or IGST combined),
-  "total": number (Net amount to pay)
+  "gstAmount": number,
+  "total": number
 }`;
 
 // --- TIER EXECUTORS ---
