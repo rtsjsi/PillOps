@@ -29,6 +29,7 @@ export default function ReviewExtraction() {
 
   interface InvoiceItem {
     medicineName: string;
+    extractedName?: string;
     batchNumber: string;
     expiryDate: string;
     purchasePrice: number;
@@ -161,37 +162,14 @@ export default function ReviewExtraction() {
       try {
         const parsed = JSON.parse(rawData);
         
-        // Background AI Enrichment & Data merging
-        const enrichData = async (invoiceData: InvoiceData) => {
-          try {
-            const medNames = invoiceData.items.map(item => item.medicineName).filter(Boolean);
-            const { data: enrichmentMap, error: enrichErr } = await checkAndEnrichInvoiceMedicines(medNames);
-            
-            if (!enrichErr && enrichmentMap) {
-               invoiceData.items = invoiceData.items.map(item => {
-                 const enrichment = enrichmentMap[item.medicineName];
-                  if (enrichment) {
-                    return {
-                      ...item,
-                      medicineName: enrichment.name || item.medicineName,
-                      category: item.category || enrichment.category,
-                      manufacturer: item.manufacturer || enrichment.manufacturer,
-                      hsnCode: item.hsnCode || enrichment.hsnCode,
-                      gstPercent: item.gstPercent || enrichment.gstPercent || 12,
-                    };
-                  }
-                 return item;
-               });
-            }
-          } catch (e) {
-            console.error('Enrichment failed in review page:', e);
-          } finally {
-            setData(invoiceData);
-            setIsEnriching(false);
-          }
-        };
-
-        enrichData(parsed);
+        // Map the parsed items to store the original extracted name
+        parsed.items = parsed.items.map((item: any) => ({
+           ...item,
+           extractedName: item.medicineName,
+        }));
+        
+        setData(parsed);
+        setIsEnriching(false);
 
       } catch (e) {
         setFatalError("Failed to parse extracted invoice data.");
@@ -444,7 +422,12 @@ export default function ReviewExtraction() {
                     <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", showHighlight ? "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-primary")}>
                       {idx + 1}
                     </span>
-                    <div className="flex-1">
+                    <div className="flex-1 flex flex-col gap-1">
+                      {item.extractedName && (
+                         <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1">
+                            Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span>
+                         </div>
+                      )}
                       <MedicineAutocomplete 
                         value={item.medicineName} 
                         onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}

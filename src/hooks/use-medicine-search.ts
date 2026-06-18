@@ -35,6 +35,44 @@ interface UseMedicineSearchOptions {
  * Hook for fast, client-side medicine name typeahead search.
  * Works against pre-fetched medicines data for instant results.
  */
+function levenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function getMatchScore(query: string, target: string) {
+    if (!target) return 0;
+    const q = query.toLowerCase();
+    const t = target.toLowerCase();
+    if (t === q) return 100;
+    if (t.startsWith(q)) return 80;
+    if (t.includes(q)) return 60;
+    
+    const cleanQ = q.replace(/[^a-z0-9]/g, '');
+    const cleanT = t.replace(/[^a-z0-9]/g, '');
+    if (cleanT.includes(cleanQ)) return 50;
+
+    if (Math.abs(cleanQ.length - cleanT.length) < 5 && cleanQ.length > 3) {
+        const dist = levenshteinDistance(cleanQ, cleanT);
+        if (dist <= 2) return 40 - dist; 
+        if (cleanQ.length > 6 && dist <= 3) return 30 - dist;
+    }
+    return 0;
+}
+
 export function useMedicineSearch({
   medicines,
   debounceMs = 150,
@@ -54,15 +92,17 @@ export function useMedicineSearch({
         return;
       }
 
-      const q = searchQuery.toLowerCase();
-      // 1. Search local medicines
-      const localMatches = medicines
-        .filter(
-          (m) =>
-            m.name?.toLowerCase().includes(q) ||
-            m.genericName?.toLowerCase().includes(q)
-        )
-        .slice(0, maxResults);
+      // 1. Search local medicines with smart scoring
+      const scoredMatches = medicines
+        .map(m => {
+           const nameScore = getMatchScore(searchQuery, m.name);
+           const genScore = getMatchScore(searchQuery, m.genericName);
+           return { item: m, score: Math.max(nameScore, genScore) };
+        })
+        .filter(m => m.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      const localMatches = scoredMatches.map(m => m.item).slice(0, maxResults);
         
       // Show local matches instantly
       setResults(localMatches);
