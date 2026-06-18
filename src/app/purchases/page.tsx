@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPurchases } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { FileScan, Box, History } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
