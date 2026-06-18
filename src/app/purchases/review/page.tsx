@@ -50,6 +50,7 @@ export default function ReviewExtraction() {
     invoiceNumber: string;
     total: number;
     items: InvoiceItem[];
+    validationWarnings?: string[];
   }
 
   const [data, setData] = useState<InvoiceData | null>(null);
@@ -417,13 +418,30 @@ export default function ReviewExtraction() {
              </div>
          </div>
          
+         {data.validationWarnings && data.validationWarnings.length > 0 && (
+            <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex flex-col gap-2 mb-4">
+               <div className="flex items-center gap-2 font-bold">
+                  <AlertTriangle size={20} />
+                  AI detected potential mathematical errors in the scan (please check highlighted rows):
+               </div>
+               <ul className="list-disc pl-8 text-sm space-y-1">
+                  {data.validationWarnings.map((w, i) => <li key={i}>{w}</li>)}
+               </ul>
+            </div>
+         )}
+         
          <div className="flex flex-col gap-4">
              {data.items.map((item: any, idx: number) => {
                const hasError = invalidFields.items.includes(idx);
+               const expectedTotal = (item.quantity || 0) * (item.purchasePrice || 0);
+               const diff = Math.abs(expectedTotal - (item.totalAmount || 0));
+               const isMathMismatch = expectedTotal > 0 && item.totalAmount > 0 && (diff > expectedTotal * 0.1 || diff > 10);
+               const showHighlight = hasError || isMathMismatch;
+
                return (
-                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", hasError ? "ring-rose-500/50 bg-rose-50/20" : "ring-primary/20")}>
+                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", showHighlight ? "ring-rose-500/80 bg-rose-50/50" : "ring-primary/20")}>
                   <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
-                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", hasError ? "bg-rose-500" : "bg-primary")}>
+                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", showHighlight ? "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-primary")}>
                       {idx + 1}
                     </span>
                     <div className="flex-1">
