@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { fetchUserProfile } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,9 +19,13 @@ import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
+import { addGlobalMedicine } from '@/app/medicines/actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 export default function ReviewExtraction() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draftId');
 
   interface InvoiceItem {
     medicineName: string;
@@ -40,6 +44,7 @@ export default function ReviewExtraction() {
   }
 
   interface InvoiceData {
+    id?: string;
     distributorName: string;
     invoiceDate: string;
     invoiceNumber: string;
@@ -52,9 +57,15 @@ export default function ReviewExtraction() {
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [invalidFields, setInvalidFields] = useState<{ header: string[], items: number[] }>({ header: [], items: [] });
   const [isSaving, setIsSaving] = useState(false);
+  const [isDrafting, setIsDrafting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   const [medicines, setMedicines] = useState<any[]>([]);
-  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
+  const manufacturers = useDistinctValues('manufacturers', 'name', true);
+  const distributors = useDistinctValues('distributors', 'name', false);
+  
+  const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
+  const [newMedicine, setNewMedicine] = useState({ name: '', category: 'Tablet', manufacturer: '' });
+  const [isAddingMedicine, setIsAddingMedicine] = useState(false);
 
   useEffect(() => {
     fetchMedicines().then(setMedicines);
@@ -104,6 +115,46 @@ export default function ReviewExtraction() {
   };
 
   useEffect(() => {
+    if (draftId) {
+      const fetchDraft = async () => {
+         try {
+             const supabase = createClient();
+             const { data: draft, error } = await supabase.from('purchase_invoices').select('*, purchase_invoice_items(*)').eq('id', draftId).single();
+             
+             if (error || !draft) throw new Error("Draft not found.");
+             
+             const mappedData: InvoiceData = {
+                 id: draft.id,
+                 distributorName: draft.distributor_name || '',
+                 invoiceDate: draft.invoice_date || '',
+                 invoiceNumber: draft.invoice_number || '',
+                 total: draft.total || 0,
+                 items: (draft.purchase_invoice_items || []).map((item: any) => ({
+                     medicineName: item.medicine_name || '',
+                     batchNumber: item.batch_number || '',
+                     expiryDate: item.expiry_date || '',
+                     purchasePrice: item.purchase_price || 0,
+                     mrp: item.mrp || 0,
+                     discountPercent: item.discount_percent || 0,
+                     quantity: item.quantity || 0,
+                     freeQuantity: item.free_quantity || 0,
+                     gstPercent: item.gst_percent || 12,
+                     totalAmount: item.total_amount || 0
+                 }))
+             };
+             
+             setData(mappedData);
+         } catch (e: any) {
+             console.error("Fetch draft error:", e);
+             setFatalError(e.message || "Failed to load draft invoice.");
+         } finally {
+             setIsEnriching(false);
+         }
+      };
+      fetchDraft();
+      return;
+    }
+
     const rawData = sessionStorage.getItem('pillops_extracted_invoice');
     if (rawData) {
       try {
@@ -151,8 +202,8 @@ export default function ReviewExtraction() {
     }
   }, []);
 
-  const handleConfirm = async () => {
-    if (!data || isSaving) return;
+  const handleConfirm = async (status: 'draft' | 'completed' = 'completed') => {
+    if (!data || isSaving || isDrafting) return;
 
     setInvalidFields({ header: [], items: [] });
     let headerErrors: string[] = [];
@@ -161,53 +212,72 @@ export default function ReviewExtraction() {
     // Validation
     if (!data.distributorName) headerErrors.push('distributorName');
     if (!data.invoiceNumber) headerErrors.push('invoiceNumber');
-    if (!data.invoiceDate) headerErrors.push('invoiceDate');
     
-    data.items.forEach((item, idx) => {
-      let isInvalid = false;
-      if (
-          !item.medicineName || !item.batchNumber || !item.expiryDate ||
-          item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
-          item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
-          item.mrp === undefined || item.mrp === null || isNaN(item.mrp) ||
-          item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ||
-          item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ||
-          item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent)
-      ) {
-        isInvalid = true;
-      }
+    if (status === 'completed') {
+      if (!data.invoiceDate) headerErrors.push('invoiceDate');
       
-      // Simple MM-YYYY format validation
-      if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
-        isInvalid = true;
-      }
+      data.items.forEach((item, idx) => {
+        let isInvalid = false;
+        if (
+            !item.medicineName || !item.batchNumber || !item.expiryDate ||
+            item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
+            item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
+            item.mrp === undefined || item.mrp === null || isNaN(item.mrp) ||
+            item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ||
+            item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ||
+            item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent)
+        ) {
+          isInvalid = true;
+        }
+        
+        // Simple MM-YYYY format validation
+        if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
+          isInvalid = true;
+        }
 
-      if (isInvalid) {
-        itemErrors.push(idx);
-      }
-    });
+        // Validate medicine is in global master
+        const isValidMedicine = medicines.some(m => m.name === item.medicineName);
+        if (!isValidMedicine) {
+          isInvalid = true;
+          toast.error(`Medicine '${item.medicineName}' on row ${idx+1} is not in global master. Please add it first.`);
+        }
+
+        if (isInvalid) {
+          itemErrors.push(idx);
+        }
+      });
+    }
 
     if (headerErrors.length > 0 || itemErrors.length > 0) {
       setInvalidFields({ header: headerErrors, items: itemErrors });
-      toast.error("Please fill in all highlighted mandatory fields correctly.");
-      return;
+      if (status === 'completed') {
+        toast.error("Please fill in all highlighted mandatory fields correctly.");
+        return;
+      } else {
+        toast.info("Saved as Draft with some missing or invalid fields.");
+      }
     }
 
-    setIsSaving(true);
+    if (status === 'completed') setIsSaving(true);
+    else setIsDrafting(true);
 
     try {
         const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
-        // Format MM-YYYY to YYYY-MM for the database
+        // Format MM-YYYY to YYYY-MM for the database if strictly matched
         const formattedItems = data.items.map(item => {
-           const [mm, yyyy] = item.expiryDate.split('-');
-           return { ...item, expiryDate: `${yyyy}-${mm}` };
+           let expiry = item.expiryDate;
+           if (/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
+             const [mm, yyyy] = item.expiryDate.split('-');
+             expiry = `${yyyy}-${mm}`;
+           }
+           return { ...item, expiryDate: expiry };
         });
 
         const supabase = createClient();
         const { error } = await supabase.rpc('save_purchase_invoice', {
-          purchase_data: { ...data, storeId: profile.store_id },
+          purchase_data: { ...data, storeId: profile.store_id, status },
           items: formattedItems,
         });
 
@@ -216,13 +286,37 @@ export default function ReviewExtraction() {
         sessionStorage.removeItem('pillops_extracted_invoice');
         setIsSuccess(true);
         setTimeout(() => {
-            router.push('/inventory');
+            router.push('/purchases');
         }, 2000);
     } catch (error: any) {
         console.error('Save failed:', error);
         toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
     } finally {
-        setIsSaving(false);
+        if (status === 'completed') setIsSaving(false);
+        else setIsDrafting(false);
+    }
+  };
+
+  const handleAddMedicine = async () => {
+    if (!newMedicine.name || !newMedicine.category || !newMedicine.manufacturer) {
+       toast.error('Name, Category, and Manufacturer are mandatory.');
+       return;
+    }
+    setIsAddingMedicine(true);
+    try {
+       const res = await addGlobalMedicine(newMedicine);
+       if (res.error) throw new Error(res.error);
+       
+       toast.success('Medicine added! The AI has enriched it with additional details.');
+       setIsAddMedicineOpen(false);
+       setNewMedicine({ name: '', category: 'Tablet', manufacturer: '' });
+       
+       // Refresh medicine list
+       fetchMedicines().then(setMedicines);
+    } catch(err: any) {
+       toast.error(err.message);
+    } finally {
+       setIsAddingMedicine(false);
     }
   };
 
@@ -282,10 +376,12 @@ export default function ReviewExtraction() {
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
             <div className="space-y-1">
                <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
-               <Input 
-                 value={data.distributorName} 
-                 onChange={e => setData({ ...data, distributorName: e.target.value })} 
-                 className={cn("text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 focus-visible:ring-rose-500")}
+               <GenericAutocomplete
+                 placeholder="Select or enter distributor..."
+                 value={data.distributorName}
+                 onValueChange={v => setData({ ...data, distributorName: v })}
+                 options={distributors}
+                 className={cn("h-11 text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
@@ -316,6 +412,9 @@ export default function ReviewExtraction() {
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
              <div className="flex gap-2">
+                 <Button variant="secondary" size="sm" onClick={() => setIsAddMedicineOpen(true)} className="rounded-full font-bold">
+                     <Plus size={16} className="mr-2" /> Add Missing Medicine
+                 </Button>
                  <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20">
                      <Plus size={16} className="mr-2" /> Add Row
                  </Button>
@@ -381,17 +480,77 @@ export default function ReviewExtraction() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-2xl">
-         <div className="container max-w-4xl">
+         <div className="container max-w-4xl flex gap-4">
            <Button 
-              className="w-full h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
-              disabled={isSaving}
-              onClick={handleConfirm}
+              variant="secondary"
+              className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
+              disabled={isSaving || isDrafting}
+              onClick={() => handleConfirm('draft')}
            >
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+              {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+              {isDrafting ? 'Saving...' : 'Save as Draft'}
+           </Button>
+           <Button 
+              className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
+              disabled={isSaving || isDrafting}
+              onClick={() => handleConfirm('completed')}
+           >
+              {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
               {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
            </Button>
          </div>
       </div>
+
+      <Dialog open={isAddMedicineOpen} onOpenChange={setIsAddMedicineOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Missing Medicine</DialogTitle>
+            <DialogDescription>
+              Add a medicine to the global master. Our AI will automatically enrich missing details like HSN, GST, and ingredients.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="med-name" className="text-xs uppercase tracking-wider font-bold">Medicine Name</Label>
+              <Input
+                id="med-name"
+                placeholder="e.g. Dolo 650"
+                value={newMedicine.name}
+                onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="med-category" className="text-xs uppercase tracking-wider font-bold">Category</Label>
+              <Select value={newMedicine.category} onValueChange={(v) => setNewMedicine({ ...newMedicine, category: v })}>
+                <SelectTrigger id="med-category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="med-manufacturer" className="text-xs uppercase tracking-wider font-bold">Manufacturer</Label>
+              <GenericAutocomplete
+                placeholder="e.g. Micro Labs"
+                value={newMedicine.manufacturer}
+                onValueChange={(v) => setNewMedicine({ ...newMedicine, manufacturer: v })}
+                options={manufacturers}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={isAddingMedicine} onClick={handleAddMedicine} className="w-full rounded-full font-bold">
+              {isAddingMedicine ? <Loader2 className="animate-spin mr-2" /> : <Sparkles size={16} className="mr-2" />}
+              {isAddingMedicine ? 'Enriching & Saving...' : 'Save & Enrich'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

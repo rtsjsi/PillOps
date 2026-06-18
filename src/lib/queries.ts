@@ -216,6 +216,7 @@ export async function fetchPurchases() {
   if (error) throw new Error(error.message);
   return (data ?? []).map((purch: any) => ({
     ...purch,
+    status: purch.status || 'completed',
     distributorName: purch.distributor_name || purch.distributorName,
     invoiceNumber: purch.invoice_number || purch.invoiceNumber,
     invoiceDate: purch.invoice_date || purch.invoiceDate,

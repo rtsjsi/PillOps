@@ -12,6 +12,7 @@ import TableLoading from '@/components/ui/tableLoading';
 export default function Purchases() {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'completed' | 'drafts'>('completed');
 
   useEffect(() => {
     async function loadPurchases() {
@@ -28,6 +29,10 @@ export default function Purchases() {
   }, []);
 
   if (loading) return <TableLoading />;
+
+  const completedPurchases = purchases.filter(p => p.status === 'completed');
+  const draftPurchases = purchases.filter(p => p.status === 'draft');
+  const currentPurchases = activeTab === 'completed' ? completedPurchases : draftPurchases;
 
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
@@ -55,28 +60,56 @@ export default function Purchases() {
       </Card>
 
       <section>
-         <div className="flex items-center gap-2 mb-4">
-           <History size={20} className="text-muted-foreground" />
-           <h2 className="text-xl font-bold tracking-tight">Recent Inwards</h2>
+         <div className="flex items-center justify-between mb-4">
+           <div className="flex items-center gap-2">
+             <History size={20} className="text-muted-foreground" />
+             <h2 className="text-xl font-bold tracking-tight">Recent Inwards</h2>
+           </div>
+           <div className="flex bg-muted/30 p-1 rounded-xl">
+             <Button
+               variant={activeTab === 'completed' ? 'secondary' : 'ghost'}
+               size="sm"
+               className={cn("rounded-lg font-bold transition-all", activeTab === 'completed' && "bg-white shadow-sm")}
+               onClick={() => setActiveTab('completed')}
+             >
+               Completed
+             </Button>
+             <Button
+               variant={activeTab === 'drafts' ? 'secondary' : 'ghost'}
+               size="sm"
+               className={cn("rounded-lg font-bold transition-all", activeTab === 'drafts' && "bg-white shadow-sm")}
+               onClick={() => setActiveTab('drafts')}
+             >
+               Drafts ({draftPurchases.length})
+             </Button>
+           </div>
          </div>
          <div className="flex flex-col gap-4">
-            {purchases.length === 0 ? (
+            {currentPurchases.length === 0 ? (
                <Card className="flex flex-col items-center justify-center gap-4 p-12 text-muted-foreground bg-muted/10 border-dashed border-2">
                   <Box size={48} className="opacity-20" />
-                  <p className="font-medium text-sm">No purchase records yet.</p>
+                  <p className="font-medium text-sm">No {activeTab} records yet.</p>
                </Card>
             ) : (
-               purchases.map((inv: any) => (
+               currentPurchases.map((inv: any) => (
                   <Card key={inv.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4 flex flex-col gap-2">
                       <div className="flex justify-between items-start">
-                         <div className="font-bold text-lg leading-tight">{inv.distributorName}</div>
+                         <div className="font-bold text-lg leading-tight">{inv.distributorName || 'Draft'}</div>
                          <div className="text-emerald-600 dark:text-emerald-400 font-extrabold">{formatCurrency(inv.total)}</div>
                       </div>
                       <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest pt-2 border-t border-border/50">
-                         <div className="bg-muted px-2 py-0.5 rounded"># {inv.invoiceNumber}</div>
-                         <div>{formatDate(inv.invoiceDate)}</div>
+                         <div className="bg-muted px-2 py-0.5 rounded">{inv.invoiceNumber ? `# ${inv.invoiceNumber}` : 'No Invoice #'}</div>
+                         <div>{inv.invoiceDate ? formatDate(inv.invoiceDate) : 'No Date'}</div>
                       </div>
+                      
+                      {activeTab === 'drafts' && (
+                        <div className="mt-2 flex justify-end">
+                          <Button render={<Link href={`/purchases/review?draftId=${inv.id}`} />} size="sm" className="rounded-full">
+                            Complete Draft
+                          </Button>
+                        </div>
+                      )}
                       
                       {inv.items && inv.items.length > 0 && (
                         <details className="mt-2 group cursor-pointer border-t border-border/50 pt-2 text-sm">

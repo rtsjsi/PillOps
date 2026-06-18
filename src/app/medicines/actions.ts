@@ -351,3 +351,63 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
     return { data: null, error: err.message || 'Failed to check and enrich medicines' };
   }
 }
+
+export async function addGlobalMedicine(data: { name: string, category: string, manufacturer: string }) {
+  try {
+    const supabase = await createClient();
+    const { createAdminClient } = await import('@/utils/supabase/admin');
+    const adminDb = createAdminClient();
+
+    // Enforce UPPERCASE name
+    const medName = data.name.toUpperCase();
+
+    // Basic AI enrichment
+    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+    const chunk = [{ id: crypto.randomUUID(), name: medName, category: data.category, manufacturer: data.manufacturer }];
+    let aiMed = chunk[0] as any;
+    
+    try {
+      const aiResponseString = await enrichMedicineBatchWithGroq(chunk);
+      const enrichedData = JSON.parse(aiResponseString);
+      if (enrichedData?.medicines?.length > 0) {
+        aiMed = enrichedData.medicines[0];
+      }
+    } catch (e) {
+      console.warn('AI Enrichment failed during manual add:', e);
+      // Fallback to basic data provided by user
+    }
+
+    const { category, manufacturer, packSize, hsnCode, gstPercent, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = aiMed;
+    const correctedName = (aiMed.correctedName || medName).toUpperCase();
+
+    const { data: newMed, error } = await adminDb
+      .from('global_medicine_master')
+      .insert({
+        name: correctedName,
+        category: category || data.category,
+        manufacturer: manufacturer || data.manufacturer,
+        pack_size: packSize || null,
+        hsn_code: hsnCode || null,
+        gst_percent: gstPercent || 12,
+        ingredients: ingredients || [],
+        substitutes: substitutes || [],
+        storage_conditions: storageConditions || null,
+        is_narcotic: isNarcotic || false,
+        prescription_required: prescriptionRequired || false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('A medicine with this name already exists.');
+      }
+      throw new Error(error.message);
+    }
+
+    return { data: newMed, error: null };
+  } catch (err: any) {
+    return { data: null, error: err.message || 'Failed to add medicine' };
+  }
+}
+
