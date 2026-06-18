@@ -382,11 +382,17 @@ export default function ReviewExtraction() {
 
   return (
     <div className="container py-8 flex flex-col gap-6 pb-32">
-      <header className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
-            <ArrowLeft size={24} />
+      <header className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
+              <ArrowLeft size={24} />
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">Review Invoice Data</h1>
+        </div>
+        <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
+          Rescan Invoice
         </Button>
-        </header>
+      </header>
 
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
