@@ -4,6 +4,8 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, Camera, Focus, ArrowLeft, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function AIInvoiceScanner() {
   const router = useRouter();
@@ -11,6 +13,7 @@ export default function AIInvoiceScanner() {
   const [scanning, setScanning] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState('auto');
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -64,7 +67,8 @@ export default function AIInvoiceScanner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          mimeType: file.type
+          mimeType: file.type,
+          preferredModel: selectedModel
         })
       });
 
@@ -131,6 +135,21 @@ export default function AIInvoiceScanner() {
       )}
 
       <div className="flex-1 flex flex-col gap-4">
+        <div className="bg-card p-4 rounded-xl border mb-2">
+           <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
+           <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="w-full h-12 text-md font-bold">
+                 <SelectValue placeholder="Select Model" />
+              </SelectTrigger>
+              <SelectContent>
+                 <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>
+                 <SelectItem value="github">GitHub Models (GPT-4o mini)</SelectItem>
+                 <SelectItem value="gemini">Google Gemini (Flash)</SelectItem>
+                 <SelectItem value="groq">Groq (Llama Vision)</SelectItem>
+              </SelectContent>
+           </Select>
+        </div>
+
         <h2 className="text-lg text-center text-muted-foreground">Choose an input method</h2>
         
         <button 

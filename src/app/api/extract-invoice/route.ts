@@ -6,42 +6,56 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
 
-    const { imageBase64, mimeType } = body;
+    const { imageBase64, mimeType, preferredModel = 'auto' } = body;
     if (!imageBase64 || !mimeType) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
     }
 
     let textResponse = "";
-    let executingTier = 1;
+    
+    const runners = [
+      { id: 'github', name: 'GitHub Models', run: () => runGitHub(imageBase64) },
+      { id: 'gemini', name: 'Gemini', run: () => runGemini(imageBase64, mimeType) },
+      { id: 'groq', name: 'Groq', run: () => runGroq(imageBase64) }
+    ];
 
-    try {
-      console.log("[OCR] Attempting Tier 1: GitHub Models");
-      textResponse = await runGitHub(imageBase64);
-    } catch (e1) {
-      console.warn(`[OCR] Tier 1 GitHub Failed: ${(e1 as Error).message}`);
-      executingTier = 2;
-      
-      try {
-        console.log("[OCR] Attempting Tier 2: Gemini");
-        textResponse = await runGemini(imageBase64, mimeType);
-      } catch (e2) {
-        console.warn(`[OCR] Tier 2 Gemini Failed: ${(e2 as Error).message}`);
-        executingTier = 3;
-
-        try {
-          console.log("[OCR] Attempting Tier 3: Groq");
-          textResponse = await runGroq(imageBase64);
-        } catch (e3) {
-          console.warn(`[OCR] Tier 3 Groq Failed: ${(e3 as Error).message}`);
-          return NextResponse.json(
-             { error: 'All 3 Vision API Fallbacks failed or are missing API keys.' },
-             { status: 503 }
-          );
-        }
-      }
+    if (preferredModel !== 'auto') {
+       const selectedRunner = runners.find(r => r.id === preferredModel);
+       if (!selectedRunner) {
+           return NextResponse.json({ error: 'Invalid model selected' }, { status: 400 });
+       }
+       
+       console.log(`[OCR] Attempting user-selected model: ${selectedRunner.name}`);
+       try {
+         textResponse = await selectedRunner.run();
+         console.log(`[OCR] Success on user-selected model: ${selectedRunner.name}`);
+       } catch (e: any) {
+         console.warn(`[OCR] User-selected model ${selectedRunner.name} failed: ${e.message}`);
+         return NextResponse.json({ error: `Selected model failed: ${e.message}` }, { status: 503 });
+       }
+    } else {
+       let executingTier = 1;
+       let success = false;
+       for (const runner of runners) {
+          console.log(`[OCR] Attempting Tier ${executingTier}: ${runner.name}`);
+          try {
+             textResponse = await runner.run();
+             console.log(`[OCR] Success on Tier ${executingTier}`);
+             success = true;
+             break;
+          } catch (e: any) {
+             console.warn(`[OCR] Tier ${executingTier} ${runner.name} Failed: ${e.message}`);
+             executingTier++;
+          }
+       }
+       
+       if (!success) {
+         return NextResponse.json(
+            { error: 'All Vision API Fallbacks failed or are missing API keys.' },
+            { status: 503 }
+         );
+       }
     }
-
-    console.log(`[OCR] Success on Tier ${executingTier}`);
     
     // Safety fallback just in case the model wraps in markdown
     const jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
