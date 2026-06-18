@@ -511,21 +511,21 @@ export default function ReviewExtraction() {
                       {idx + 1}
                     </span>
                     <div className="flex-1 flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-1">
-                          <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 w-full">
                              {item.extractedName ? (
-                               <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
+                               <div className="flex items-center gap-1">Extracted: <span className="text-primary truncate max-w-[150px] sm:max-w-[250px]" title={item.extractedName}>{item.extractedName}</span></div>
                              ) : 'Item Details'}
                              {statusMsg}
                              {item.matchStatus === 'probable' && (
-                                <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full" onClick={() => {
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full shrink-0" onClick={() => {
                                    const newItems = [...data.items];
                                    newItems[idx].matchStatus = 'exact';
                                    setData({ ...data, items: newItems });
                                 }}>✓ Confirm Match</Button>
                              )}
                              {(item.matchStatus === 'none' || item.matchStatus === 'probable') && (
-                                <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full" onClick={async () => {
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full shrink-0" onClick={async () => {
                                    setFetchingAI(prev => [...prev, idx]);
                                    try {
                                       const res = await fetchMedicineDetailsFromAI(item.extractedName || item.medicineName);
@@ -545,7 +545,7 @@ export default function ReviewExtraction() {
                                       setFetchingAI(prev => prev.filter(i => i !== idx));
                                    }
                                 }} disabled={fetchingAI.includes(idx)}>
-                                   {fetchingAI.includes(idx) ? <Loader2 size={10} className="mr-1 animate-spin" /> : <Sparkles size={10} className="mr-1" />}
+                                   {fetchingAI.includes(idx) ? <Loader2 size={12} className="mr-1 animate-spin" /> : <Sparkles size={12} className="mr-1" />}
                                    Ask AI
                                 </Button>
                              )}
