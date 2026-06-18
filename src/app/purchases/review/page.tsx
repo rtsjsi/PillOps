@@ -20,7 +20,7 @@ import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
-import { addGlobalMedicine } from '@/app/medicines/actions';
+import { addGlobalMedicine, fetchMedicineDetailsFromAI } from '@/app/medicines/actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 
 export default function ReviewExtraction() {
@@ -70,6 +70,7 @@ export default function ReviewExtraction() {
   const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
   const [newMedicine, setNewMedicine] = useState({ name: '', category: 'Tablet', manufacturer: '' });
   const [isAddingMedicine, setIsAddingMedicine] = useState(false);
+  const [fetchingAI, setFetchingAI] = useState<number[]>([]);
 
   useEffect(() => {
     fetchMedicines().then(setMedicines);
@@ -303,6 +304,22 @@ export default function ReviewExtraction() {
         const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
+        // Auto-insert any unmatched items to global_medicine_master
+        if (status === 'completed') {
+           const unmatchedItems = data.items.filter(item => item.matchStatus === 'none' && item.medicineName);
+           if (unmatchedItems.length > 0) {
+              await Promise.all(unmatchedItems.map(item => 
+                 addGlobalMedicine({
+                    name: item.medicineName,
+                    category: item.category || 'Tablet',
+                    manufacturer: item.manufacturer || 'Unknown'
+                 }).catch(e => {
+                    console.error("Failed to auto-insert to global master:", e);
+                 })
+              ));
+           }
+        }
+
         // Format MM-YYYY to YYYY-MM for the database if strictly matched
         const formattedItems = data.items.map(item => {
            let expiry = item.expiryDate;
@@ -500,6 +517,38 @@ export default function ReviewExtraction() {
                                <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
                              ) : 'Item Details'}
                              {statusMsg}
+                             {item.matchStatus === 'probable' && (
+                                <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full" onClick={() => {
+                                   const newItems = [...data.items];
+                                   newItems[idx].matchStatus = 'exact';
+                                   setData({ ...data, items: newItems });
+                                }}>✓ Confirm Match</Button>
+                             )}
+                             {(item.matchStatus === 'none' || item.matchStatus === 'probable') && (
+                                <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full" onClick={async () => {
+                                   setFetchingAI(prev => [...prev, idx]);
+                                   try {
+                                      const res = await fetchMedicineDetailsFromAI(item.extractedName || item.medicineName);
+                                      if (res.data) {
+                                         const newItems = [...data.items];
+                                         newItems[idx].medicineName = res.data.name;
+                                         newItems[idx].category = res.data.category;
+                                         newItems[idx].manufacturer = res.data.manufacturer;
+                                         setData({ ...data, items: newItems });
+                                         toast.success("AI fetched details successfully!");
+                                      } else {
+                                         throw new Error(res.error);
+                                      }
+                                   } catch (e: any) {
+                                      toast.error(e.message || "Failed to fetch details from AI");
+                                   } finally {
+                                      setFetchingAI(prev => prev.filter(i => i !== idx));
+                                   }
+                                }} disabled={fetchingAI.includes(idx)}>
+                                   {fetchingAI.includes(idx) ? <Loader2 size={10} className="mr-1 animate-spin" /> : <Sparkles size={10} className="mr-1" />}
+                                   Ask AI
+                                </Button>
+                             )}
                           </div>
                        </div>
                       <MedicineAutocomplete 

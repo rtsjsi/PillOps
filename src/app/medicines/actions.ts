@@ -409,3 +409,28 @@ export async function addGlobalMedicine(data: { name: string, category: string, 
   }
 }
 
+export async function fetchMedicineDetailsFromAI(name: string) {
+  try {
+    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+    const chunk = [{ id: crypto.randomUUID(), name: name.toUpperCase() }];
+    
+    const aiResponseString = await enrichMedicineBatchWithGroq(chunk);
+    const enrichedData = JSON.parse(aiResponseString);
+    
+    if (enrichedData?.medicines && enrichedData.medicines.length > 0) {
+      const aiMed = enrichedData.medicines[0];
+      return { 
+        data: {
+          name: aiMed.correctedName || name.toUpperCase(),
+          category: aiMed.category || '',
+          manufacturer: aiMed.manufacturer || ''
+        }, 
+        error: null 
+      };
+    }
+    throw new Error('AI returned no data');
+  } catch (err: any) {
+    return { data: null, error: err.message || 'Failed to fetch AI details' };
+  }
+}
+
