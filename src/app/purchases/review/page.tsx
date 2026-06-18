@@ -443,25 +443,10 @@ export default function ReviewExtraction() {
              </div>
          </div>
          
-         {data.validationWarnings && data.validationWarnings.length > 0 && (
-            <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex flex-col gap-2 mb-4">
-               <div className="flex items-center gap-2 font-bold">
-                  <AlertTriangle size={20} />
-                  AI detected potential mathematical errors in the scan (please check highlighted rows):
-               </div>
-               <ul className="list-disc pl-8 text-sm space-y-1">
-                  {data.validationWarnings.map((w, i) => <li key={i}>{w}</li>)}
-               </ul>
-            </div>
-         )}
-         
+
          <div className="flex flex-col gap-4">
               {data.items.map((item: any, idx: number) => {
                 const hasError = invalidFields.items.includes(idx);
-                const qty = item.quantity || 0;
-                const rate = item.purchasePrice || 0;
-                const gst = item.gstPercent || 0;
-                const expectedTotal = qty * rate * (1 + gst / 100);
                 const showHighlight = hasError;
 
                return (
@@ -472,13 +457,12 @@ export default function ReviewExtraction() {
                     </span>
                     <div className="flex-1 flex flex-col gap-1">
                       <div className="flex justify-between items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-1">
-                         <div>
-                            {item.extractedName ? (
-                              <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
-                            ) : 'Item Details'}
-                         </div>
-                         <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">Line Total: ₹{expectedTotal.toFixed(2)}</div>
-                      </div>
+                          <div>
+                             {item.extractedName ? (
+                               <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
+                             ) : 'Item Details'}
+                          </div>
+                       </div>
                       <MedicineAutocomplete 
                         value={item.medicineName} 
                         onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
@@ -528,54 +512,24 @@ export default function ReviewExtraction() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-2xl">
-         <div className="container max-w-4xl flex flex-col gap-4">
-           {(() => {
-              const itemTotal = data.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.purchasePrice || 0)), 0);
-              const gstTotal = data.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.purchasePrice || 0) * ((item.gstPercent || 0) / 100)), 0);
-              const calculatedTotal = itemTotal + gstTotal;
-              const isTotalMismatch = Math.abs(calculatedTotal - data.total) > 1;
-
-              return (
-                 <div className="bg-white/50 rounded-2xl p-4 shadow-sm border border-border flex justify-between items-center text-sm md:text-base">
-                    <div className="flex gap-6">
-                       <div><span className="text-muted-foreground font-bold">Item Total:</span> <span className="font-black">{formatCurrency(itemTotal)}</span></div>
-                       <div><span className="text-muted-foreground font-bold">GST Total:</span> <span className="font-black">{formatCurrency(gstTotal)}</span></div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                       <div className="text-right">
-                          <span className="text-muted-foreground font-bold mr-2">Calculated Total:</span>
-                          <span className={cn("font-black text-lg", isTotalMismatch ? "text-rose-500" : "text-emerald-600")}>
-                             {formatCurrency(calculatedTotal)}
-                          </span>
-                       </div>
-                       {isTotalMismatch && (
-                          <div className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse">
-                             <AlertTriangle size={14} /> Mismatch with Net Amount!
-                          </div>
-                       )}
-                    </div>
-                 </div>
-              );
-           })()}
-           <div className="flex gap-4">
-             <Button 
-                variant="secondary"
-                className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
-                disabled={isSaving || isDrafting}
-                onClick={() => handleConfirm('draft')}
-             >
-                {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                {isDrafting ? 'Saving...' : 'Save as Draft'}
-             </Button>
-             <Button 
-                className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
-                disabled={isSaving || isDrafting}
-                onClick={() => handleConfirm('completed')}
-             >
-                {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
-                {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
-             </Button>
-           </div>
+         <div className="container max-w-4xl flex gap-4">
+           <Button 
+              variant="secondary"
+              className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
+              disabled={isSaving || isDrafting}
+              onClick={() => handleConfirm('draft')}
+           >
+              {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+              {isDrafting ? 'Saving...' : 'Save as Draft'}
+           </Button>
+           <Button 
+              className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
+              disabled={isSaving || isDrafting}
+              onClick={() => handleConfirm('completed')}
+           >
+              {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
+              {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
+           </Button>
          </div>
       </div>
 
