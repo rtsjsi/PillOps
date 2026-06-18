@@ -280,13 +280,6 @@ export default function ReviewExtraction() {
           isInvalid = true;
         }
 
-        // Validate medicine is in global master
-        const isValidMedicine = medicines.some(m => m.name === item.medicineName);
-        if (!isValidMedicine) {
-          isInvalid = true;
-          toast.error(`Medicine '${item.medicineName}' on row ${idx+1} is not in global master. Please add it first.`);
-        }
-
         if (isInvalid) {
           itemErrors.push(idx);
         }
