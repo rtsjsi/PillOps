@@ -36,9 +36,7 @@ export default function Purchases() {
 
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
-      <header className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Purchases</h1>
-      </header>
+
 
       {/* Hero Action */}
       <Card className="flex flex-col items-center gap-6 p-8 bg-gradient-to-br from-primary/10 to-transparent border-primary/20 shadow-xl shadow-primary/5">
@@ -48,11 +46,11 @@ export default function Purchases() {
          <div className="text-center max-w-sm">
             <h2 className="text-2xl font-extrabold mb-1 tracking-tight">AI Invoice Scanner</h2>
             <p className="text-muted-foreground text-sm font-medium mb-6 leading-relaxed">Instantly digitize distributor bills and update your inventory automatically.</p>
-            <div className="flex flex-col sm:flex-row gap-3 w-full">
-              <Button render={<Link href="/purchases/scan" />} size="lg" className="flex-1 h-12 text-md font-bold rounded-xl shadow-lg shadow-primary/20">
+            <div className="flex flex-row gap-3 w-full">
+              <Button render={<Link href="/purchases/scan" />} size="lg" className="flex-1 h-14 sm:h-16 text-lg font-bold rounded-xl shadow-lg shadow-primary/20">
                 Scan Invoice
               </Button>
-              <Button variant="outline" render={<Link href="/purchases/manual" />} size="lg" className="flex-1 h-12 text-md font-bold rounded-xl border-primary/20 hover:bg-primary/5">
+              <Button variant="outline" render={<Link href="/purchases/manual" />} size="lg" className="flex-1 h-14 sm:h-16 text-lg font-bold rounded-xl border-primary/20 hover:bg-primary/5">
                 Manual Entry
               </Button>
             </div>
