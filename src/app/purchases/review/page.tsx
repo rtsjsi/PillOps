@@ -366,11 +366,7 @@ export default function ReviewExtraction() {
         <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
             <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-           Review Data
-           <Sparkles size={24} className="text-primary animate-pulse" />
-        </h1>
-      </header>
+        </header>
 
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">

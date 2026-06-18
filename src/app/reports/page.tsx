@@ -34,11 +34,6 @@ export default function ReportsDashboard() {
 
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Reports & Analytics</h1>
-        <p className="text-muted-foreground font-medium">Access your store registers and inventory reports.</p>
-      </header>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reports.map((report) => {
           const Icon = report.icon;

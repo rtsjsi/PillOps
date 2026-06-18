@@ -307,7 +307,6 @@ export default function POS() {
           <Button render={<Link href="/pos" />} variant="ghost" size="icon" className="rounded-full">
               <ArrowLeft size={20} />
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">New Sale</h1>
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
             <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">F2</kbd> New</span>
             <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">F5</kbd> / <kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">Ctrl+Enter</kbd> Checkout</span>

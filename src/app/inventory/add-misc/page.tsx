@@ -124,8 +124,7 @@ export default function AddMiscStock() {
         <Button variant="ghost" size="icon" render={<Link href="/inventory" />} className="rounded-full">
             <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Add Miscellaneous Stock</h1>
-      </header>
+        </header>
 
       {error && (
         <div className="bg-red-50 text-red-500 p-4 rounded-xl border border-red-200">

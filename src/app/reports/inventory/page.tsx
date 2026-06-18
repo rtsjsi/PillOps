@@ -60,10 +60,6 @@ export default function InventoryReport() {
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
       <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">On Hand Stock</h1>
-          <p className="text-muted-foreground font-medium mt-1">Live inventory snapshot and valuation.</p>
-        </div>
         <div className="text-right bg-primary/10 px-4 py-2 rounded-xl border border-primary/20">
            <div className="text-xs font-bold text-primary uppercase tracking-widest">Total Stock Value</div>
            <div className="text-2xl font-extrabold text-primary">{formatCurrency(totalValue)}</div>

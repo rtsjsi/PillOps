@@ -88,10 +88,6 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-8 max-w-2xl flex flex-col gap-8 pb-24">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-      </header>
-
       <Card className="border border-slate-200 shadow-sm">
         <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-6">
           <Avatar className="h-24 w-24 border-2 border-slate-100">

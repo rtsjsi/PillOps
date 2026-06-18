@@ -51,10 +51,6 @@ export default function PurchaseRegister() {
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Purchase Register</h1>
-          <p className="text-muted-foreground font-medium mt-1">View all your historical inward bills and distributor invoices.</p>
-        </div>
         <ExportButtons data={exportData} columns={exportColumns} filename="purchase_register" title="Purchase Register" />
       </header>
 

@@ -44,9 +44,6 @@ export default function POSLanding() {
     <div className="container py-8 flex flex-col gap-6">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Sales</h1>
-        </div>
-        <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
             <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">F2</kbd> New Sale</span>
           </div>

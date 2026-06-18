@@ -98,10 +98,6 @@ export default function Inventory() {
   return (
     <div className="container py-8 flex flex-col gap-6 pb-24">
       <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">Monitor and manage your medicine stock levels.</p>
-        </div>
         <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex">
             <Plus size={18} className="mr-2" /> Add Misc Stock
         </Button>
