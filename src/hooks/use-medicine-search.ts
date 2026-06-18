@@ -61,6 +61,9 @@ function getMatchScore(query: string, target: string) {
     if (t.startsWith(q)) return 80;
     if (t.includes(q)) return 60;
     
+    const qWords = q.split(/[\s-]+/).filter(Boolean);
+    if (qWords.length > 1 && qWords.every(w => t.includes(w))) return 55;
+    
     const cleanQ = q.replace(/[^a-z0-9]/g, '');
     const cleanT = t.replace(/[^a-z0-9]/g, '');
     if (cleanT.includes(cleanQ)) return 50;
@@ -112,8 +115,20 @@ export function useMedicineSearch({
       // 2. Fetch global medicines (only if we need more results or always to enrich)
       try {
          const globalMatches = await fetchGlobalMedicines(searchQuery);
+         
+         const scoredGlobals = globalMatches
+            .map((m: any) => {
+               const nameScore = getMatchScore(searchQuery, m.name);
+               const genScore = getMatchScore(searchQuery, m.genericName);
+               return { item: m, score: Math.max(nameScore, genScore) };
+            })
+            .filter((m: any) => m.score > 0)
+            .sort((a: any, b: any) => b.score - a.score);
+
          // Filter out ones we already have locally to avoid duplicates
-         const newGlobals = globalMatches.filter((g: any) => !localMatches.some((l: any) => l.name?.toLowerCase() === g.name?.toLowerCase()));
+         const newGlobals = scoredGlobals
+            .map((m: any) => m.item)
+            .filter((g: any) => !localMatches.some((l: any) => l.name?.toLowerCase() === g.name?.toLowerCase()));
          
          if (newGlobals.length > 0) {
             setResults(prev => {

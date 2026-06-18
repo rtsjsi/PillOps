@@ -85,15 +85,21 @@ export default function ReviewExtraction() {
       if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
     }
     
+    if (field === 'mrp' || field === 'purchasePrice') {
+       const mrp = field === 'mrp' ? value : newItems[idx].mrp || 0;
+       const rate = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
+       if (mrp > 0 && rate > 0 && mrp >= rate) {
+           newItems[idx].discountPercent = Number((((mrp - rate) / mrp) * 100).toFixed(2));
+       }
+    }
+    
     // Auto-calc total
-    if (['quantity', 'purchasePrice', 'discountPercent', 'gstPercent'].includes(field)) {
+    if (['quantity', 'purchasePrice', 'gstPercent'].includes(field)) {
        const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
        const price = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
-       const disc = field === 'discountPercent' ? value : newItems[idx].discountPercent || 0;
        const gst = field === 'gstPercent' ? value : newItems[idx].gstPercent || 0;
        const base = qty * price;
-       const afterDisc = base - (base * (disc / 100));
-       newItems[idx].totalAmount = afterDisc + (afterDisc * (gst / 100));
+       newItems[idx].totalAmount = base + (base * (gst / 100));
     }
     
     setData({ ...data, items: newItems });
@@ -409,12 +415,16 @@ export default function ReviewExtraction() {
          )}
          
          <div className="flex flex-col gap-4">
-             {data.items.map((item: any, idx: number) => {
-               const hasError = invalidFields.items.includes(idx);
-               const expectedTotal = (item.quantity || 0) * (item.purchasePrice || 0);
-               const diff = Math.abs(expectedTotal - (item.totalAmount || 0));
-               const isMathMismatch = expectedTotal > 0 && item.totalAmount > 0 && (diff > expectedTotal * 0.1 || diff > 10);
-               const showHighlight = hasError || isMathMismatch;
+              {data.items.map((item: any, idx: number) => {
+                const hasError = invalidFields.items.includes(idx);
+                const qty = item.quantity || 0;
+                const rate = item.purchasePrice || 0;
+                const gst = item.gstPercent || 0;
+                const discount = item.discountPercent || 0;
+                const expectedTotal = qty * rate * (1 + gst / 100);
+                const diff = Math.abs(expectedTotal - (item.totalAmount || 0));
+                const isMathMismatch = expectedTotal > 0 && item.totalAmount > 0 && (diff > expectedTotal * 0.1 || diff > 10);
+                const showHighlight = hasError || isMathMismatch;
 
                return (
                 <Card key={idx} className={cn("transition-all ring-2 border-primary/30", showHighlight ? "ring-rose-500/80 bg-rose-50/50" : "ring-primary/20")}>
@@ -423,11 +433,14 @@ export default function ReviewExtraction() {
                       {idx + 1}
                     </span>
                     <div className="flex-1 flex flex-col gap-1">
-                      {item.extractedName && (
-                         <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1">
-                            Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span>
+                      <div className="flex justify-between items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-1">
+                         <div>
+                            {item.extractedName ? (
+                              <>Extracted: <span className="text-primary truncate max-w-[200px]">{item.extractedName}</span></>
+                            ) : 'Item Details'}
                          </div>
-                      )}
+                         <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">Line Total: ₹{expectedTotal.toFixed(2)}</div>
+                      </div>
                       <MedicineAutocomplete 
                         value={item.medicineName} 
                         onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}

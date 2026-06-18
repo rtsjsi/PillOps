@@ -67,12 +67,19 @@ export async function POST(req: NextRequest) {
       parsedData.items.forEach((item: any, index: number) => {
         const qty = Number(item.quantity) || 0;
         const price = Number(item.purchasePrice) || 0;
+        const gst = Number(item.gstPercent) || 0;
+        const mrp = Number(item.mrp) || 0;
         const total = Number(item.totalAmount) || 0;
-        const expectedTotal = qty * price;
+        
+        if (mrp > 0 && price > 0 && mrp >= price && !item.discountPercent) {
+            item.discountPercent = Number((((mrp - price) / mrp) * 100).toFixed(2));
+        }
+
+        const expectedTotal = qty * price * (1 + gst / 100);
         // Check if there is a discrepancy (allowing for > 10% error or > 10 rupees difference)
         const diff = Math.abs(expectedTotal - total);
         if (expectedTotal > 0 && total > 0 && (diff > expectedTotal * 0.1 || diff > 10)) {
-           validationWarnings.push(`Row ${index + 1} (${item.medicineName || 'Unknown'}): Qty (${qty}) * Rate (${price}) = ${expectedTotal.toFixed(2)}, but total extracted is ${total}. Please review.`);
+           validationWarnings.push(`Row ${index + 1} (${item.medicineName || 'Unknown'}): Qty (${qty}) * Rate (${price}) + GST (${gst}%) = ${expectedTotal.toFixed(2)}, but extracted total is ${total}. Please review.`);
         }
       });
     }
