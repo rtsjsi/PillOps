@@ -432,35 +432,35 @@ export default function ReviewExtraction() {
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
         <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
             <div className="space-y-1">
-               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
+               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
                <GenericAutocomplete
                  placeholder="Select or enter distributor..."
                  value={data.distributorName}
                  onValueChange={v => setData({ ...data, distributorName: v })}
                  options={distributors}
-                 className={cn("h-11 text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-12 text-base md:text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
-               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('invoiceDate') && "text-rose-500")}>Date</Label>
+               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('invoiceDate') && "text-rose-500")}>Date</Label>
                <Input 
                  type="date"
                  value={data.invoiceDate} 
                  onChange={e => setData({ ...data, invoiceDate: e.target.value })} 
-                 className={cn("text-lg font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-12 text-base md:text-lg font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1">
-               <Label className={cn("text-[10px] uppercase tracking-widest text-muted-foreground", invalidFields.header.includes('invoiceNumber') && "text-rose-500")}>Invoice Number</Label>
+               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('invoiceNumber') && "text-rose-500")}>Invoice Number</Label>
                <Input 
                  value={data.invoiceNumber} 
                  onChange={e => setData({ ...data, invoiceNumber: e.target.value })} 
-                 className={cn("text-lg font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-12 text-base md:text-lg font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
-               <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Net Amount</Label>
-               <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
+               <Label className="text-xs uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
+               <p className="text-3xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
             </div>
         </CardContent>
       </Card>
@@ -566,10 +566,10 @@ export default function ReviewExtraction() {
                   </CardHeader>
                   
                   <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Category</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-x-3 gap-y-4">
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Category</Label>
                         <Select value={item.category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
-                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectTrigger className="h-10 text-sm font-medium"><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
                               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -577,21 +577,21 @@ export default function ReviewExtraction() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Manufacturer</Label>
-                        <GenericAutocomplete placeholder="e.g. Cipla" value={item.manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-9 text-xs"/>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Manufacturer</Label>
+                        <GenericAutocomplete placeholder="e.g. Cipla" value={item.manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-10 text-sm font-medium"/>
                       </div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
                          let v = e.target.value.replace(/\D/g, '').substring(0, 6);
                          if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
                          handleItemChange(idx, 'expiryDate', v);
-                      }} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9 text-xs"/></div>
-                      <div className="space-y-1.5"><Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-xs"/></div>
+                      }} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-10 text-sm font-medium"/></div>
+                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
                     </div>
                   </CardContent>
                </Card>
