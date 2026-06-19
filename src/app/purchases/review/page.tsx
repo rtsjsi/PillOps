@@ -506,11 +506,11 @@ export default function ReviewExtraction() {
 
                return (
                 <Card key={idx} className={cn("transition-all ring-2 border-primary/30", cardStyle)}>
-                  <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
-                    <span className={cn("text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0", badgeStyle)}>
+                  <CardHeader className="p-2.5 md:p-3 flex flex-row items-start md:items-center gap-2 md:gap-3 space-y-0">
+                    <span className={cn("text-white text-[9px] font-black w-5 h-5 mt-1 md:mt-0 flex items-center justify-center rounded-full shrink-0", badgeStyle)}>
                       {idx + 1}
                     </span>
-                    <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex-1 flex flex-col gap-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-2 mb-1">
                           <div className="flex flex-wrap items-center gap-2 w-full">
                              {item.extractedName ? (
@@ -559,13 +559,13 @@ export default function ReviewExtraction() {
                       />
                     </div>
                     {data.items.length > 1 && (
-                       <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 hover:bg-rose-50 rounded-full shrink-0">
-                           <Trash2 size={16} />
+                       <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 hover:bg-rose-50 rounded-full shrink-0 mt-1 md:mt-0 h-8 w-8">
+                           <Trash2 size={14} />
                        </Button>
                     )}
                   </CardHeader>
                   
-                  <CardContent className="p-4 pt-0">
+                  <CardContent className="p-2.5 md:p-3 pt-0">
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-x-3 gap-y-4">
                       <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Category</Label>
                         <Select value={item.category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>

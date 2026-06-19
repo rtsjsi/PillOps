@@ -108,7 +108,7 @@ export function MedicineAutocomplete({
           }
         }}
         className={cn(
-          "font-bold border-none bg-slate-50 shadow-inner h-12 text-lg w-full",
+          "font-bold border-none bg-slate-50 shadow-inner h-10 text-sm md:text-base w-full",
           className
         )}
         autoComplete="off"
