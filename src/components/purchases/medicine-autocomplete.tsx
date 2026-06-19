@@ -161,9 +161,6 @@ export function MedicineAutocomplete({
                   {mrp !== undefined && (
                     <span className="shrink-0">• MRP ₹{mrp}</span>
                   )}
-                  {r.gstPercent !== undefined && (
-                    <span className="shrink-0">• GST {r.gstPercent}%</span>
-                  )}
                   {!isLocal && (
                     <span className="ml-auto shrink-0 flex items-center gap-0.5 text-blue-500">
                       <Globe className="w-3 h-3" />
