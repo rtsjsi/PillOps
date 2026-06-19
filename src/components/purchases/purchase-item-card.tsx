@@ -123,7 +123,7 @@ export function PurchaseItemCard({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-2.5">
           <FieldCell label="Category">
             <Select value={item.category || ''} onValueChange={v => onChange(index, 'category', v)}>
-              <SelectTrigger className="h-9 text-sm font-medium"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectTrigger className="h-9 text-sm font-medium"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
@@ -131,7 +131,7 @@ export function PurchaseItemCard({
           </FieldCell>
           <FieldCell label="Manufacturer">
             <GenericAutocomplete
-              placeholder="e.g. Cipla"
+              onChange={(val, fullItem) => onChange(index, 'medicineName', val, fullItem)}
               value={item.manufacturer || ''}
               onValueChange={v => onChange(index, 'manufacturer', v)}
               options={manufacturers}
@@ -142,7 +142,7 @@ export function PurchaseItemCard({
             <Input value={item.batchNumber} onChange={e => onChange(index, 'batchNumber', e.target.value)} className="h-9 text-sm font-medium" />
           </FieldCell>
           <FieldCell label="Exp (MM-YYYY)">
-            <Input placeholder="12-2025" value={item.expiryDate} onChange={e => handleExpiryInput(e.target.value)} className="h-9 text-sm font-medium" />
+            <Input value={item.expiryDate} onChange={e => handleExpiryInput(e.target.value)} className="h-9 text-sm font-medium" />
           </FieldCell>
           <FieldCell label="Rate (₹)">
             <Input type="number" step="0.01" value={item.purchasePrice || ''} onChange={e => onChange(index, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />

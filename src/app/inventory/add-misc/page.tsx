@@ -153,7 +153,7 @@ export default function AddMiscStock() {
                <Label>Reason / Note</Label>
                <GenericAutocomplete 
                  required 
-                 placeholder="e.g. Opening Balance, Manual Correction" 
+                 
                  value={adjustmentData.reason} 
                  onValueChange={v => handleAdjustmentChange('reason', v)} 
                  options={reasons}
@@ -192,7 +192,7 @@ export default function AddMiscStock() {
                 <CardContent className="p-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM-YYYY)</Label><Input required placeholder="12-2025" value={item.expiryDate} onChange={e=>{
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM-YYYY)</Label><Input required value={item.expiryDate} onChange={e=>{
                        let v = e.target.value.replace(/\D/g, '').substring(0, 6);
                        if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
                        handleItemChange(idx, 'expiryDate', v);

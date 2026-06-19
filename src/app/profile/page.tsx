@@ -151,7 +151,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3 max-w-sm">
               <Input 
                 type="password" 
-                placeholder="New Password (min 6 chars)" 
+                
                 value={newPassword} 
                 onChange={e => setNewPassword(e.target.value)} 
               />

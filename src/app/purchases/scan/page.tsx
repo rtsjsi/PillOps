@@ -139,7 +139,7 @@ export default function AIInvoiceScanner() {
            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
            <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
               <SelectTrigger className="w-full h-10 text-sm font-bold">
-                 <SelectValue placeholder="Select Model" />
+                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                  <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>

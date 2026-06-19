@@ -50,7 +50,6 @@ export function CommandPalette() {
           <div className="flex items-center border-b border-border px-6">
             <Search className="h-5 w-5 text-muted-foreground shrink-0" />
             <Command.Input 
-              placeholder="What do you want to do? (type 'Search', 'Add', 'Expiring'...)" 
               className="flex h-16 w-full bg-transparent py-4 text-lg outline-none placeholder:text-muted-foreground px-4"
               autoFocus
             />

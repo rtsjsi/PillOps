@@ -65,7 +65,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     autoFocus
-                    placeholder="pharmacist@store.com"
+                   
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -88,7 +88,7 @@ export default function LoginPage() {
                   <Input 
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                   
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

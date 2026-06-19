@@ -156,7 +156,7 @@ export default function Inventory() {
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
             onClear={() => setSearchQuery('')}
-            placeholder="Search medicines..."
+           
           />
         </div>
         

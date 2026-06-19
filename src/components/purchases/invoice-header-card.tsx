@@ -55,7 +55,7 @@ export function InvoiceHeaderCard({
               invalidFields.includes('distributorName') && "text-rose-500"
             )}>Distributor</Label>
             <GenericAutocomplete
-              placeholder="Distributor..."
+              className="bg-muted/50 border-0 h-9 font-bold"
               value={data.distributorName}
               onValueChange={v => onChange('distributorName', v)}
               options={distributors}

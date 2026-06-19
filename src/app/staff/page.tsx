@@ -109,15 +109,15 @@ export default function StaffPage() {
             <form onSubmit={handleAddStaff} className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
-                <Input required value={newUser.fullName} onChange={e => setNewUser({...newUser, fullName: e.target.value})} placeholder="e.g. Jane Doe" />
+                <Input required value={newUser.fullName} onChange={e => setNewUser({...newUser, fullName: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <Label>Email (Login ID)</Label>
-                <Input required type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} placeholder="jane@pharmacy.com" />
+                <Input required type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <Label>Temporary Password</Label>
-                <Input required type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} placeholder="Min 6 characters" />
+                <Input required type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
                 <p className="text-xs text-muted-foreground mt-1">Provide this password to the new user. They can change it later.</p>
               </div>
               <div className="space-y-2">

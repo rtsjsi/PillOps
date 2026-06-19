@@ -50,7 +50,7 @@ export function CustomerHeaderCard({
           <div className="space-y-1 col-span-2 md:col-span-1">
             <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Customer</Label>
             <GenericAutocomplete
-              placeholder="Name..."
+              className="bg-muted/50 border-0 h-9 font-bold"
               value={data.customerName}
               onValueChange={v => onChange('customerName', v)}
               options={customerNames}
@@ -62,7 +62,7 @@ export function CustomerHeaderCard({
           <div className="space-y-1 col-span-1">
             <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Phone</Label>
             <GenericAutocomplete
-              placeholder="Phone..."
+              className="bg-muted/50 border-0 h-9 font-bold"
               value={data.customerPhone}
               onValueChange={v => onChange('customerPhone', v)}
               options={customerPhones}
@@ -74,7 +74,7 @@ export function CustomerHeaderCard({
           <div className="space-y-1 col-span-1">
             <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Doctor</Label>
             <GenericAutocomplete
-              placeholder="Doctor..."
+              className="bg-muted/50 border-0 h-9 font-bold"
               value={data.doctorName}
               onValueChange={v => onChange('doctorName', v)}
               options={doctorNames}
@@ -86,7 +86,7 @@ export function CustomerHeaderCard({
           <div className="space-y-1 col-span-1">
             <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Hospital/Area</Label>
             <GenericAutocomplete
-              placeholder="Area..."
+              className="bg-muted/50 border-0 h-9 font-bold"
               value={data.area}
               onValueChange={v => onChange('area', v)}
               options={areas}

@@ -83,7 +83,7 @@ export default function MedicinesDirectoryPage() {
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by name or generic name..." 
+              
               className="pl-9"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

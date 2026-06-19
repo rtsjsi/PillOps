@@ -41,7 +41,7 @@ export function MedicineAutocomplete({
   value, 
   onChange, 
   medicines,
-  placeholder = 'Search medicine name...',
+  placeholder,
   className,
   required,
   autoFocus,
@@ -91,7 +91,7 @@ export function MedicineAutocomplete({
         ref={inputRef}
         required={required}
         autoFocus={autoFocus}
-        placeholder={placeholder}
+       
         value={query} 
         onChange={e => {
           setQuery(e.target.value);

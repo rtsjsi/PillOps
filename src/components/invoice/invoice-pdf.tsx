@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
 });
 
 export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netAmount }: any) {
-  const invoiceDate = new Date(invoice.createdAt).toLocaleDateString('en-IN', {
+  const dateObj = new Date(invoice.invoiceDate || invoice.createdAt || Date.now());
+  const invoiceDate = isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -57,18 +58,18 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
           
           {/* Header Row 1 */}
           <View style={[styles.flexRow, styles.borderBottom]}>
-            <View style={[styles.flex2, styles.p2, styles.borderRight]}>
+            <View style={[styles.p2, styles.borderRight, { width: '45%' }]}>
               <Text style={[styles.textXl, styles.uppercase]}>{storeInfo?.name || 'MEDICAL STORE'}</Text>
               <Text style={[styles.uppercase, { marginTop: 4 }]}>{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</Text>
             </View>
-            <View style={[styles.flex1, styles.p2, styles.borderRight, { justifyContent: 'space-between' }]}>
+            <View style={[styles.p2, styles.borderRight, { width: '25%', justifyContent: 'space-between' }]}>
               <Text style={styles.uppercase}>BILL OF SUPPLY</Text>
               <View style={[styles.flexRow, { justifyContent: 'space-between', marginTop: 10 }]}>
                 <Text>ORIGINAL</Text>
-                <Text>Page : 1 of 1</Text>
+                <Text>Page: 1/1</Text>
               </View>
             </View>
-            <View style={[styles.flex1, styles.p2, { justifyContent: 'space-between' }]}>
+            <View style={[styles.p2, { width: '30%', justifyContent: 'space-between' }]}>
               <Text>MO. {storeInfo?.phone || 'N/A'}</Text>
               <Text style={{ marginTop: 2 }}>D.L NO. {storeInfo?.drugLicense || ''}</Text>
               {storeInfo?.gstin && <Text style={{ marginTop: 2 }}>GSTIN: {storeInfo?.gstin}</Text>}
@@ -77,33 +78,33 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
 
           {/* Header Row 2 */}
           <View style={[styles.flexRow, styles.borderBottom]}>
-            <View style={[styles.flex2, styles.p2, styles.borderRight]}>
+            <View style={[styles.p2, styles.borderRight, { width: '45%' }]}>
               <View style={styles.flexRow}>
                 <Text style={{ width: 50 }}>Customer</Text>
-                <Text style={styles.uppercase}>: {invoice.customerName}</Text>
+                <Text style={styles.uppercase}>: {invoice.customerName || 'WALK-IN CUSTOMER'}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
                 <Text style={{ width: 50 }}>Doctor</Text>
                 <Text style={styles.uppercase}>: {invoice.doctorName || 'WALK-IN'}</Text>
               </View>
             </View>
-            <View style={[styles.flex1, styles.p2, styles.borderRight]}>
+            <View style={[styles.p2, styles.borderRight, { width: '25%' }]}>
               <View style={styles.flexRow}>
                 <Text style={{ width: 30 }}>Area</Text>
                 <Text style={styles.uppercase}>: {invoice.area || 'LOCAL'}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
                 <Text style={{ width: 30 }}>Mob</Text>
-                <Text>: {invoice.customerPhone || ''}</Text>
+                <Text>: {invoice.customerPhone || ' '}</Text>
               </View>
             </View>
-            <View style={[styles.flex1, styles.p2]}>
+            <View style={[styles.p2, { width: '30%' }]}>
               <View style={styles.flexRow}>
-                <Text style={{ width: 40 }}>Bill No</Text>
+                <Text style={{ width: 35 }}>Bill No</Text>
                 <Text style={styles.bold}>: {invoice.invoiceNumber}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
-                <Text style={{ width: 40 }}>Date</Text>
+                <Text style={{ width: 35 }}>Date</Text>
                 <Text>: {invoiceDate}</Text>
               </View>
             </View>
@@ -126,19 +127,21 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
             
             {invoice.items.map((item: any, idx: number) => {
               const amount = item.quantity * item.mrp;
-              const expDt = item.expiryDate ? formatExpiryDate(item.expiryDate).split(' ').join('/') : '';
-              const hsn = item.medicine?.hsnCode || '30049099';
-              const pack = item.medicine?.pack || 'TAB';
+              const expDt = item.expiryDate ? formatExpiryDate(item.expiryDate).split(' ').join('/') : ' ';
+              const hsn = item.medicine?.hsnCode || item.hsnCode || '30049099';
+              const pack = item.medicine?.pack || item.pack || 'TAB';
               const disc = invoice.discountPercent > 0 ? invoice.discountPercent.toFixed(2) : '0.00';
+              const medicineName = item.medicine?.name || item.medicineName || 'UNKNOWN';
+              const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
               
               return (
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.textCenter, { width: '5%' }]}>{idx + 1}</Text>
-                  <Text style={[styles.uppercase, { width: '25%' }]}>{item.medicine?.name || item.medicineName}</Text>
-                  <Text style={[styles.uppercase, styles.textXs, { width: '8%' }]}>{pack}</Text>
-                  <Text style={{ width: '10%' }}>{hsn}</Text>
-                  <Text style={[styles.uppercase, { width: '12%' }]}>{item.batchNumber || item.batch?.batch_number}</Text>
-                  <Text style={{ width: '8%' }}>{expDt.substring(0, 5)}</Text>
+                  <Text style={[styles.uppercase, { width: '25%' }]} numberOfLines={1}>{medicineName}</Text>
+                  <Text style={[styles.uppercase, styles.textXs, { width: '8%' }]} numberOfLines={1}>{pack}</Text>
+                  <Text style={{ width: '10%' }} numberOfLines={1}>{hsn}</Text>
+                  <Text style={[styles.uppercase, { width: '12%' }]} numberOfLines={1}>{batchNo}</Text>
+                  <Text style={{ width: '8%' }} numberOfLines={1}>{expDt.substring(0, 5)}</Text>
                   <Text style={[styles.textRight, { width: '6%' }]}>{item.quantity}</Text>
                   <Text style={[styles.textRight, { width: '8%' }]}>{item.mrp.toFixed(2)}</Text>
                   <Text style={[styles.textRight, { width: '8%' }]}>{disc}</Text>

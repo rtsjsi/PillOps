@@ -367,7 +367,7 @@ function AdminDashboardContent() {
         <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
           <Input 
-            placeholder={`Search ${activeTab}...`}
+           ...`}
             className="h-9 w-full sm:w-64 pl-9 text-xs rounded-full bg-white border-slate-200 shadow-sm"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -389,22 +389,22 @@ function AdminDashboardContent() {
                 <form onSubmit={handleCreateStore} className="flex flex-col gap-4">
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pharmacy Name</Label>
-                    <Input required placeholder="e.g. Apollo Pharmacy" className="rounded-xl bg-slate-50 h-10"
+                    <Input required className="rounded-xl bg-slate-50 h-10"
                         value={newStore.name} onChange={e => setNewStore({...newStore, name: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">GSTIN Number</Label>
-                    <Input placeholder="15-digit ID" className="rounded-xl bg-slate-50 h-10"
+                    <Input className="rounded-xl bg-slate-50 h-10"
                         value={newStore.gstin} onChange={e => setNewStore({...newStore, gstin: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Contact Number</Label>
-                    <Input placeholder="+91" className="rounded-xl bg-slate-50 h-10"
+                    <Input className="rounded-xl bg-slate-50 h-10"
                         value={newStore.phone} onChange={e => setNewStore({...newStore, phone: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Address</Label>
-                    <Input placeholder="Full Location" className="rounded-xl bg-slate-50 h-10"
+                    <Input className="rounded-xl bg-slate-50 h-10"
                         value={newStore.address} onChange={e => setNewStore({...newStore, address: e.target.value})} />
                   </div>
                   
@@ -512,17 +512,17 @@ function AdminDashboardContent() {
                 <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Full Name</Label>
-                    <Input required placeholder="John Doe" className="rounded-xl bg-slate-50 h-10"
+                    <Input required className="rounded-xl bg-slate-50 h-10"
                         value={newUser.fullName} onChange={e => setNewUser({...newUser, fullName: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Email (Login ID)</Label>
-                    <Input type="email" required placeholder="john@pharmacy.com" className="rounded-xl bg-slate-50 h-10"
+                    <Input type="email" required className="rounded-xl bg-slate-50 h-10"
                         value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Temporary Password</Label>
-                    <Input type="text" required placeholder="Min 8 chars" minLength={8} className="rounded-xl bg-slate-50 h-10"
+                    <Input type="text" required minLength={8} className="rounded-xl bg-slate-50 h-10"
                         value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
@@ -580,7 +580,7 @@ function AdminDashboardContent() {
                     </p>
                     <Input 
                       type="text" 
-                      placeholder="New password (min 8 chars)" 
+                      
                       required 
                       minLength={8}
                       className="h-10 border-rose-200 focus-visible:ring-rose-500"
@@ -683,12 +683,12 @@ function AdminDashboardContent() {
                 <form onSubmit={handleCreateItem} className="flex flex-col gap-4">
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Medicine Name</Label>
-                    <Input required placeholder="E.g. Dolo 650mg" className="rounded-xl bg-slate-50 h-10"
+                    <Input required className="rounded-xl bg-slate-50 h-10"
                         value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Generic Name</Label>
-                    <Input placeholder="E.g. Paracetamol" className="rounded-xl bg-slate-50 h-10"
+                    <Input className="rounded-xl bg-slate-50 h-10"
                         value={newItem.genericName} onChange={e => setNewItem({...newItem, genericName: e.target.value})} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -719,12 +719,12 @@ function AdminDashboardContent() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manufacturer</Label>
-                    <GenericAutocomplete placeholder="E.g. Micro Labs" className="rounded-xl bg-slate-50 h-10"
+                    <GenericAutocomplete className="rounded-xl bg-slate-50 h-10"
                         value={newItem.manufacturer} onValueChange={v => setNewItem({...newItem, manufacturer: v})} options={manufacturers} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">HSN Code</Label>
-                    <Input placeholder="HSN Code" className="rounded-xl bg-slate-50 h-10"
+                    <Input className="rounded-xl bg-slate-50 h-10"
                         value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} />
                   </div>
                   <Button type="submit" disabled={isCreating} className="h-12 mt-2 font-bold rounded-xl bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">

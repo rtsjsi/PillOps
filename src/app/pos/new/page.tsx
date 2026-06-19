@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -213,12 +212,7 @@ export default function POS() {
     setLastInvoiceId(null);
   };
 
-  useKeyboardShortcuts([
-    { key: 'F2', action: startNewSale, allowInInput: true, description: 'New Sale' },
-    { key: 'n', ctrl: true, shift: true, action: addItem, allowInInput: true },
-    { key: 'Enter', ctrl: true, action: () => handleCheckout(), allowInInput: true },
-    { key: 'F5', action: () => handleCheckout(), allowInInput: true, description: 'Checkout' }
-  ]);
+
 
   if (loading) return <GenericTableLoading />;
 
@@ -240,7 +234,7 @@ export default function POS() {
                     className="w-full h-11 text-base font-bold shadow-lg shadow-primary/20" 
                   />
                   <Button variant="outline" size="lg" className="w-full h-10" onClick={startNewSale}>
-                    New Sale (F2)
+                    New Sale
                   </Button>
                   <Button render={<Link href="/pos" />} variant="ghost" size="lg" className="w-full h-10">
                     Back to Sales List
@@ -257,10 +251,6 @@ export default function POS() {
             <ArrowLeft size={24} />
         </Button>
         <h1 className="text-lg font-bold tracking-tight">Point of Sale</h1>
-        <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-lg border border-border ml-auto">
-          <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">Ctrl+Shift+N</kbd> Add Item</span>
-          <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">F5</kbd> / <kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">Ctrl+Enter</kbd> Checkout</span>
-        </div>
       </header>
 
       <form onSubmit={handleCheckout} className="flex flex-col gap-4">

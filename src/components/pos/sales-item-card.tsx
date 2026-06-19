@@ -31,6 +31,8 @@ interface SalesItemCardProps {
   canRemove?: boolean;
 }
 
+import { toast } from 'sonner';
+
 export function SalesItemCard({
   item,
   index,
@@ -64,6 +66,14 @@ export function SalesItemCard({
     }
   };
 
+  const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const qty = parseInt(e.target.value) || 0;
+    if (currentBatch && qty > currentBatch.quantity) {
+      toast.warning(`Max stock is ${currentBatch.quantity} for this batch.`);
+    }
+    onChange(index, 'quantity', qty);
+  };
+
   return (
     <Card className={cn(
       "transition-all border-l-4 shadow-sm hover:shadow-md",
@@ -90,7 +100,7 @@ export function SalesItemCard({
             value={item.medicineName}
             onChange={(val, fullItem) => onChange(index, 'medicineName', val, fullItem)}
             medicines={medicines}
-            placeholder="Search medicine..."
+            medicines={medicines}
           />
         </div>
 
@@ -108,14 +118,14 @@ export function SalesItemCard({
           
           <FieldCell label="Batch">
             <Select value={item.storeInventoryBatchId || ''} onValueChange={handleBatchSelect}>
-              <SelectTrigger className="h-9 text-sm font-medium">
-                <SelectValue placeholder="Select Batch" />
+              <SelectTrigger className="h-9 text-sm font-medium w-full [&>span]:truncate">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {availableBatches.length > 0 ? (
                   availableBatches.map(b => (
                     <SelectItem key={b.id} value={b.id}>
-                      {b.batchNumber} (Stock: {b.quantity})
+                      {b.batchNumber || 'N/A'}
                     </SelectItem>
                   ))
                 ) : (
@@ -144,14 +154,13 @@ export function SalesItemCard({
               <Input 
                 type="number" 
                 value={item.quantity || ''} 
-                onChange={e => onChange(index, 'quantity', parseInt(e.target.value))} 
+                onChange={handleQtyChange} 
                 className={cn("h-9 text-sm font-medium", currentBatch && item.quantity > currentBatch.quantity && "border-rose-500")}
-                max={currentBatch?.quantity || 1}
                 min={1}
               />
-              {currentBatch && (
-                <span className="absolute -top-5 right-0 text-[9px] font-bold text-muted-foreground">
-                  Max: {currentBatch.quantity}
+              {currentBatch && item.quantity > currentBatch.quantity && (
+                <span className="absolute -top-5 right-0 text-[9px] font-bold text-rose-500">
+                  Exceeds stock!
                 </span>
               )}
             </div>
@@ -169,8 +178,8 @@ export function SalesItemCard({
 
 function FieldCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1 relative">
-      <Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground leading-none">{label}</Label>
+    <div className="space-y-1 relative min-w-0">
+      <Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground leading-none truncate block">{label}</Label>
       {children}
     </div>
   );

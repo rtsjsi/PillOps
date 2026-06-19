@@ -165,7 +165,7 @@ export function AIAssistant() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask anything..."
+             
               className="h-12 pr-12 rounded-xl bg-muted/50 border-border focus:ring-4 focus:ring-primary/10 transition-all font-medium"
             />
             <Button 

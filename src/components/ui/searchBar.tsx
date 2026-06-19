@@ -9,7 +9,7 @@ interface SearchBarProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
-  function SearchBar({ value, onChange, onClear, placeholder = 'Search...', className = '', ...props }, ref) {
+  function SearchBar({ value, onChange, onClear, placeholder, className = '', ...props }, ref) {
     return (
       <div className={cn('relative flex items-center w-full', className)}>
         <Search
@@ -21,7 +21,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
           ref={ref}
           value={value}
           onChange={onChange}
-          placeholder={placeholder}
+         
           className={cn(
             'w-full py-2 pl-10 pr-9',
             'rounded-lg border border-border',
