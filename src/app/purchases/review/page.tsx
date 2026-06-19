@@ -4,57 +4,38 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { fetchUserProfile } from '@/lib/queries';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, cn } from '@/lib/utils';
-import { CheckCircle2, ArrowLeft, Sparkles, Edit2, AlertTriangle, Loader2, Save, Trash2, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { CheckCircle2, ArrowLeft, Sparkles, AlertTriangle, Loader2, Save, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
-import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
 import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
 import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine-search';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
-import { GenericAutocomplete } from '@/components/ui/autocomplete';
 import { addGlobalMedicine, fetchMedicineDetailsFromAI } from '@/app/medicines/actions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GenericAutocomplete } from '@/components/ui/autocomplete';
+
+// ─── Shared Components ────────────────────────────────────────
+import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
+import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purchase-item-card';
+
+interface InvoiceData extends InvoiceHeaderData {
+  id?: string;
+  items: PurchaseItem[];
+  validationWarnings?: string[];
+  duplicateWarning?: string;
+}
 
 export default function ReviewExtraction() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get('draftId');
-
-  interface InvoiceItem {
-    medicineName: string;
-    extractedName?: string;
-    batchNumber: string;
-    expiryDate: string;
-    purchasePrice: number;
-    mrp: number;
-    discountPercent: number;
-    quantity: number;
-    freeQuantity: number;
-    manufacturer?: string;
-    category?: string;
-    hsnCode?: string;
-    gstPercent?: number;
-    totalAmount?: number;
-    matchStatus?: 'exact' | 'probable' | 'none';
-  }
-
-  interface InvoiceData {
-    id?: string;
-    distributorName: string;
-    invoiceDate: string;
-    invoiceNumber: string;
-    total: number;
-    items: InvoiceItem[];
-    validationWarnings?: string[];
-  }
 
   const [data, setData] = useState<InvoiceData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -76,11 +57,12 @@ export default function ReviewExtraction() {
     fetchMedicines().then(setMedicines);
   }, []);
 
-  const handleItemChange = (idx: number, field: keyof InvoiceItem, value: any, fullItem?: any) => {
+  // ─── Item Change Handler (shared logic) ──────────────────────
+  const handleItemChange = (idx: number, field: keyof PurchaseItem, value: any, fullItem?: any) => {
     if (!data) return;
     const newItems = [...data.items];
     const finalValue = field === 'medicineName' && typeof value === 'string' ? value.toUpperCase() : value;
-    newItems[idx] = { ...newItems[idx], [field]: finalValue } as InvoiceItem;
+    newItems[idx] = { ...newItems[idx], [field]: finalValue } as PurchaseItem;
     
     if (field === 'medicineName') {
        if (fullItem) {
@@ -116,8 +98,7 @@ export default function ReviewExtraction() {
 
   const removeItem = (idx: number) => {
     if (!data || data.items.length === 1) return;
-    const newItems = data.items.filter((_, i) => i !== idx);
-    setData({ ...data, items: newItems });
+    setData({ ...data, items: data.items.filter((_, i) => i !== idx) });
   };
 
   const addItem = () => {
@@ -131,6 +112,7 @@ export default function ReviewExtraction() {
     });
   };
 
+  // ─── Data Loading: Draft or OCR ──────────────────────────────
   useEffect(() => {
     if (draftId) {
       const fetchDraft = async () => {
@@ -210,11 +192,8 @@ export default function ReviewExtraction() {
                          enrichedItem.medicineName = bestMatch.item.name;
                          enrichedItem.category = bestMatch.item.category || '';
                          enrichedItem.manufacturer = bestMatch.item.manufacturer || '';
-                         // We DO NOT override hsnCode and gstPercent from global master
-                         // We respect whatever was extracted (or undefined)
                          enrichedItem.matchStatus = bestMatch.score === 100 ? 'exact' : 'probable';
                       } else {
-                         // No good match, clear category/manufacturer to force manual entry
                          enrichedItem.category = '';
                          enrichedItem.manufacturer = '';
                       }
@@ -248,6 +227,7 @@ export default function ReviewExtraction() {
     }
   }, []);
 
+  // ─── Save / Confirm Handler ──────────────────────────────────
   const handleConfirm = async (status: 'draft' | 'completed' = 'completed') => {
     if (!data || isSaving || isDrafting) return;
 
@@ -276,7 +256,6 @@ export default function ReviewExtraction() {
           isInvalid = true;
         }
         
-        // Simple MM-YYYY format validation
         if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
           isInvalid = true;
         }
@@ -336,7 +315,15 @@ export default function ReviewExtraction() {
           items: formattedItems,
         });
 
-        if (error) throw new Error(error.message);
+        if (error) {
+          // Handle duplicate invoice error from the DB-level guard
+          if (error.message?.includes('DUPLICATE_INVOICE')) {
+            const cleanMsg = error.message.replace('DUPLICATE_INVOICE: ', '');
+            toast.error(cleanMsg, { duration: 8000 });
+            return;
+          }
+          throw new Error(error.message);
+        }
 
         sessionStorage.removeItem('pillops_extracted_invoice');
         setIsSuccess(true);
@@ -345,13 +332,50 @@ export default function ReviewExtraction() {
         }, 2000);
     } catch (error: any) {
         console.error('Save failed:', error);
-        toast.error(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+        const msg = error.message || 'Unknown error';
+        if (msg.includes('DUPLICATE_INVOICE')) {
+          toast.error(msg.replace('DUPLICATE_INVOICE: ', ''), { duration: 8000 });
+        } else {
+          toast.error(`Failed to save invoice: ${msg}`);
+        }
     } finally {
         if (status === 'completed') setIsSaving(false);
         else setIsDrafting(false);
     }
   };
 
+  // ─── AI Lookup Handler ───────────────────────────────────────
+  const handleAILookup = async (idx: number) => {
+    if (!data) return;
+    setFetchingAI(prev => [...prev, idx]);
+    try {
+      const item = data.items[idx];
+      const res = await fetchMedicineDetailsFromAI(item.extractedName || item.medicineName);
+      if (res.data) {
+        const newItems = [...data.items];
+        newItems[idx].medicineName = res.data.name;
+        newItems[idx].category = res.data.category;
+        newItems[idx].manufacturer = res.data.manufacturer;
+        setData({ ...data, items: newItems });
+        toast.success("AI fetched details successfully!");
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to fetch details from AI");
+    } finally {
+      setFetchingAI(prev => prev.filter(i => i !== idx));
+    }
+  };
+
+  const handleConfirmMatch = (idx: number) => {
+    if (!data) return;
+    const newItems = [...data.items];
+    newItems[idx].matchStatus = 'exact';
+    setData({ ...data, items: newItems });
+  };
+
+  // ─── Add Medicine Dialog Handler ─────────────────────────────
   const handleAddMedicine = async () => {
     if (!newMedicine.name || !newMedicine.category || !newMedicine.manufacturer) {
        toast.error('Name, Category, and Manufacturer are mandatory.');
@@ -366,7 +390,6 @@ export default function ReviewExtraction() {
        setIsAddMedicineOpen(false);
        setNewMedicine({ name: '', category: 'Tablet', manufacturer: '' });
        
-       // Refresh medicine list
        fetchMedicines().then(setMedicines);
     } catch(err: any) {
        toast.error(err.message);
@@ -375,6 +398,7 @@ export default function ReviewExtraction() {
     }
   };
 
+  // ─── Error State ─────────────────────────────────────────────
   if (fatalError) {
      return (
         <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
@@ -390,6 +414,7 @@ export default function ReviewExtraction() {
      );
   }
 
+  // ─── Loading State ───────────────────────────────────────────
   if (isEnriching || !data) {
     return (
        <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
@@ -403,6 +428,7 @@ export default function ReviewExtraction() {
     );
   }
 
+  // ─── Success State ───────────────────────────────────────────
   if (isSuccess) {
       return (
           <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
@@ -415,8 +441,10 @@ export default function ReviewExtraction() {
       );
   }
 
+  // ─── Main Review UI ──────────────────────────────────────────
   return (
     <div className="container py-4 flex flex-col gap-4 pb-28">
+      {/* Header Navigation */}
       <header className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
@@ -429,42 +457,17 @@ export default function ReviewExtraction() {
         </Button>
       </header>
 
-      <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-sm">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3">
-            <div className="space-y-1">
-               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
-               <GenericAutocomplete
-                 placeholder="Select or enter distributor..."
-                 value={data.distributorName}
-                 onValueChange={v => setData({ ...data, distributorName: v })}
-                 options={distributors}
-                 className={cn("h-10 text-sm md:text-base font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
-               />
-            </div>
-            <div className="space-y-1 text-right">
-               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('invoiceDate') && "text-rose-500")}>Date</Label>
-               <Input 
-                 type="date"
-                 value={data.invoiceDate} 
-                 onChange={e => setData({ ...data, invoiceDate: e.target.value })} 
-                 className={cn("h-10 text-sm md:text-base font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
-               />
-            </div>
-            <div className="space-y-1">
-               <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('invoiceNumber') && "text-rose-500")}>Invoice Number</Label>
-               <Input 
-                 value={data.invoiceNumber} 
-                 onChange={e => setData({ ...data, invoiceNumber: e.target.value })} 
-                 className={cn("h-10 text-sm md:text-base font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
-               />
-            </div>
-            <div className="space-y-1 text-right">
-               <Label className="text-xs uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
-               <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
-            </div>
-        </CardContent>
-      </Card>
+      {/* ─── Sticky Invoice Header ─── */}
+      <InvoiceHeaderCard
+        data={data}
+        onChange={(field, value) => setData({ ...data, [field]: value })}
+        invalidFields={invalidFields.header}
+        distributors={distributors}
+        warning={data.duplicateWarning}
+        sticky
+      />
 
+      {/* ─── Items Section ─── */}
       <div>
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
@@ -477,134 +480,34 @@ export default function ReviewExtraction() {
                  </Button>
              </div>
          </div>
-         
 
-         <div className="flex flex-col gap-4">
-              {data.items.map((item: any, idx: number) => {
-                const hasError = invalidFields.items.includes(idx);
-                
-                let cardStyle = "ring-primary/20";
-                let badgeStyle = "bg-primary";
-                let statusMsg = null;
-                
-                if (hasError) {
-                   cardStyle = "ring-rose-500/80 bg-rose-50/50";
-                   badgeStyle = "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]";
-                } else if (item.matchStatus === 'none') {
-                   cardStyle = "ring-rose-500/80 bg-rose-50/50";
-                   badgeStyle = "bg-rose-500 animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]";
-                   statusMsg = <span className="text-rose-500 font-bold bg-rose-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> No Match Found</span>;
-                } else if (item.matchStatus === 'probable') {
-                   cardStyle = "ring-amber-500/80 bg-amber-50/50";
-                   badgeStyle = "bg-amber-500";
-                   statusMsg = <span className="text-amber-600 font-bold bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={12} /> Probable Match</span>;
-                } else if (item.matchStatus === 'exact') {
-                   cardStyle = "ring-emerald-500/50 bg-emerald-50/30";
-                   badgeStyle = "bg-emerald-500";
-                   statusMsg = <span className="text-emerald-600 font-bold bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={12} /> Exact Match</span>;
-                }
-
-               return (
-                <Card key={idx} className={cn("transition-all ring-2 border-primary/30", cardStyle)}>
-                  <CardHeader className="p-2.5 md:p-3 flex flex-row items-start md:items-center gap-2 md:gap-3 space-y-0">
-                    <span className={cn("text-white text-[9px] font-black w-5 h-5 mt-1 md:mt-0 flex items-center justify-center rounded-full shrink-0", badgeStyle)}>
-                      {idx + 1}
-                    </span>
-                    <div className="flex-1 flex flex-col gap-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest gap-2 mb-1">
-                          <div className="flex flex-wrap items-center gap-2 w-full">
-                             {item.extractedName ? (
-                               <div className="flex items-center gap-1">Extracted: <span className="text-primary truncate max-w-[150px] sm:max-w-[250px]" title={item.extractedName}>{item.extractedName}</span></div>
-                             ) : 'Item Details'}
-                             {statusMsg}
-                             {item.matchStatus === 'probable' && (
-                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full shrink-0" onClick={() => {
-                                   const newItems = [...data.items];
-                                   newItems[idx].matchStatus = 'exact';
-                                   setData({ ...data, items: newItems });
-                                }}>✓ Confirm Match</Button>
-                             )}
-                             {(item.matchStatus === 'none' || item.matchStatus === 'probable') && (
-                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-full shrink-0" onClick={async () => {
-                                   setFetchingAI(prev => [...prev, idx]);
-                                   try {
-                                      const res = await fetchMedicineDetailsFromAI(item.extractedName || item.medicineName);
-                                      if (res.data) {
-                                         const newItems = [...data.items];
-                                         newItems[idx].medicineName = res.data.name;
-                                         newItems[idx].category = res.data.category;
-                                         newItems[idx].manufacturer = res.data.manufacturer;
-                                         setData({ ...data, items: newItems });
-                                         toast.success("AI fetched details successfully!");
-                                      } else {
-                                         throw new Error(res.error);
-                                      }
-                                   } catch (e: any) {
-                                      toast.error(e.message || "Failed to fetch details from AI");
-                                   } finally {
-                                      setFetchingAI(prev => prev.filter(i => i !== idx));
-                                   }
-                                }} disabled={fetchingAI.includes(idx)}>
-                                   {fetchingAI.includes(idx) ? <Loader2 size={12} className="mr-1 animate-spin" /> : <Sparkles size={12} className="mr-1" />}
-                                   Ask AI
-                                </Button>
-                             )}
-                          </div>
-                       </div>
-                      <MedicineAutocomplete 
-                        required
-                        value={item.medicineName} 
-                        onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
-                        medicines={medicines}
-                      />
-                    </div>
-                    {data.items.length > 1 && (
-                       <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 hover:bg-rose-50 rounded-full shrink-0 mt-1 md:mt-0 h-8 w-8">
-                           <Trash2 size={14} />
-                       </Button>
-                    )}
-                  </CardHeader>
-                  
-                  <CardContent className="p-2.5 md:p-3 pt-0">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-x-2 gap-y-3">
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Category</Label>
-                        <Select value={item.category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
-                          <SelectTrigger className="h-10 text-sm font-medium"><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>
-                            {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Manufacturer</Label>
-                        <GenericAutocomplete placeholder="e.g. Cipla" value={item.manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-10 text-sm font-medium"/>
-                      </div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Batch</Label><Input value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Exp (MM-YYYY)</Label><Input placeholder="12-2025" value={item.expiryDate} onChange={e=>{
-                         let v = e.target.value.replace(/\D/g, '').substring(0, 6);
-                         if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
-                         handleItemChange(idx, 'expiryDate', v);
-                      }} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Rate</Label><Input type="number" value={item.purchasePrice} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">MRP</Label><Input type="number" value={item.mrp} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Disc %</Label><Input type="number" value={item.discountPercent} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Free</Label><Input type="number" value={item.freeQuantity} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">GST %</Label><Input type="number" value={item.gstPercent} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-10 text-sm font-medium"/></div>
-                    </div>
-                  </CardContent>
-               </Card>
-               );
-            })}
+         <div className="flex flex-col gap-3">
+            {data.items.map((item, idx) => (
+              <PurchaseItemCard
+                key={idx}
+                item={item}
+                index={idx}
+                onChange={handleItemChange}
+                onRemove={removeItem}
+                medicines={medicines}
+                manufacturers={manufacturers}
+                canRemove={data.items.length > 1}
+                hasError={invalidFields.items.includes(idx)}
+                showMatchFeatures={!draftId}
+                onAILookup={handleAILookup}
+                onConfirmMatch={handleConfirmMatch}
+                isAIFetching={fetchingAI.includes(idx)}
+              />
+            ))}
          </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-4 shadow-lg">
-         <div className="container max-w-4xl flex gap-3">
+      {/* ─── Bottom Action Bar ─── */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/80 backdrop-blur-xl border-t border-border z-50 shadow-lg">
+         <div className="container max-w-4xl flex flex-col sm:flex-row gap-2 sm:gap-3">
            <Button 
               variant="secondary"
-              className="w-1/3 h-11 text-sm font-bold rounded-xl shadow-md flex gap-2"
+              className="w-full sm:w-1/3 h-12 sm:h-11 text-sm font-bold rounded-xl shadow-md flex gap-2"
               disabled={isSaving || isDrafting}
               onClick={() => handleConfirm('draft')}
            >
@@ -612,16 +515,17 @@ export default function ReviewExtraction() {
               {isDrafting ? 'Saving...' : 'Save as Draft'}
            </Button>
            <Button 
-              className="w-2/3 h-11 text-sm font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2"
+              className="w-full sm:w-2/3 h-12 sm:h-11 text-sm font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2"
               disabled={isSaving || isDrafting}
               onClick={() => handleConfirm('completed')}
            >
               {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
-              {isSaving ? 'Finalizing Stock...' : 'Confirm & Add to Inventory'}
+              {isSaving ? 'Finalizing Stock...' : `Confirm & Add to Inventory (${data.items.length} items)`}
            </Button>
          </div>
       </div>
 
+      {/* ─── Add Medicine Dialog ─── */}
       <Dialog open={isAddMedicineOpen} onOpenChange={setIsAddMedicineOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -675,4 +579,3 @@ export default function ReviewExtraction() {
     </div>
   );
 }
-

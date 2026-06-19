@@ -120,9 +120,8 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (existing) {
-                   // We consider it a duplicate if Distributor and Invoice Number match. 
-                   // Date format from OCR is too unreliable to include in the strict DB query.
-                   return NextResponse.json({ error: `Duplicate invoice detected: Invoice #${parsedData.invoiceNumber} from ${parsedData.distributorName} already exists in your inventory.` }, { status: 409 });
+                   // Warn but allow proceeding (Option B) — OCR can misread invoice numbers
+                   parsedData.duplicateWarning = `Invoice #${parsedData.invoiceNumber} from ${parsedData.distributorName} may already exist in your inventory. Please verify before saving.`;
                 }
             }
         }

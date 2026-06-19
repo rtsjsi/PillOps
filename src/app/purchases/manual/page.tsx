@@ -1,25 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { fetchUserProfile } from '@/lib/queries';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { fetchUserProfile, fetchMedicines } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Trash2, Save, CheckCircle2, Loader2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
-import { fetchMedicines } from '@/lib/queries';
-import { useMedicineSearch } from '@/hooks/use-medicine-search';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
-import { cn } from '@/lib/utils';
-import { GenericAutocomplete } from '@/components/ui/autocomplete';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
-import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
+// ─── Shared Components ────────────────────────────────────────
+import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
+import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purchase-item-card';
+
 export default function ManualPurchaseEntry() {
   const router = useRouter();
   const distributors = useDistinctValues('purchase_invoices', 'distributor_name');
@@ -29,26 +24,18 @@ export default function ManualPurchaseEntry() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [invoiceData, setInvoiceData] = useState({
+  const [invoiceData, setInvoiceData] = useState<InvoiceHeaderData>({
     distributorName: '',
     invoiceDate: new Date().toISOString().split('T')[0],
     invoiceNumber: '',
+    total: 0,
   });
 
-  const [items, setItems] = useState([
+  const [items, setItems] = useState<PurchaseItem[]>([
     {
-      medicineName: '',
-      category: '',
-      manufacturer: '',
-      batchNumber: '',
-      expiryDate: '',
-      quantity: 1,
-      freeQuantity: 0,
-      purchasePrice: 0,
-      mrp: 0,
-      discountPercent: 0,
-      gstPercent: 12,
-      totalAmount: 0
+      medicineName: '', category: '', manufacturer: '',
+      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
     }
   ]);
 
@@ -75,19 +62,17 @@ export default function ManualPurchaseEntry() {
     }
   }, [invoiceData, items, isClient]);
 
-  const handleInvoiceChange = (field: string, value: string) => {
-    setInvoiceData({ ...invoiceData, [field]: value });
-  };
-
-  const handleItemChange = (idx: number, field: string, value: any, fullItem?: any) => {
+  // ─── Item Change Handler ─────────────────────────────────────
+  const handleItemChange = (idx: number, field: keyof PurchaseItem, value: any, fullItem?: any) => {
     const newItems = [...items];
     (newItems[idx] as any)[field] = value;
     
     // Auto-fill from global master if available
     if (field === 'medicineName' && fullItem) {
       if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
-      if (fullItem.manufacturer !== undefined) (newItems[idx] as any).manufacturer = fullItem.manufacturer;
-      if (fullItem.hsnCode !== undefined) (newItems[idx] as any).hsnCode = fullItem.hsnCode;
+      if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
+      if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
+      if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
     }
     
     // Auto-calculate total amount
@@ -108,45 +93,29 @@ export default function ManualPurchaseEntry() {
 
   const addItem = () => {
     setItems([...items, {
-      medicineName: '',
-      category: '',
-      manufacturer: '',
-      batchNumber: '',
-      expiryDate: '',
-      quantity: 1,
-      freeQuantity: 0,
-      purchasePrice: 0,
-      mrp: 0,
-      discountPercent: 0,
-      gstPercent: 12,
-      totalAmount: 0
+      medicineName: '', category: '', manufacturer: '',
+      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
     }]);
   };
 
   const removeItem = (idx: number) => {
     if (items.length === 1) return;
-    const newItems = items.filter((_, i) => i !== idx);
-    setItems(newItems);
+    setItems(items.filter((_, i) => i !== idx));
   };
 
   const calculateTotals = () => {
-    let subtotal = 0;
-    let discountAmount = 0;
-    let gstAmount = 0;
-    let total = 0;
-
+    let subtotal = 0, discountAmount = 0, gstAmount = 0, total = 0;
     items.forEach(item => {
        const base = item.quantity * item.purchasePrice;
        const disc = base * ((item.discountPercent || 0) / 100);
        const afterDisc = base - disc;
        const gst = afterDisc * ((item.gstPercent || 0) / 100);
-       
        subtotal += base;
        discountAmount += disc;
        gstAmount += gst;
        total += (afterDisc + gst);
     });
-
     return { subtotal, discountAmount, gstAmount, total };
   };
 
@@ -178,7 +147,16 @@ export default function ManualPurchaseEntry() {
         items: formattedItems,
       });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Handle duplicate invoice error from the DB-level guard
+        if (error.message?.includes('DUPLICATE_INVOICE')) {
+          const cleanMsg = error.message.replace('DUPLICATE_INVOICE: ', '');
+          toast.error(cleanMsg, { duration: 8000 });
+          setIsSaving(false);
+          return;
+        }
+        throw new Error(error.message);
+      }
 
       setIsSuccess(true);
       sessionStorage.removeItem('manual_purchase_draft');
@@ -186,7 +164,12 @@ export default function ManualPurchaseEntry() {
          router.push('/purchases');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save purchase invoice');
+      const msg = err.message || 'Failed to save purchase invoice';
+      if (msg.includes('DUPLICATE_INVOICE')) {
+        toast.error(msg.replace('DUPLICATE_INVOICE: ', ''), { duration: 8000 });
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -217,7 +200,8 @@ export default function ManualPurchaseEntry() {
         <Button variant="ghost" size="icon" render={<Link href="/purchases" />} className="rounded-full">
             <ArrowLeft size={24} />
         </Button>
-        </header>
+        <h1 className="text-lg font-bold tracking-tight">Manual Purchase Entry</h1>
+      </header>
 
       {error && (
         <div className="bg-red-50 text-red-500 p-4 rounded-xl border border-red-200">
@@ -225,34 +209,15 @@ export default function ManualPurchaseEntry() {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="flex flex-col gap-6">
-        <Card className="border-primary/20 shadow-sm">
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-               <Label>Distributor Name</Label>
-               <GenericAutocomplete 
-                 autoFocus 
-                 required 
-                 placeholder="Enter distributor name" 
-                 value={invoiceData.distributorName} 
-                 onValueChange={v => handleInvoiceChange('distributorName', v)} 
-                 options={distributors}
-               />
-            </div>
-            <div className="space-y-1.5">
-               <Label>Invoice Number</Label>
-               <Input required placeholder="e.g. INV-12345" value={invoiceData.invoiceNumber} onChange={e => handleInvoiceChange('invoiceNumber', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-               <Label>Invoice Date</Label>
-               <Input required type="date" value={invoiceData.invoiceDate} onChange={e => handleInvoiceChange('invoiceDate', e.target.value)} />
-            </div>
-          </CardContent>
-        </Card>
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        {/* ─── Invoice Header ─── */}
+        <InvoiceHeaderCard
+          data={{ ...invoiceData, total: totals.total }}
+          onChange={(field, value) => setInvoiceData({ ...invoiceData, [field]: value })}
+          distributors={distributors}
+        />
 
+        {/* ─── Items Section ─── */}
         <div className="flex justify-between items-center">
            <h2 className="text-xl font-bold tracking-tight">Line Items</h2>
            <Button type="button" onClick={addItem} variant="outline" size="sm" className="rounded-full font-bold">
@@ -260,73 +225,37 @@ export default function ManualPurchaseEntry() {
            </Button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {items.map((item, idx) => (
-             <Card key={idx} className="relative ring-1 ring-slate-200 overflow-visible">
-                <CardHeader className="p-4 flex flex-row items-center gap-4 pb-0">
-                  <span className="bg-slate-800 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0">
-                    {idx + 1}
-                  </span>
-                  <MedicineAutocomplete 
-                    required
-                    value={item.medicineName} 
-                    onChange={(val, fullItem) => handleItemChange(idx, 'medicineName', val, fullItem)}
-                    medicines={medicines}
-                  />
-                  {items.length > 1 && (
-                     <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-rose-500 shrink-0">
-                        <Trash2 size={18} />
-                     </Button>
-                  )}
-                </CardHeader>
-                
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Category</Label>
-                      <Select value={(item as any).category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>
-                          {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Manufacturer</Label>
-                      <GenericAutocomplete placeholder="e.g. Cipla" value={(item as any).manufacturer || ''} onValueChange={v=>handleItemChange(idx, 'manufacturer', v)} options={manufacturers} className="h-9"/>
-                    </div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Batch</Label><Input required value={item.batchNumber} onChange={e=>handleItemChange(idx, 'batchNumber', e.target.value)} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Exp (MM-YYYY)</Label><Input required placeholder="12-2025" value={item.expiryDate} onChange={e=>{
-                       let v = e.target.value.replace(/\D/g, '').substring(0, 6);
-                       if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
-                       handleItemChange(idx, 'expiryDate', v);
-                    }} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><Input required type="number" step="0.01" value={item.purchasePrice || ''} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">MRP (₹)</Label><Input required type="number" step="0.01" value={item.mrp || ''} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Qty</Label><Input required type="number" value={item.quantity || ''} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Free</Label><Input type="number" value={item.freeQuantity || ''} onChange={e=>handleItemChange(idx, 'freeQuantity', parseInt(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Disc %</Label><Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e=>handleItemChange(idx, 'discountPercent', parseFloat(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">GST %</Label><Input type="number" step="0.1" value={item.gstPercent || ''} onChange={e=>handleItemChange(idx, 'gstPercent', parseFloat(e.target.value))} className="h-9"/></div>
-                  </div>
-                </CardContent>
-             </Card>
+             <PurchaseItemCard
+               key={idx}
+               item={item}
+               index={idx}
+               onChange={handleItemChange}
+               onRemove={removeItem}
+               medicines={medicines}
+               manufacturers={manufacturers}
+               canRemove={items.length > 1}
+               showMatchFeatures={false}
+             />
           ))}
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/90 backdrop-blur-xl border-t border-border z-50 lg:p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-           <div className="container max-w-4xl flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex gap-6 font-bold">
+        {/* ─── Bottom Action Bar ─── */}
+        <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/90 backdrop-blur-xl border-t border-border z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+           <div className="container max-w-4xl flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="flex gap-6 font-bold w-full sm:w-auto justify-center sm:justify-start">
                  <div className="flex flex-col"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Subtotal</span>₹{totals.subtotal.toFixed(2)}</div>
                  <div className="flex flex-col"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Tax</span>₹{totals.gstAmount.toFixed(2)}</div>
                  <div className="flex flex-col text-primary text-xl"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Net Total</span>₹{totals.total.toFixed(2)}</div>
               </div>
               <Button 
                  type="submit"
-                 className="w-full md:w-auto h-11 px-6 text-base font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2 shrink-0"
+                 className="w-full sm:w-auto h-12 sm:h-11 px-6 text-base font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2 shrink-0"
                  disabled={isSaving}
               >
                  {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-                 {isSaving ? 'Saving Invoice...' : 'Save & Add to Inventory'}
+                 {isSaving ? 'Saving Invoice...' : `Save & Add to Inventory (${items.length} items)`}
               </Button>
            </div>
         </div>
