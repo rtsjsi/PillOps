@@ -236,6 +236,30 @@ export async function fetchPurchases() {
   }));
 }
 
+// ─── Aliases ───────────────────────────────────────────────
+
+export async function fetchAliasesForDistributor(distributorName: string) {
+  if (!distributorName) return [];
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('distributor_medicine_aliases')
+    .select('ocr_name, global_medicine_master(*)')
+    .eq('distributor_name', distributorName);
+
+  if (error) return [];
+  
+  return data.map((alias: any) => {
+    const gObj = alias.global_medicine_master;
+    const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
+    return {
+      ocrName: alias.ocr_name,
+      medicineName: g.name,
+      category: g.category,
+      manufacturer: g.manufacturer
+    };
+  });
+}
+
 // ─── Store Settings ────────────────────────────────────────
 
 export async function fetchStoreSettings() {

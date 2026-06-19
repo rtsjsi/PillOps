@@ -8,7 +8,7 @@ import { CheckCircle2, ArrowLeft, Sparkles, AlertTriangle, Loader2, Save, Plus }
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
+import { fetchMedicines, fetchGlobalMedicines, fetchAliasesForDistributor } from '@/lib/queries';
 import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine-search';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 
@@ -90,7 +90,7 @@ export default function ReviewExtraction() {
     setData({
       ...data, 
       items: [...data.items, {
-        medicineName: '', batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+        medicineName: '', extractedName: '', batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
         purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
       }]
     });
@@ -144,13 +144,26 @@ export default function ReviewExtraction() {
         try {
           const parsed = JSON.parse(rawData);
           
-          // Trust the OCR output. Try to auto-fill category/manufacturer if we find a global match,
-          // but ALWAYS keep the medicine name (either the matched name or the raw OCR name).
+          // ─── Smart Aliasing ───
+          const aliases = await fetchAliasesForDistributor(parsed.distributorName);
+          const aliasMap = new Map<string, any>();
+          aliases.forEach((a: any) => aliasMap.set(a.ocrName, a));
+          
           const enrichedItems = await Promise.all(parsed.items.map(async (item: any) => {
              const extracted = item.medicineName;
-             let enrichedItem = { ...item };
+             let enrichedItem = { ...item, extractedName: extracted }; // Save original OCR name
              
              if (extracted) {
+                // Check for learned alias first!
+                const learnedAlias = aliasMap.get(extracted);
+                if (learnedAlias) {
+                   enrichedItem.medicineName = learnedAlias.medicineName;
+                   enrichedItem.category = learnedAlias.category || 'Tablet';
+                   enrichedItem.manufacturer = learnedAlias.manufacturer || '';
+                   return enrichedItem;
+                }
+
+                // Fallback to fuzzy search if no alias exists
                 try {
                    const cleanExtracted = expandMedicineAbbreviations(extracted);
                    enrichedItem.medicineName = cleanExtracted.toUpperCase(); // Default to cleaned OCR

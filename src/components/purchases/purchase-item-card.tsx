@@ -14,6 +14,7 @@ const CATEGORIES = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drop
 
 export interface PurchaseItem {
   medicineName: string;
+  extractedName?: string;
   batchNumber: string;
   expiryDate: string;
   purchasePrice: number;
