@@ -38,7 +38,7 @@ export function InvoiceHeaderCard({
   sticky = false,
 }: InvoiceHeaderCardProps) {
   return (
-    <div className={cn(sticky && "sticky top-0 z-30")}>
+    <div className={cn(sticky && "sticky top-0 z-30 bg-background/95 backdrop-blur-md pt-2 pb-3 -mt-2")}>
       {/* Duplicate / Warning Banner */}
       {warning && (
         <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 p-3 rounded-xl mb-3 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
