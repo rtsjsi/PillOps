@@ -394,7 +394,6 @@ export default function ReviewExtraction() {
         invalidFields={invalidFields.header}
         distributors={distributors}
         warning={data.duplicateWarning}
-        sticky
       />
 
       {/* ─── Items Section ─── */}

@@ -35,40 +35,41 @@ export function InvoiceHeaderCard({
   invalidFields = [],
   distributors = [],
   warning,
-  sticky = false,
 }: InvoiceHeaderCardProps) {
   return (
-    <div className={cn(sticky && "sticky top-0 z-30 bg-background/95 backdrop-blur-md pt-2 pb-3 -mt-2")}>
+    <div className="mb-4">
       {/* Duplicate / Warning Banner */}
       {warning && (
-        <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 p-3 rounded-xl mb-3 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-          <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-500" />
+        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 p-2.5 rounded-lg mb-3 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-500" />
           <span>{warning}</span>
         </div>
       )}
 
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-sm">
-        <CardContent className="p-4 grid grid-cols-2 gap-y-4 gap-x-3">
-          {/* Row 1: Distributor + Date */}
-          <div className="space-y-1 col-span-2 sm:col-span-1">
+        <CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-3 items-end">
+          {/* Row 1/Col 1: Distributor */}
+          <div className="space-y-1 col-span-2 md:col-span-1">
             <Label className={cn(
-              "text-[10px] uppercase tracking-widest font-black text-muted-foreground",
+              "text-[9px] uppercase tracking-widest font-black text-muted-foreground",
               invalidFields.includes('distributorName') && "text-rose-500"
             )}>Distributor</Label>
             <GenericAutocomplete
-              placeholder="Select or enter distributor..."
+              placeholder="Distributor..."
               value={data.distributorName}
               onValueChange={v => onChange('distributorName', v)}
               options={distributors}
               className={cn(
-                "h-10 text-sm md:text-base font-bold text-slate-900 bg-white",
+                "h-8 text-xs font-bold text-slate-900 bg-white",
                 invalidFields.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500"
               )}
             />
           </div>
-          <div className="space-y-1 col-span-2 sm:col-span-1 sm:text-right">
+          
+          {/* Row 2/Col 2: Date */}
+          <div className="space-y-1 col-span-1">
             <Label className={cn(
-              "text-[10px] uppercase tracking-widest font-black text-muted-foreground",
+              "text-[9px] uppercase tracking-widest font-black text-muted-foreground",
               invalidFields.includes('invoiceDate') && "text-rose-500"
             )}>Date</Label>
             <Input
@@ -76,30 +77,32 @@ export function InvoiceHeaderCard({
               value={data.invoiceDate}
               onChange={e => onChange('invoiceDate', e.target.value)}
               className={cn(
-                "h-10 text-sm md:text-base font-bold text-slate-900 bg-white sm:text-right",
+                "h-8 text-xs font-bold text-slate-900 bg-white",
                 invalidFields.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500"
               )}
             />
           </div>
           
-          {/* Row 2: Invoice Number + Total */}
-          <div className="space-y-1 col-span-2 sm:col-span-1">
+          {/* Row 2/Col 3: Invoice Number */}
+          <div className="space-y-1 col-span-1">
             <Label className={cn(
-              "text-[10px] uppercase tracking-widest font-black text-muted-foreground",
+              "text-[9px] uppercase tracking-widest font-black text-muted-foreground",
               invalidFields.includes('invoiceNumber') && "text-rose-500"
             )}>Invoice Number</Label>
             <Input
               value={data.invoiceNumber}
               onChange={e => onChange('invoiceNumber', e.target.value)}
               className={cn(
-                "h-10 text-sm md:text-base font-bold text-primary bg-white",
+                "h-8 text-xs font-bold text-primary bg-white",
                 invalidFields.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500"
               )}
             />
           </div>
-          <div className="space-y-1 col-span-2 sm:col-span-1 sm:text-right">
-            <Label className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
-            <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
+          
+          {/* Row 1/Col 4: Total */}
+          <div className="space-y-1 col-span-2 md:col-span-1 md:text-right flex flex-col md:items-end justify-end">
+            <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
+            <p className="text-xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
           </div>
         </CardContent>
       </Card>
