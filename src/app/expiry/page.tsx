@@ -105,22 +105,22 @@ export default function ExpiryTracker() {
   const totalValueAtRisk = items.reduce((sum, item) => sum + item.valueAtRisk, 0);
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-24">
+    <div className="container py-4 flex flex-col gap-4 pb-24">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Expiry Radar</h1>
+        <h1 className="text-xl font-bold tracking-tight">Expiry Radar</h1>
         <p className="text-muted-foreground font-medium">Predict and prevent losses from expiring stock.</p>
       </header>
 
-      <Card className="bg-primary/5 border-primary/20 shadow-xl shadow-primary/5">
-         <CardContent className="p-6 flex items-center gap-6">
-            <div className="bg-primary text-white p-5 rounded-2xl shadow-lg shadow-primary/20">
-               <TrendingDown size={32} />
+      <Card className="bg-primary/5 border-primary/20 shadow-sm">
+         <CardContent className="p-4 flex items-center gap-4">
+            <div className="bg-primary text-white p-3 rounded-xl shadow-sm">
+               <TrendingDown size={22} />
             </div>
             <div>
-               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Total Value at Risk</p>
-               <h3 className="text-3xl font-extrabold tracking-tight">{formatCurrency(totalValueAtRisk)}</h3>
-               <p className="text-xs font-bold text-red-500 flex items-center gap-1 mt-1">
-                 <AlertTriangle size={12} />
+               <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Total Value at Risk</p>
+               <h3 className="text-xl font-extrabold tracking-tight">{formatCurrency(totalValueAtRisk)}</h3>
+               <p className="text-[11px] font-bold text-red-500 flex items-center gap-1 mt-0.5">
+                 <AlertTriangle size={11} />
                  {items.length} batches requiring attention
                </p>
             </div>
@@ -169,7 +169,7 @@ export default function ExpiryTracker() {
                   <CardHeader className="p-4 flex flex-row items-center gap-4 space-y-0">
                      <input type="checkbox" className="w-5 h-5 accent-primary shrink-0 cursor-pointer" checked={isSelected} onChange={() => toggleBatch(item.batch.id)} />
                      <div className="flex-1 grid gap-1">
-                        <CardTitle className="text-lg font-bold cursor-pointer" onClick={() => toggleBatch(item.batch.id)}>{item.medicine.name}</CardTitle>
+                        <CardTitle className="text-sm font-bold cursor-pointer" onClick={() => toggleBatch(item.batch.id)}>{item.medicine.name}</CardTitle>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store Section: {item.medicine.rack || 'Main'}</p>
                      </div>
                      <Badge variant={urgency === 'expired' || urgency === 'critical' ? 'destructive' : 'outline'} className={cn(
@@ -181,7 +181,7 @@ export default function ExpiryTracker() {
                   </CardHeader>
                   
                   <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm font-medium mb-4">
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-sm font-medium mb-3">
                        <div className="flex flex-col">
                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Batch Number</span>
                          <span className="font-bold">{item.batch.batchNumber}</span>
@@ -201,13 +201,13 @@ export default function ExpiryTracker() {
                     </div>
 
                     <div className="flex gap-2 pt-4 border-t border-border">
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl" onClick={() => requestAction('return', item.batch.id)}>
-                         <RotateCcw size={14} className="mr-2" />
-                         Return to Vendor
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-9 rounded-lg" onClick={() => requestAction('return', item.batch.id)}>
+                         <RotateCcw size={12} className="mr-1.5" />
+                         Return
                        </Button>
-                       <Button variant="outline" size="sm" className="flex-1 font-bold h-11 rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100" onClick={() => requestAction('dispose', item.batch.id)}>
-                         <Trash2 size={14} className="mr-2" />
-                         Dispose Stock
+                       <Button variant="outline" size="sm" className="flex-1 font-bold h-9 rounded-lg text-red-500 hover:bg-red-500/10 hover:text-red-600 border-red-100" onClick={() => requestAction('dispose', item.batch.id)}>
+                         <Trash2 size={12} className="mr-1.5" />
+                         Dispose
                        </Button>
                     </div>
                   </CardContent>

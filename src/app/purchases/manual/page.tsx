@@ -202,7 +202,7 @@ export default function ManualPurchaseEntry() {
         <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
             <CheckCircle2 size={80} className="text-emerald-500 animate-bounce" />
             <div className="grid gap-2">
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Stock Added Manually!</h2>
+              <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Stock Added Manually!</h2>
               <p className="text-muted-foreground font-medium">Inventory updated successfully. Redirecting...</p>
             </div>
         </div>
@@ -212,7 +212,7 @@ export default function ManualPurchaseEntry() {
   const totals = calculateTotals();
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-32">
+    <div className="container py-4 flex flex-col gap-4 pb-28">
       <header className="flex items-center gap-4">
         <Button variant="ghost" size="icon" render={<Link href="/purchases" />} className="rounded-full">
             <ArrowLeft size={24} />
@@ -226,7 +226,7 @@ export default function ManualPurchaseEntry() {
       )}
 
       <form onSubmit={handleSave} className="flex flex-col gap-6">
-        <Card className="border-primary/20 shadow-xl shadow-primary/5">
+        <Card className="border-primary/20 shadow-sm">
           <CardHeader>
             <CardTitle>Invoice Details</CardTitle>
           </CardHeader>
@@ -313,7 +313,7 @@ export default function ManualPurchaseEntry() {
           ))}
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+        <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/90 backdrop-blur-xl border-t border-border z-50 lg:p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
            <div className="container max-w-4xl flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex gap-6 font-bold">
                  <div className="flex flex-col"><span className="text-[10px] text-muted-foreground uppercase tracking-widest">Subtotal</span>₹{totals.subtotal.toFixed(2)}</div>
@@ -322,7 +322,7 @@ export default function ManualPurchaseEntry() {
               </div>
               <Button 
                  type="submit"
-                 className="w-full md:w-auto h-14 px-8 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2 shrink-0"
+                 className="w-full md:w-auto h-11 px-6 text-base font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2 shrink-0"
                  disabled={isSaving}
               >
                  {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}

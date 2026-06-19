@@ -67,7 +67,7 @@ export default function MedicinesDirectoryPage() {
       {/* Header & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Global Medicine Master</h1>
+          <h1 className="text-lg font-bold tracking-tight">Global Medicine Master</h1>
           <p className="text-muted-foreground">Search and view details of all available medicines in the directory.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
@@ -129,7 +129,7 @@ export default function MedicinesDirectoryPage() {
               <CardHeader className="bg-muted/30 pb-4">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{med.name}</CardTitle>
+                    <CardTitle className="text-base">{med.name}</CardTitle>
                     <CardDescription className="text-xs font-medium text-primary">
                       {med.genericName || 'No Generic Name'}
                     </CardDescription>

@@ -35,27 +35,18 @@ export default function Purchases() {
   const currentPurchases = activeTab === 'completed' ? completedPurchases : draftPurchases;
 
   return (
-    <div className="container py-8 flex flex-col gap-8 pb-24">
+    <div className="container py-4 flex flex-col gap-5 pb-24">
 
 
-      {/* Hero Action */}
-      <Card className="flex flex-col items-center gap-6 p-8 bg-gradient-to-br from-primary/10 to-transparent border-primary/20 shadow-xl shadow-primary/5">
-         <div className="bg-primary text-white p-5 rounded-3xl shadow-lg shadow-primary/30 ring-8 ring-primary/5 animate-pulse">
-            <FileScan size={36} />
-         </div>
-         <div className="text-center max-w-sm">
-            <h2 className="text-2xl font-extrabold mb-1 tracking-tight">AI Invoice Scanner</h2>
-            <p className="text-muted-foreground text-sm font-medium mb-6 leading-relaxed">Instantly digitize distributor bills and update your inventory automatically.</p>
-            <div className="flex flex-row gap-3 w-full">
-              <Button render={<Link href="/purchases/scan" />} size="lg" className="flex-1 h-14 sm:h-16 text-lg font-bold rounded-xl shadow-lg shadow-primary/20">
-                Scan Invoice
-              </Button>
-              <Button variant="outline" render={<Link href="/purchases/manual" />} size="lg" className="flex-1 h-14 sm:h-16 text-lg font-bold rounded-xl border-primary/20 hover:bg-primary/5">
-                Manual Entry
-              </Button>
-            </div>
-         </div>
-      </Card>
+      {/* Quick Actions */}
+      <div className="flex gap-3">
+        <Button render={<Link href="/purchases/scan" />} size="lg" className="flex-1 h-11 text-sm font-bold rounded-lg shadow-sm">
+          Scan Invoice
+        </Button>
+        <Button variant="outline" render={<Link href="/purchases/manual" />} size="lg" className="flex-1 h-11 text-sm font-bold rounded-lg">
+          Manual Entry
+        </Button>
+      </div>
 
       <section>
          <div className="flex items-center justify-between mb-4">
@@ -91,9 +82,9 @@ export default function Purchases() {
             ) : (
                currentPurchases.map((inv: any) => (
                   <Card key={inv.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex flex-col gap-2">
+                    <CardContent className="p-3 flex flex-col gap-1.5">
                       <div className="flex justify-between items-start">
-                         <div className="font-bold text-lg leading-tight">{inv.distributorName || 'Draft'}</div>
+                         <div className="font-bold text-base leading-tight">{inv.distributorName || 'Draft'}</div>
                          <div className="text-emerald-600 dark:text-emerald-400 font-extrabold">{formatCurrency(inv.total)}</div>
                       </div>
                       <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest pt-2 border-t border-border/50">

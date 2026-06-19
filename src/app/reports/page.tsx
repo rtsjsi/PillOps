@@ -33,18 +33,18 @@ export default function ReportsDashboard() {
   ];
 
   return (
-    <div className="container py-8 flex flex-col gap-8 pb-24">
+    <div className="container py-4 flex flex-col gap-5 pb-24">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reports.map((report) => {
           const Icon = report.icon;
           return (
             <Link key={report.href} href={report.href}>
-              <Card className="hover:shadow-xl transition-all hover:scale-[1.02] cursor-pointer h-full border-border/50 bg-card/50 backdrop-blur-sm">
+              <Card className="hover:shadow-md transition-all cursor-pointer h-full border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <div className={`w-12 h-12 rounded-xl ${report.bgColor} flex items-center justify-center mb-4`}>
-                    <Icon className={`w-6 h-6 ${report.color}`} />
+                  <div className={`w-8 h-8 rounded-lg ${report.bgColor} flex items-center justify-center mb-2`}>
+                    <Icon className={`w-4 h-4 ${report.color}`} />
                   </div>
-                  <CardTitle className="text-xl">{report.title}</CardTitle>
+                  <CardTitle className="text-base">{report.title}</CardTitle>
                   <CardDescription className="text-sm font-medium mt-2 leading-relaxed">
                     {report.description}
                   </CardDescription>

@@ -122,7 +122,7 @@ export default function AIInvoiceScanner() {
         <Link href="/purchases" className="p-2 border-none">
            <ArrowLeft size={24} />
         </Link>
-        <h1 className="text-2xl font-bold">Scan Invoice</h1>
+        <h1 className="text-lg font-bold">Scan Invoice</h1>
       </header>
 
       {error && (
@@ -138,7 +138,7 @@ export default function AIInvoiceScanner() {
         <div className="bg-card p-4 rounded-xl border mb-2">
            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
            <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
-              <SelectTrigger className="w-full h-12 text-md font-bold">
+              <SelectTrigger className="w-full h-10 text-sm font-bold">
                  <SelectValue placeholder="Select Model" />
               </SelectTrigger>
               <SelectContent>
@@ -150,10 +150,10 @@ export default function AIInvoiceScanner() {
            </Select>
         </div>
 
-        <h2 className="text-lg text-center text-muted-foreground">Choose an input method</h2>
+        <h2 className="text-sm text-center text-muted-foreground">Choose an input method</h2>
         
         <button 
-          className="flex-1 flex flex-col items-center justify-center gap-4 text-xl font-bold border-2 border-dashed border-primary bg-primary/10 rounded-xl"
+          className="flex-1 flex flex-col items-center justify-center gap-3 text-base font-bold border-2 border-dashed border-primary bg-primary/10 rounded-xl"
           onClick={() => {
               if (fileInputRef.current) {
                 fileInputRef.current.capture = 'environment';
@@ -161,14 +161,14 @@ export default function AIInvoiceScanner() {
               }
           }}
         >
-          <Camera size={48} className="text-primary" />
+          <Camera size={36} className="text-primary" />
           Open Camera
         </button>
 
         <div className="flex items-center justify-center text-muted-foreground">OR</div>
 
         <button 
-          className="flex-1 flex flex-col items-center justify-center gap-4 text-xl font-bold border border-muted/20 bg-card rounded-xl"
+          className="flex-1 flex flex-col items-center justify-center gap-3 text-base font-bold border border-muted/20 bg-card rounded-xl"
           onClick={() => {
             if (fileInputRef.current) {
               fileInputRef.current.removeAttribute('capture');
@@ -176,7 +176,7 @@ export default function AIInvoiceScanner() {
             }
           }}
         >
-          <Upload size={48} className="text-muted-foreground" />
+          <Upload size={36} className="text-muted-foreground" />
           Upload Image
         </button>
         

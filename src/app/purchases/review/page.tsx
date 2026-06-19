@@ -408,7 +408,7 @@ export default function ReviewExtraction() {
           <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
               <CheckCircle2 size={80} className="text-emerald-500 animate-bounce" />
               <div className="grid gap-2">
-                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Stock Added!</h2>
+                <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Stock Added!</h2>
                 <p className="text-muted-foreground font-medium">Inventory updated successfully. Redirecting...</p>
               </div>
           </div>
@@ -416,21 +416,21 @@ export default function ReviewExtraction() {
   }
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-32">
+    <div className="container py-4 flex flex-col gap-4 pb-28">
       <header className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
               <ArrowLeft size={24} />
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Review Invoice Data</h1>
+          <h1 className="text-lg font-bold tracking-tight">Review Invoice Data</h1>
         </div>
         <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
           Rescan Invoice
         </Button>
       </header>
 
-      <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
-        <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
+      <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-sm">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3">
             <div className="space-y-1">
                <Label className={cn("text-xs uppercase tracking-widest font-black text-muted-foreground", invalidFields.header.includes('distributorName') && "text-rose-500")}>Distributor</Label>
                <GenericAutocomplete
@@ -438,7 +438,7 @@ export default function ReviewExtraction() {
                  value={data.distributorName}
                  onValueChange={v => setData({ ...data, distributorName: v })}
                  options={distributors}
-                 className={cn("h-12 text-base md:text-lg font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-10 text-sm md:text-base font-bold text-slate-900 bg-white", invalidFields.header.includes('distributorName') && "border-rose-500 ring-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
@@ -447,7 +447,7 @@ export default function ReviewExtraction() {
                  type="date"
                  value={data.invoiceDate} 
                  onChange={e => setData({ ...data, invoiceDate: e.target.value })} 
-                 className={cn("h-12 text-base md:text-lg font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-10 text-sm md:text-base font-bold text-slate-900 bg-white text-right", invalidFields.header.includes('invoiceDate') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1">
@@ -455,12 +455,12 @@ export default function ReviewExtraction() {
                <Input 
                  value={data.invoiceNumber} 
                  onChange={e => setData({ ...data, invoiceNumber: e.target.value })} 
-                 className={cn("h-12 text-base md:text-lg font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
+                 className={cn("h-10 text-sm md:text-base font-bold text-primary bg-white", invalidFields.header.includes('invoiceNumber') && "border-rose-500 focus-visible:ring-rose-500")}
                />
             </div>
             <div className="space-y-1 text-right">
                <Label className="text-xs uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
-               <p className="text-3xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
+               <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
             </div>
         </CardContent>
       </Card>
@@ -566,7 +566,7 @@ export default function ReviewExtraction() {
                   </CardHeader>
                   
                   <CardContent className="p-2.5 md:p-3 pt-0">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-x-3 gap-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-x-2 gap-y-3">
                       <div className="space-y-1.5"><Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground">Category</Label>
                         <Select value={item.category || ''} onValueChange={(v) => handleItemChange(idx, 'category', v)}>
                           <SelectTrigger className="h-10 text-sm font-medium"><SelectValue placeholder="Select" /></SelectTrigger>
@@ -600,11 +600,11 @@ export default function ReviewExtraction() {
          </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-6 shadow-2xl">
-         <div className="container max-w-4xl flex gap-4">
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/80 backdrop-blur-xl border-t border-border z-50 lg:p-4 shadow-lg">
+         <div className="container max-w-4xl flex gap-3">
            <Button 
               variant="secondary"
-              className="w-1/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-slate-200 flex gap-2"
+              className="w-1/3 h-11 text-sm font-bold rounded-xl shadow-md flex gap-2"
               disabled={isSaving || isDrafting}
               onClick={() => handleConfirm('draft')}
            >
@@ -612,7 +612,7 @@ export default function ReviewExtraction() {
               {isDrafting ? 'Saving...' : 'Save as Draft'}
            </Button>
            <Button 
-              className="w-2/3 h-14 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 flex gap-2"
+              className="w-2/3 h-11 text-sm font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2"
               disabled={isSaving || isDrafting}
               onClick={() => handleConfirm('completed')}
            >

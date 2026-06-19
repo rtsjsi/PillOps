@@ -263,25 +263,25 @@ export default function POS() {
 
   if (isSuccess) {
       return (
-          <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-8 text-center p-6">
-              <div className="text-emerald-500 bg-emerald-500/10 p-6 rounded-full ring-8 ring-emerald-500/5 animate-bounce">
-                <CheckCircle2 size={64} />
+          <div className="container min-h-[60vh] flex flex-col items-center justify-center gap-6 text-center p-4">
+              <div className="text-emerald-500 bg-emerald-500/10 p-4 rounded-full ring-4 ring-emerald-500/5 animate-bounce">
+                <CheckCircle2 size={48} />
               </div>
-              <div className="grid gap-2">
-                <h2 className="text-3xl font-extrabold tracking-tight">Sale Completed!</h2>
-                <p className="text-muted-foreground font-medium">Inventory updated and invoice generated successfully.</p>
+              <div className="grid gap-1">
+                <h2 className="text-xl font-extrabold tracking-tight">Sale Completed!</h2>
+                <p className="text-sm text-muted-foreground font-medium">Inventory updated and invoice generated.</p>
               </div>
               
-              <div className="flex flex-col gap-3 w-full max-w-sm">
+              <div className="flex flex-col gap-2 w-full max-w-sm">
                   <InvoicePDFWrapper 
                     invoiceId={lastInvoiceId} 
                     size="lg" 
-                    className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
+                    className="w-full h-11 text-base font-bold shadow-lg shadow-primary/20" 
                   />
-                  <Button variant="outline" size="lg" className="w-full h-12" onClick={() => { setIsSuccess(false); setLastInvoiceId(null); }}>
+                  <Button variant="outline" size="lg" className="w-full h-10" onClick={() => { setIsSuccess(false); setLastInvoiceId(null); }}>
                     New Sale (F2)
                   </Button>
-                  <Button render={<Link href="/pos" />} variant="ghost" size="lg" className="w-full h-12">
+                  <Button render={<Link href="/pos" />} variant="ghost" size="lg" className="w-full h-10">
                     Back to Sales List
                   </Button>
               </div>
@@ -295,7 +295,7 @@ export default function POS() {
     .slice(0, 5);
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-[400px] lg:pb-8">
+    <div className="container py-4 flex flex-col gap-4 pb-[360px] lg:pb-4">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button render={<Link href="/pos" />} variant="ghost" size="icon" className="rounded-full">
@@ -314,9 +314,9 @@ export default function POS() {
         )}
       </header>
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Left Side: Search and Cart Items */}
-        <div className="flex-1 w-full flex flex-col gap-6">
+        <div className="flex-1 w-full flex flex-col gap-4">
           <div className="relative z-50">
               <MedicineAutocomplete
                 inputRef={searchInputRef}
@@ -325,7 +325,7 @@ export default function POS() {
                 medicines={medicines}
                 placeholder="Search by name, generic... (Autofocus enabled)"
                 autoFocus
-                className="font-bold border border-border bg-background shadow-md h-14 text-lg"
+                className="font-bold border border-border bg-background shadow-sm h-11 text-base"
               />
               
               {/* Quick Add Chips (when empty search) */}
@@ -348,13 +348,13 @@ export default function POS() {
 
           <div className="flex flex-col gap-3">
               {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-4 py-16 text-muted-foreground bg-muted/20 rounded-3xl border-2 border-dashed border-border/50">
-                      <ShoppingCart size={48} className="opacity-20" />
-                      <p className="font-medium">Cart is empty. Search to add items.</p>
+                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
+                      <ShoppingCart size={36} className="opacity-20" />
+                      <p className="text-sm font-medium">Cart is empty. Search to add items.</p>
                   </div>
               ) : (
                   cart.map((item, i) => (
-                      <Card key={`${item.storeInventoryBatchId}-${i}`} className="p-4 flex justify-between items-center border-border shadow-sm">
+                      <Card key={`${item.storeInventoryBatchId}-${i}`} className="p-3 flex justify-between items-center border-border shadow-sm">
                           <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <p className="font-bold text-sm">{item.medicineName}</p>
@@ -364,7 +364,7 @@ export default function POS() {
                               </p>
                           </div>
                           
-                          <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-4">
                               <div className="flex items-center bg-muted/30 rounded-lg border border-border p-1">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(i, item.quantity - 1)}>
                                       <Minus size={14} />
@@ -395,12 +395,12 @@ export default function POS() {
 
         {/* Right Side: Checkout Panel */}
         {cart.length > 0 && (
-            <div className="w-full lg:w-[400px] fixed bottom-0 left-0 right-0 p-4 lg:p-0 lg:sticky lg:top-8 z-40 bg-background/80 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none border-t lg:border-t-0 border-border lg:border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none animate-in slide-in-from-bottom-10 lg:animate-none">
+            <div className="w-full lg:w-[380px] fixed bottom-0 left-0 right-0 p-3 lg:p-0 lg:sticky lg:top-4 z-40 bg-background/80 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none border-t lg:border-t-0 border-border lg:border-none shadow-[0_-8px_30px_rgba(0,0,0,0.08)] lg:shadow-none animate-in slide-in-from-bottom-10 lg:animate-none">
               <Card className="bg-card/95 backdrop-blur-2xl border-border shadow-2xl shadow-black/10">
                   <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Customer (Optional)</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-3 lg:p-4 flex flex-col gap-3 lg:gap-4 max-h-[40vh] lg:max-h-none overflow-y-auto">
+                  <CardContent className="p-3 flex flex-col gap-2.5 max-h-[45vh] lg:max-h-none overflow-y-auto">
                     <div className="grid grid-cols-2 gap-3">
                       <GenericAutocomplete 
                         placeholder="Customer Name" 
@@ -432,7 +432,7 @@ export default function POS() {
                       />
                     </div>
 
-                    <div className="flex justify-between items-end gap-4 border-t border-dashed border-border pt-4">
+                    <div className="flex justify-between items-end gap-3 border-t border-dashed border-border pt-3">
                         <div className="flex flex-col gap-2 flex-1">
                             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Discount</span>
                             <div className="flex items-center gap-1">
@@ -459,7 +459,7 @@ export default function POS() {
                     </div>
 
                     <Button 
-                        className="w-full h-12 lg:h-14 text-lg lg:text-xl font-bold rounded-xl lg:rounded-2xl flex justify-between px-4 lg:px-6 shadow-xl shadow-primary/20 transition-transform active:scale-[0.98] shrink-0"
+                        className="w-full h-11 lg:h-12 text-base lg:text-lg font-bold rounded-xl flex justify-between px-4 shadow-lg shadow-primary/15 transition-transform active:scale-[0.98] shrink-0"
                         disabled={isCheckingOut}
                         onClick={handleCheckout}
                     >

@@ -23,10 +23,10 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
           onChange={onChange}
           placeholder={placeholder}
           className={cn(
-            'w-full py-3 pl-10 pr-9',
+            'w-full py-2 pl-10 pr-9',
             'rounded-lg border border-border',
             'bg-muted/30 text-foreground placeholder:text-muted-foreground',
-            'text-sm font-medium',
+            'text-[13px] font-medium',
             'outline-none transition-all duration-200',
             'focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:bg-background',
             'shadow-inner shadow-black/[0.02]'

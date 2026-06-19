@@ -22,7 +22,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[45] h-[65px] bg-card border-t border-border flex items-center justify-around px-2 pb-safe md:hidden shadow-[0_-1px_10px_rgba(0,0,0,0.03)]"
+      className="fixed bottom-0 left-0 right-0 z-[45] h-[56px] bg-card border-t border-border flex items-center justify-around px-2 pb-safe md:hidden shadow-[0_-1px_10px_rgba(0,0,0,0.03)]"
       aria-label="Quick navigation"
     >
       {links.map((link) => {
@@ -40,10 +40,10 @@ export default function BottomNav() {
             )}
           >
             <div className="p-1">
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+              <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
             </div>
             <span className={cn(
-                "text-[10px] font-medium transition-all duration-200",
+                "text-[9px] font-medium transition-all duration-200",
                 isActive ? "text-primary font-bold" : "text-muted-foreground"
             )}>
                 {link.shortLabel}

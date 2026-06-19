@@ -53,20 +53,20 @@ export function MobileSidebar({ profile }: { profile: any }) {
       {/* Drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 bg-card shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div className="p-4 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-primary text-primary-foreground rounded-lg flex items-center justify-center shadow-sm">
-              <Pill size={20} />
+        <div className="p-3 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center shadow-sm">
+              <Pill size={16} />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-foreground tracking-tight">PillOps</h1>
+              <h1 className="font-bold text-base text-foreground tracking-tight">PillOps</h1>
               <p className="text-[10px] font-medium text-muted-foreground truncate w-32">
                 {profile?.store?.name || 'Clinical Pharmacy'}
               </p>
@@ -94,13 +94,13 @@ export function MobileSidebar({ profile }: { profile: any }) {
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-3 h-12 rounded-xl transition-all duration-200 text-[15px]",
+                  "flex items-center gap-2.5 px-3 h-10 rounded-xl transition-all duration-200 text-sm",
                   isActive 
                     ? "bg-primary/10 text-primary font-bold shadow-sm" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Icon size={20} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
+                <Icon size={18} className={cn(isActive ? "text-primary" : "text-muted-foreground")} />
                 {item.label}
               </Link>
             );

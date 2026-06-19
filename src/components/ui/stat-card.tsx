@@ -18,25 +18,21 @@ interface StatCardProps {
 
 export function StatCard({ label, value, trend, icon: Icon, iconClassName, className }: StatCardProps) {
   return (
-    <Card className={cn("border border-border bg-card shadow-none rounded-xl", className)}>
-      <CardContent className="p-4 flex items-start gap-3">
-        {Icon && (
-          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", iconClassName || "bg-primary/10 text-primary")}>
-            <Icon size={20} />
+    <Card className={cn("border border-border bg-card shadow-none rounded-lg", className)}>
+      <CardContent className="p-3 flex flex-col gap-0.5">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide truncate flex items-center gap-1.5">
+          {Icon && <Icon size={13} className={iconClassName ? iconClassName.replace(/bg-\S+/g, '').replace(/rounded-\S+/g, '').replace(/flex\b/g, '').replace(/items-center/g, '').replace(/justify-center/g, '').replace(/shrink-0/g, '').replace(/h-\d+/g, '').replace(/w-\d+/g, '').trim() : "text-primary"} />}
+          {label}
+        </p>
+        <h3 className="text-base font-bold text-card-foreground tracking-tight">{value}</h3>
+        {trend && (
+          <div className={cn(
+            "flex items-center gap-1 text-[11px] font-bold",
+            trend.isUp ? "text-primary" : "text-destructive"
+          )}>
+            <span>{trend.isUp ? '↑' : '↓'} {trend.value}%</span>
           </div>
         )}
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">{label}</p>
-          <h3 className="text-lg font-bold text-card-foreground tracking-tight">{value}</h3>
-          {trend && (
-            <div className={cn(
-              "flex items-center gap-1 text-[11px] font-bold",
-              trend.isUp ? "text-primary" : "text-destructive"
-            )}>
-              <span>{trend.isUp ? '↑' : '↓'} {trend.value}%</span>
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

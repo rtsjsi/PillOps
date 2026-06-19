@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Top Bar */}
               <TopBar />
               
-              <main className="flex-1 overflow-y-auto bg-muted/20 p-4 lg:p-8 scroll-smooth pb-20 lg:pb-8">
+              <main className="flex-1 overflow-y-auto bg-muted/20 p-3 lg:p-5 scroll-smooth pb-16 lg:pb-5">
                 <div className="max-w-7xl mx-auto w-full">
                   {children}
                 </div>

@@ -96,7 +96,7 @@ export default function Inventory() {
   const categories = ['All', ...Array.from(new Set(medicines.map(m => m.category)))];
 
   return (
-    <div className="container py-8 flex flex-col gap-6 pb-24">
+    <div className="container py-4 flex flex-col gap-4 pb-24">
       <header className="flex justify-between items-center">
         <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex">
             <Plus size={18} className="mr-2" /> Add Misc Stock
@@ -109,7 +109,7 @@ export default function Inventory() {
           <button 
             onClick={() => setExpiryFilter(expiryFilter === 'expired' ? null : 'expired')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all shrink-0 font-bold text-sm",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
               expiryFilter === 'expired' ? "bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20" : "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20"
             )}
           >
@@ -119,7 +119,7 @@ export default function Inventory() {
           <button 
             onClick={() => setExpiryFilter(expiryFilter === 'critical' ? null : 'critical')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all shrink-0 font-bold text-sm",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
               expiryFilter === 'critical' ? "bg-orange-500 text-white border-orange-600 shadow-lg shadow-orange-500/20" : "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20"
             )}
           >
@@ -129,7 +129,7 @@ export default function Inventory() {
           <button 
             onClick={() => setExpiryFilter(expiryFilter === 'warning' ? null : 'warning')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all shrink-0 font-bold text-sm",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
               expiryFilter === 'warning' ? "bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
             )}
           >
@@ -139,7 +139,7 @@ export default function Inventory() {
           <button 
             onClick={() => setExpiryFilter(null)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all shrink-0 font-bold text-sm",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
               !expiryFilter ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20"
             )}
           >
@@ -238,9 +238,9 @@ export default function Inventory() {
                       </div>
                     )}
 
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0 p-4">
-                       <div className="grid gap-1">
-                         <CardTitle className="text-lg font-bold">{med.name}</CardTitle>
+                    <CardHeader className="flex flex-row items-start justify-between space-y-0 p-3">
+                       <div className="grid gap-0.5">
+                         <CardTitle className="text-base font-bold">{med.name}</CardTitle>
                          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{med.genericName}</p>
                        </div>
                        <Badge variant={stockStatus === 'ok' ? 'default' : stockStatus === 'low' ? 'outline' : 'destructive'} className={cn(
@@ -250,7 +250,7 @@ export default function Inventory() {
                           {totalQty} in stock
                        </Badge>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
+                    <CardContent className="p-3 pt-0">
                      <div className="flex flex-col gap-3">
                        <div className="flex flex-wrap gap-2">
                          {med.batches.map((batch: any, i: number) => (

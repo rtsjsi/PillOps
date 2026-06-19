@@ -72,13 +72,13 @@ export function TopBar() {
   };
 
   return (
-    <header className="h-[60px] border-b border-border bg-card sticky top-0 z-40 px-4 flex items-center justify-between">
+    <header className="h-[48px] border-b border-border bg-card sticky top-0 z-40 px-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <MobileSidebar profile={profile} />
-        <h1 className="text-xl font-bold text-foreground lg:hidden ml-1">{getTitle()}</h1>
+        <h1 className="text-base font-bold text-foreground lg:hidden ml-1">{getTitle()}</h1>
 
         <div
-          className="hidden lg:flex items-center gap-2 text-muted-foreground bg-muted/50 border border-border px-3 py-1.5 rounded-lg w-[400px] cursor-pointer hover:bg-muted transition-colors"
+          className="hidden lg:flex items-center gap-2 text-muted-foreground bg-muted/50 border border-border px-3 py-1 rounded-lg w-[320px] cursor-pointer hover:bg-muted transition-colors"
           role="button"
           tabIndex={0}
           aria-label="Search medicines and batches"
@@ -95,7 +95,7 @@ export function TopBar() {
             }
           }}
         >
-          <Search size={16} />
+          <Search size={14} />
           <span className="text-sm">Search medicines, batches...</span>
         </div>
       </div>
@@ -124,7 +124,7 @@ export function TopBar() {
           className="text-foreground hover:bg-muted rounded-full lg:hidden"
           aria-label="Search"
         >
-          <Search size={22} />
+          <Search size={18} />
         </Button>
 
         <Button
@@ -133,13 +133,13 @@ export function TopBar() {
           className="text-foreground hover:bg-muted rounded-full"
           aria-label="Notifications"
         >
-          <Bell size={20} />
+          <Bell size={18} />
         </Button>
 
         {/* Profile button */}
         <Link
           href="/profile"
-          className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs ring-2 ring-background shadow-sm hover:ring-primary/30 transition-all"
+          className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] ring-2 ring-background shadow-sm hover:ring-primary/30 transition-all"
           aria-label="View profile"
         >
           {initials}

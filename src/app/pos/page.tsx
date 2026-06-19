@@ -41,7 +41,7 @@ export default function POSLanding() {
   if (loading) return <GenericTableLoading />;
 
   return (
-    <div className="container py-8 flex flex-col gap-6">
+    <div className="container py-4 flex flex-col gap-4">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
@@ -61,10 +61,10 @@ export default function POSLanding() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {recentSales.map((inv) => (
-             <Card key={inv.id} className="p-4 border-border shadow-sm flex flex-col gap-2">
+             <Card key={inv.id} className="p-3 border-border shadow-sm flex flex-col gap-1.5">
                <div className="flex justify-between items-start">
-                  <div className="font-bold text-base line-clamp-1">{inv.customerName || 'Walk-in'}</div>
-                  <div className="text-emerald-600 font-extrabold text-base">{formatCurrency(inv.total)}</div>
+                  <div className="font-bold text-sm line-clamp-1">{inv.customerName || 'Walk-in'}</div>
+                  <div className="text-emerald-600 font-extrabold text-sm">{formatCurrency(inv.total)}</div>
                </div>
                <div className="flex justify-between items-center text-xs text-muted-foreground font-medium mt-auto pt-4 border-t border-border/50">
                   <div className="bg-muted px-2 py-1 rounded font-mono text-[10px]">#{inv.invoiceNumber}</div>
@@ -75,8 +75,8 @@ export default function POSLanding() {
              </Card>
           ))}
           {recentSales.length === 0 && (
-            <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-xl border-border/50 flex flex-col items-center justify-center gap-4">
-              <History size={48} className="opacity-20" />
+            <div className="col-span-full p-8 text-center text-muted-foreground border-2 border-dashed rounded-xl border-border/50 flex flex-col items-center justify-center gap-3">
+              <History size={36} className="opacity-20" />
               <p className="font-medium">No recent sales found.</p>
               <Button render={<Link href="/pos/new" />} variant="outline">
                 Create your first sale

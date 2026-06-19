@@ -135,28 +135,28 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-page-in">
+    <div className="flex flex-col gap-4 animate-page-in">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm font-medium mt-1">Overview of your pharmacy operations today.</p>
         </div>
         
         {/* Quick Actions */}
         <div className="flex items-center gap-3">
-          <Button onClick={() => router.push('/pos')} className="font-bold shadow-sm shadow-primary/20 rounded-xl h-10">
-            <ShoppingCart size={16} className="mr-2" />
+          <Button onClick={() => router.push('/pos')} className="font-bold shadow-sm shadow-primary/20 rounded-lg h-8">
+            <ShoppingCart size={14} className="mr-1.5" />
             New Sale
           </Button>
-          <Button variant="outline" onClick={() => router.push('/purchases/scan')} className="font-bold rounded-xl h-10">
-            <FileScan size={16} className="mr-2" />
+          <Button variant="outline" onClick={() => router.push('/purchases/scan')} className="font-bold rounded-lg h-8">
+            <FileScan size={14} className="mr-1.5" />
             Scan Invoice
           </Button>
         </div>
       </header>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 
           label="Today's Sales" 
           value={formatCurrency(stats?.todaySales || 0)} 
@@ -183,14 +183,14 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue Trends */}
         <Card className="lg:col-span-2 border-border shadow-sm bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Revenue Trends</CardTitle>
             <Badge variant="secondary" className="text-[10px] font-bold">Past 30 Days</Badge>
           </CardHeader>
-          <CardContent className="h-[280px] w-full pt-4">
+          <CardContent className="h-[220px] w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={salesTrends} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
@@ -211,7 +211,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Stock Mix (Top 5)</CardTitle>
           </CardHeader>
-          <CardContent className="h-[280px] flex flex-col items-center justify-center pt-0">
+          <CardContent className="h-[220px] flex flex-col items-center justify-center pt-0">
              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -244,7 +244,7 @@ export default function Dashboard() {
       </div>
 
       {/* Lists Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
           {/* Action Required / Alerts */}
           <Card className="border-border shadow-sm bg-card flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
@@ -256,20 +256,17 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
                {alerts.slice(0, 5).map((alert, i) => (
-                  <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                     <div className="flex items-center gap-3">
-                       <div className={cn(
-                         "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                         alert.severity === 'error' ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"
-                       )}>
-                         {alert.type === 'Low Stock' ? <Package size={18} /> : <Clock size={18} />}
+                  <div key={i} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                     <div className="flex items-center gap-2">
+                       <div className="shrink-0">
+                         {alert.type === 'Low Stock' ? <Package size={16} className={alert.severity === 'error' ? "text-destructive" : "text-amber-600"} /> : <Clock size={16} className={alert.severity === 'error' ? "text-destructive" : "text-amber-600"} />}
                        </div>
                        <div className="min-w-0">
                          <p className="text-sm font-bold text-foreground truncate">{alert.name}</p>
                          <p className="text-xs text-muted-foreground">{alert.type}</p>
                        </div>
                      </div>
-                     <div className="text-right shrink-0 ml-4">
+                     <div className="text-right shrink-0 ml-3">
                         <p className={cn(
                            "text-sm font-bold",
                            alert.severity === 'error' ? "text-destructive" : "text-amber-600"
@@ -278,8 +275,8 @@ export default function Dashboard() {
                   </div>
                ))}
                {alerts.length === 0 && (
-                  <div className="p-12 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-3">
-                     <ShieldAlert size={32} className="opacity-20" />
+                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                     <ShieldAlert size={28} className="opacity-20" />
                      <p className="text-sm font-medium">All clear! No pending alerts.</p>
                   </div>
                )}
@@ -297,9 +294,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
                {stats?.recentInvoices?.slice(0, 5).map((inv: any) => (
-                  <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-                     <div className="flex items-center gap-3">
-                       <div className="h-10 w-10 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-xs shrink-0">
+                  <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+                     <div className="flex items-center gap-2">
+                       <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
                           {inv.customerName?.charAt(0)?.toUpperCase() || 'W'}
                        </div>
                        <div className="min-w-0">
@@ -307,15 +304,15 @@ export default function Dashboard() {
                          <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{inv.invoiceNumber}</p>
                        </div>
                      </div>
-                     <div className="text-right shrink-0 ml-4">
+                     <div className="text-right shrink-0 ml-3">
                        <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
                        <p className="text-[10px] text-emerald-500 font-bold tracking-wide uppercase mt-0.5">Success</p>
                      </div>
                   </Link>
                ))}
                {(!stats?.recentInvoices || stats.recentInvoices.length === 0) && (
-                  <div className="p-12 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-3">
-                     <Receipt size={32} className="opacity-20" />
+                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                     <Receipt size={28} className="opacity-20" />
                      <p className="text-sm font-medium">No sales recorded yet today.</p>
                   </div>
                )}

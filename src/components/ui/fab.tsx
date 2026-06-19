@@ -26,12 +26,12 @@ export function FAB({ onClick, href, icon, label, className }: FABProps) {
             <Button 
                 onClick={handleClick}
                 size="lg"
-                className="h-16 w-16 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center p-0"
+                className="h-12 w-12 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center p-0"
             >
-                {icon || <Plus size={32} />}
+                {icon || <Plus size={24} />}
             </Button>
             {label && (
-                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10">
+                <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-zinc-900 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md shadow-lg whitespace-nowrap border border-white/10">
                     {label}
                 </div>
             )}
