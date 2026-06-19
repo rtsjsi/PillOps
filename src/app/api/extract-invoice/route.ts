@@ -97,17 +97,26 @@ export async function POST(req: NextRequest) {
             if (profile?.store_id) {
                 const supabase = await createClient();
                 
-                const { data: existing, error: dbError } = await supabase
-                   .from('purchase_invoices')
-                   .select('id, invoice_date')
-                   .eq('store_id', profile.store_id)
-                   .ilike('distributor_name', parsedData.distributorName.trim())
-                   .ilike('invoice_number', parsedData.invoiceNumber.trim())
-                   .limit(1)
-                   .maybeSingle();
+                // Try parsing the OCR date to YYYY-MM-DD for DB
+                let parsedDateForDB: string | null = null;
+                if (parsedData.invoiceDate) {
+                    if (/^\d{2}-\d{2}-\d{4}$/.test(parsedData.invoiceDate)) {
+                        const [dd, mm, yyyy] = parsedData.invoiceDate.split('-');
+                        parsedDateForDB = `${yyyy}-${mm}-${dd}`;
+                    } else if (/^\d{4}-\d{2}-\d{2}$/.test(parsedData.invoiceDate)) {
+                        parsedDateForDB = parsedData.invoiceDate;
+                    }
+                }
+
+                const { data: existing, error: dbError } = await supabase.rpc('check_duplicate_invoice', {
+                   p_store_id: profile.store_id,
+                   p_distributor_name: parsedData.distributorName,
+                   p_invoice_number: parsedData.invoiceNumber,
+                   p_invoice_date: parsedDateForDB
+                });
 
                 if (dbError) {
-                   console.warn("[OCR] DB Error checking duplicate:", dbError);
+                   console.warn("[OCR] DB Error checking duplicate via RPC:", dbError);
                 }
 
                 if (existing) {
