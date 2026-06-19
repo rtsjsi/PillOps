@@ -48,7 +48,8 @@ export function SalesItemCard({
   // Find current batch to show max quantity
   const currentBatch = availableBatches.find(b => b.id === item.storeInventoryBatchId);
 
-  const handleBatchSelect = (batchId: string) => {
+  const handleBatchSelect = (batchId: string | null) => {
+    if (!batchId) return;
     const batch = availableBatches.find(b => b.id === batchId);
     if (batch) {
       onChange(index, 'storeInventoryBatchId', batch.id);
