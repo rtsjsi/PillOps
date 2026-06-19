@@ -236,7 +236,6 @@ export default function ManualPurchaseEntry() {
                medicines={medicines}
                manufacturers={manufacturers}
                canRemove={items.length > 1}
-               showMatchFeatures={false}
              />
           ))}
         </div>

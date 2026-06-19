@@ -4,22 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { fetchUserProfile } from '@/lib/queries';
-import { cn } from '@/lib/utils';
 import { CheckCircle2, ArrowLeft, Sparkles, AlertTriangle, Loader2, Save, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import GenericTableLoading from '@/components/ui/tableLoading';
 import { toast } from 'sonner';
 import { fetchMedicines, fetchGlobalMedicines } from '@/lib/queries';
-import { checkAndEnrichInvoiceMedicines } from '@/app/medicines/actions';
 import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine-search';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
-import { addGlobalMedicine, fetchMedicineDetailsFromAI } from '@/app/medicines/actions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GenericAutocomplete } from '@/components/ui/autocomplete';
 
 // ─── Shared Components ────────────────────────────────────────
 import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
@@ -44,14 +35,10 @@ export default function ReviewExtraction() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
+  
   const [medicines, setMedicines] = useState<any[]>([]);
   const manufacturers = useDistinctValues('manufacturers', 'name', true);
   const distributors = useDistinctValues('distributors', 'name', false);
-  
-  const [isAddMedicineOpen, setIsAddMedicineOpen] = useState(false);
-  const [newMedicine, setNewMedicine] = useState({ name: '', category: 'Tablet', manufacturer: '' });
-  const [isAddingMedicine, setIsAddingMedicine] = useState(false);
-  const [fetchingAI, setFetchingAI] = useState<number[]>([]);
 
   useEffect(() => {
     fetchMedicines().then(setMedicines);
@@ -70,9 +57,6 @@ export default function ReviewExtraction() {
           if (fullItem.manufacturer !== undefined) newItems[idx].manufacturer = fullItem.manufacturer;
           if (fullItem.hsnCode !== undefined) newItems[idx].hsnCode = fullItem.hsnCode;
           if (fullItem.category !== undefined) newItems[idx].category = fullItem.category;
-          newItems[idx].matchStatus = 'exact';
-       } else {
-          newItems[idx].matchStatus = 'none';
        }
     }
     
@@ -160,19 +144,18 @@ export default function ReviewExtraction() {
         try {
           const parsed = JSON.parse(rawData);
           
+          // Trust the OCR output. Try to auto-fill category/manufacturer if we find a global match,
+          // but ALWAYS keep the medicine name (either the matched name or the raw OCR name).
           const enrichedItems = await Promise.all(parsed.items.map(async (item: any) => {
              const extracted = item.medicineName;
-             let enrichedItem = {
-               ...item,
-               extractedName: extracted,
-               matchStatus: 'none' as 'exact' | 'probable' | 'none',
-             };
+             let enrichedItem = { ...item };
              
              if (extracted) {
                 try {
                    const cleanExtracted = expandMedicineAbbreviations(extracted);
-                   let globals = await fetchGlobalMedicines(cleanExtracted);
+                   enrichedItem.medicineName = cleanExtracted.toUpperCase(); // Default to cleaned OCR
                    
+                   let globals = await fetchGlobalMedicines(cleanExtracted);
                    if (!globals || globals.length === 0) {
                       const firstWord = cleanExtracted.split(' ')[0];
                       if (firstWord && firstWord.length > 2) {
@@ -188,25 +171,28 @@ export default function ReviewExtraction() {
                       }).sort((a: any, b: any) => b.score - a.score);
                       
                       const bestMatch = scored[0];
-                      if (bestMatch && bestMatch.score > 0) {
+                      // Auto-fill details if it's a very strong match
+                      if (bestMatch && bestMatch.score > 80) {
                          enrichedItem.medicineName = bestMatch.item.name;
                          enrichedItem.category = bestMatch.item.category || '';
                          enrichedItem.manufacturer = bestMatch.item.manufacturer || '';
-                         enrichedItem.matchStatus = bestMatch.score === 100 ? 'exact' : 'probable';
                       } else {
-                         enrichedItem.category = '';
+                         enrichedItem.category = 'Tablet'; // sensible default
                          enrichedItem.manufacturer = '';
                       }
                    } else {
-                      enrichedItem.category = '';
+                      enrichedItem.category = 'Tablet';
                       enrichedItem.manufacturer = '';
                    }
                 } catch (e) {
-                   enrichedItem.category = '';
+                   // Fallback on error
+                   enrichedItem.medicineName = extracted.toUpperCase();
+                   enrichedItem.category = 'Tablet';
                    enrichedItem.manufacturer = '';
                 }
              } else {
-                enrichedItem.category = '';
+                enrichedItem.medicineName = '';
+                enrichedItem.category = 'Tablet';
                 enrichedItem.manufacturer = '';
              }
              return enrichedItem;
@@ -245,7 +231,8 @@ export default function ReviewExtraction() {
       data.items.forEach((item, idx) => {
         let isInvalid = false;
         if (
-            !item.medicineName || !item.batchNumber || !item.expiryDate ||
+            !item.medicineName || item.medicineName.trim().length < 3 || 
+            !item.batchNumber || !item.expiryDate ||
             item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
             item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
             item.mrp === undefined || item.mrp === null || isNaN(item.mrp) ||
@@ -283,23 +270,7 @@ export default function ReviewExtraction() {
         const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
-        // Auto-insert any unmatched items to global_medicine_master
-        if (status === 'completed') {
-           const unmatchedItems = data.items.filter(item => item.matchStatus === 'none' && item.medicineName);
-           if (unmatchedItems.length > 0) {
-              await Promise.all(unmatchedItems.map(item => 
-                 addGlobalMedicine({
-                    name: item.medicineName,
-                    category: item.category || 'Tablet',
-                    manufacturer: item.manufacturer || 'Unknown'
-                 }).catch(e => {
-                    console.error("Failed to auto-insert to global master:", e);
-                 })
-              ));
-           }
-        }
-
-        // Format MM-YYYY to YYYY-MM for the database if strictly matched
+        // Format MM-YYYY to YYYY-MM for the database
         const formattedItems = data.items.map(item => {
            let expiry = item.expiryDate;
            if (/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
@@ -344,60 +315,6 @@ export default function ReviewExtraction() {
     }
   };
 
-  // ─── AI Lookup Handler ───────────────────────────────────────
-  const handleAILookup = async (idx: number) => {
-    if (!data) return;
-    setFetchingAI(prev => [...prev, idx]);
-    try {
-      const item = data.items[idx];
-      const res = await fetchMedicineDetailsFromAI(item.extractedName || item.medicineName);
-      if (res.data) {
-        const newItems = [...data.items];
-        newItems[idx].medicineName = res.data.name;
-        newItems[idx].category = res.data.category;
-        newItems[idx].manufacturer = res.data.manufacturer;
-        setData({ ...data, items: newItems });
-        toast.success("AI fetched details successfully!");
-      } else {
-        throw new Error(res.error);
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Failed to fetch details from AI");
-    } finally {
-      setFetchingAI(prev => prev.filter(i => i !== idx));
-    }
-  };
-
-  const handleConfirmMatch = (idx: number) => {
-    if (!data) return;
-    const newItems = [...data.items];
-    newItems[idx].matchStatus = 'exact';
-    setData({ ...data, items: newItems });
-  };
-
-  // ─── Add Medicine Dialog Handler ─────────────────────────────
-  const handleAddMedicine = async () => {
-    if (!newMedicine.name || !newMedicine.category || !newMedicine.manufacturer) {
-       toast.error('Name, Category, and Manufacturer are mandatory.');
-       return;
-    }
-    setIsAddingMedicine(true);
-    try {
-       const res = await addGlobalMedicine(newMedicine);
-       if (res.error) throw new Error(res.error);
-       
-       toast.success('Medicine added! The AI has enriched it with additional details.');
-       setIsAddMedicineOpen(false);
-       setNewMedicine({ name: '', category: 'Tablet', manufacturer: '' });
-       
-       fetchMedicines().then(setMedicines);
-    } catch(err: any) {
-       toast.error(err.message);
-    } finally {
-       setIsAddingMedicine(false);
-    }
-  };
-
   // ─── Error State ─────────────────────────────────────────────
   if (fatalError) {
      return (
@@ -420,8 +337,8 @@ export default function ReviewExtraction() {
        <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
           <Sparkles size={64} className="text-primary animate-pulse" />
           <div className="grid gap-2">
-            <h2 className="text-2xl font-bold">Enriching Medicine Data...</h2>
-            <p className="text-muted-foreground">Checking Global Medicine Master and AI for missing details to save your time.</p>
+            <h2 className="text-2xl font-bold">Processing Invoice...</h2>
+            <p className="text-muted-foreground">Mapping extracted data to your inventory.</p>
           </div>
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mt-4" />
        </div>
@@ -471,14 +388,9 @@ export default function ReviewExtraction() {
       <div>
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold tracking-tight">Extracted Items ({data.items.length})</h2>
-             <div className="flex gap-2">
-                 <Button variant="secondary" size="sm" onClick={() => setIsAddMedicineOpen(true)} className="rounded-full font-bold">
-                     <Plus size={16} className="mr-2" /> Add Missing Medicine
-                 </Button>
-                 <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20">
-                     <Plus size={16} className="mr-2" /> Add Row
-                 </Button>
-             </div>
+             <Button variant="outline" size="sm" onClick={addItem} className="rounded-full font-bold text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
+                 <Plus size={16} className="mr-2" /> Add Row
+             </Button>
          </div>
 
          <div className="flex flex-col gap-3">
@@ -493,10 +405,6 @@ export default function ReviewExtraction() {
                 manufacturers={manufacturers}
                 canRemove={data.items.length > 1}
                 hasError={invalidFields.items.includes(idx)}
-                showMatchFeatures={!draftId}
-                onAILookup={handleAILookup}
-                onConfirmMatch={handleConfirmMatch}
-                isAIFetching={fetchingAI.includes(idx)}
               />
             ))}
          </div>
@@ -524,58 +432,6 @@ export default function ReviewExtraction() {
            </Button>
          </div>
       </div>
-
-      {/* ─── Add Medicine Dialog ─── */}
-      <Dialog open={isAddMedicineOpen} onOpenChange={setIsAddMedicineOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add Missing Medicine</DialogTitle>
-            <DialogDescription>
-              Add a medicine to the global master. Our AI will automatically enrich missing details like HSN, GST, and ingredients.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="med-name" className="text-xs uppercase tracking-wider font-bold">Medicine Name</Label>
-              <Input
-                id="med-name"
-                placeholder="e.g. Dolo 650"
-                value={newMedicine.name}
-                onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="med-category" className="text-xs uppercase tracking-wider font-bold">Category</Label>
-              <Select value={newMedicine.category} onValueChange={(v) => setNewMedicine({ ...newMedicine, category: v || 'Tablet' })}>
-                <SelectTrigger id="med-category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'].map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="med-manufacturer" className="text-xs uppercase tracking-wider font-bold">Manufacturer</Label>
-              <GenericAutocomplete
-                placeholder="e.g. Micro Labs"
-                value={newMedicine.manufacturer}
-                onValueChange={(v) => setNewMedicine({ ...newMedicine, manufacturer: v })}
-                options={manufacturers}
-                className="w-full"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={isAddingMedicine} onClick={handleAddMedicine} className="w-full rounded-full font-bold">
-              {isAddingMedicine ? <Loader2 className="animate-spin mr-2" /> : <Sparkles size={16} className="mr-2" />}
-              {isAddingMedicine ? 'Enriching & Saving...' : 'Save & Enrich'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
