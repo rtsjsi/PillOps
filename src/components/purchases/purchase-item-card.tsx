@@ -131,7 +131,6 @@ export function PurchaseItemCard({
           </FieldCell>
           <FieldCell label="Manufacturer">
             <GenericAutocomplete
-              onChange={(val, fullItem) => onChange(index, 'medicineName', val, fullItem)}
               value={item.manufacturer || ''}
               onValueChange={v => onChange(index, 'manufacturer', v)}
               options={manufacturers}

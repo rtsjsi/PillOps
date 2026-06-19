@@ -137,11 +137,11 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               return (
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.textCenter, { width: '5%' }]}>{idx + 1}</Text>
-                  <Text style={[styles.uppercase, { width: '25%' }]} numberOfLines={1}>{medicineName}</Text>
-                  <Text style={[styles.uppercase, styles.textXs, { width: '8%' }]} numberOfLines={1}>{pack}</Text>
-                  <Text style={{ width: '10%' }} numberOfLines={1}>{hsn}</Text>
-                  <Text style={[styles.uppercase, { width: '12%' }]} numberOfLines={1}>{batchNo}</Text>
-                  <Text style={{ width: '8%' }} numberOfLines={1}>{expDt.substring(0, 5)}</Text>
+                  <Text style={[styles.uppercase, { width: '25%' }]}>{medicineName}</Text>
+                  <Text style={[styles.uppercase, styles.textXs, { width: '8%' }]}>{pack}</Text>
+                  <Text style={{ width: '10%' }}>{hsn}</Text>
+                  <Text style={[styles.uppercase, { width: '12%' }]}>{batchNo}</Text>
+                  <Text style={{ width: '8%' }}>{expDt.substring(0, 5)}</Text>
                   <Text style={[styles.textRight, { width: '6%' }]}>{item.quantity}</Text>
                   <Text style={[styles.textRight, { width: '8%' }]}>{item.mrp.toFixed(2)}</Text>
                   <Text style={[styles.textRight, { width: '8%' }]}>{disc}</Text>

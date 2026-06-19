@@ -100,7 +100,6 @@ export function SalesItemCard({
             value={item.medicineName}
             onChange={(val, fullItem) => onChange(index, 'medicineName', val, fullItem)}
             medicines={medicines}
-            medicines={medicines}
           />
         </div>
 

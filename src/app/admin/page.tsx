@@ -367,7 +367,6 @@ function AdminDashboardContent() {
         <div className="relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
           <Input 
-           ...`}
             className="h-9 w-full sm:w-64 pl-9 text-xs rounded-full bg-white border-slate-200 shadow-sm"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
