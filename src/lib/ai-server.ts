@@ -62,8 +62,7 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
       { role: "user", content: content }
     ],
     model: modelName,
-    temperature: 0.1,
-    response_format: { type: "json_object" },
+    temperature: 0.1
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
