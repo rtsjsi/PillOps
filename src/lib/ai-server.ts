@@ -39,7 +39,9 @@ Return ONLY a valid JSON object matching exactly this schema:
   "discountAmount": number,
   "gstAmount": number,
   "total": number
-}`;
+}
+
+IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting like ```json, and do not include any conversational text or preamble. Output JSON immediately.`;
 
 // --- TIER EXECUTORS ---
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
