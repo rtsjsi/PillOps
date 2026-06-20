@@ -40,6 +40,8 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderColor: '#000',
   },
 });
 
@@ -113,19 +115,24 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
           {/* Table */}
           <View style={{ minHeight: 300 }}>
             <View style={styles.tableHeaderRow}>
-              <Text style={[styles.textCenter, { width: '5%' }]}>Sr.</Text>
-              <Text style={{ width: '28%' }}>Description</Text>
-              <Text style={{ width: '15%' }}>HSN</Text>
-              <Text style={{ width: '18%' }}>BatchNo</Text>
-              <Text style={{ width: '10%' }}>ExpDt</Text>
-              <Text style={[styles.textRight, { width: '8%' }]}>MRP</Text>
-              <Text style={[styles.textRight, { width: '6%' }]}>Qty</Text>
+              <Text style={[styles.textCenter, styles.borderRight, { width: '5%' }]}>Sr.</Text>
+              <Text style={[styles.borderRight, { width: '28%', paddingLeft: 2 }]}>Description</Text>
+              <Text style={[styles.borderRight, { width: '15%', paddingLeft: 2 }]}>HSN</Text>
+              <Text style={[styles.borderRight, { width: '18%', paddingLeft: 2 }]}>BatchNo</Text>
+              <Text style={[styles.borderRight, { width: '10%', paddingLeft: 2 }]}>ExpDt</Text>
+              <Text style={[styles.textRight, styles.borderRight, { width: '8%', paddingRight: 2 }]}>MRP</Text>
+              <Text style={[styles.textRight, styles.borderRight, { width: '6%', paddingRight: 2 }]}>Qty</Text>
               <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>Amount</Text>
             </View>
             
             {invoice.items.map((item: any, idx: number) => {
               const amount = item.quantity * item.mrp;
-              const expDt = item.expiryDate ? formatExpiryDate(item.expiryDate).split(' ').join('/') : ' ';
+              
+              const expDateObj = item.expiryDate ? new Date(item.expiryDate) : null;
+              const expDt = expDateObj && !isNaN(expDateObj.getTime()) 
+                 ? `${String(expDateObj.getMonth() + 1).padStart(2, '0')}-${expDateObj.getFullYear()}` 
+                 : ' ';
+                 
               const hsn = item.medicine?.hsnCode || item.hsnCode || '30049099';
               
               const gObj = item.medicine?.global_medicine_master;
@@ -136,13 +143,13 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               
               return (
                 <View key={idx} style={styles.tableRow}>
-                  <Text style={[styles.textCenter, { width: '5%' }]}>{idx + 1}</Text>
-                  <Text style={[styles.uppercase, { width: '28%' }]}>{medicineName}</Text>
-                  <Text style={{ width: '15%' }}>{hsn}</Text>
-                  <Text style={[styles.uppercase, { width: '18%' }]}>{batchNo}</Text>
-                  <Text style={{ width: '10%' }}>{expDt.substring(0, 7)}</Text>
-                  <Text style={[styles.textRight, { width: '8%' }]}>{item.mrp.toFixed(2)}</Text>
-                  <Text style={[styles.textRight, { width: '6%' }]}>{item.quantity}</Text>
+                  <Text style={[styles.textCenter, styles.borderRight, { width: '5%' }]}>{idx + 1}</Text>
+                  <Text style={[styles.uppercase, styles.borderRight, { width: '28%', paddingLeft: 2 }]}>{medicineName}</Text>
+                  <Text style={[styles.borderRight, { width: '15%', paddingLeft: 2 }]}>{hsn}</Text>
+                  <Text style={[styles.uppercase, styles.borderRight, { width: '18%', paddingLeft: 2 }]}>{batchNo}</Text>
+                  <Text style={[styles.borderRight, { width: '10%', paddingLeft: 2 }]}>{expDt}</Text>
+                  <Text style={[styles.textRight, styles.borderRight, { width: '8%', paddingRight: 2 }]}>{item.mrp.toFixed(2)}</Text>
+                  <Text style={[styles.textRight, styles.borderRight, { width: '6%', paddingRight: 2 }]}>{item.quantity}</Text>
                   <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>{amount.toFixed(2)}</Text>
                 </View>
               );
@@ -152,12 +159,11 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
           {/* Footer Area */}
           <View style={[styles.flexRow, styles.borderTop]}>
             <View style={[styles.flex3, styles.p2, styles.borderRight, { justifyContent: 'flex-end', paddingBottom: 4 }]}>
-              <Text>PAN NO. {storeInfo?.panNo || ''}</Text>
-              <Text style={[styles.uppercase, { marginTop: 10 }]}>MSG-BROKEN & CUTTING STRIPS WILL BE NOT TAKEN BACK.</Text>
               <Text style={{ marginTop: 2 }}>Rupees {words} Only</Text>
             </View>
             <View style={styles.flex1}>
               <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
+                <Text style={styles.bold}>TOTAL</Text>
                 <Text style={styles.bold}>{totalQty}</Text>
                 <Text style={styles.bold}>{invoice.subtotal.toFixed(2)}</Text>
               </View>
@@ -175,12 +181,6 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               </View>
             </View>
           </View>
-        </View>
-
-        {/* Bottom Info */}
-        <View style={[styles.flexRow, { justifyContent: 'space-between', marginTop: 4 }]}>
-          <Text style={styles.textXs}>USER: ADMIN</Text>
-          <Text style={styles.textXs}>E. & O. E.</Text>
         </View>
       </Page>
     </Document>
