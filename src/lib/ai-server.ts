@@ -10,7 +10,9 @@ CRITICAL INSTRUCTIONS:
 4. OCR PRECISION: Pay extreme attention to similar-looking characters in Batch Numbers (e.g., 6 vs 8, 0 vs O, B vs 8, D vs 0). Double-check the image pixels carefully.
 5. EXPIRY FORMATS: Look for the 'Exp' column. Indian invoices typically use MM/YY or MM-YY (e.g., "08/26" or "08-26"). Read the digits carefully.
 6. EXACT MEDICINE NAMES: Do NOT clean, normalize, or truncate the medicine names. Extract the EXACT verbatim string written under the item/product name column, including all volume, packaging, and unit details (e.g. extract "CREMAFFIN SYP 225ML" exactly, NOT just "CREMAFFIN SYRUP").
-7. DUPLICATE ROWS: Be extremely careful not to skip rows that have the same medicine name. Some invoices list the same item twice on consecutive lines (e.g. if there are two different batches). Treat them as separate items and extract BOTH rows. Count the total number of rows visually to ensure you don't miss any.
+7. DUPLICATE ROWS & REPEATED ITEMS: Be extremely careful not to skip rows that have the same medicine name. Some invoices list the same item twice on consecutive lines. Treat them as separate items and extract BOTH rows. 
+8. IGNORE HANDWRITTEN MARKS: The invoice may have handwritten checkmarks (e.g., blue pen ticks) over the printed quantities or amounts. Ignore these pen marks. Read only the printed digits.
+9. QTY vs PACK: Do NOT confuse the "Pack" column (e.g. "60T", "10ML") with the "Qty" column. Make sure the quantity reflects the printed number in the Qty column.
 
 Return ONLY a valid JSON object matching exactly this schema:
 {
