@@ -1,9 +1,11 @@
-const j = '{\n  "test": "abc\ndef"\n}';
 try {
-  JSON.parse(j);
-  console.log('Parsed successfully');
+  JSON.parse('{"a":1,}');
 } catch(e) {
-  console.log('Error:', e.message);
-  const fixed = j.replace(/[\u0000-\u001F]+/g, ' ');
-  console.log('Fixed parse:', JSON.parse(fixed));
+  console.error("Error 1:", e.message);
+}
+
+try {
+  JSON.parse('{"a":1, "b":}');
+} catch(e) {
+  console.error("Error 2:", e.message);
 }

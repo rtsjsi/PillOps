@@ -60,8 +60,50 @@ export async function POST(req: NextRequest) {
     
     // Safety fallback just in case the model wraps in markdown
     let jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-    // Sanitize unescaped literal control characters (like literal newlines) that break JSON.parse
-    jsonString = jsonString.replace(/[\u0000-\u001F]+/g, ' ');
+    
+    // Robust JSON sanitization state machine: fixes trailing commas and unescaped control chars
+    function fixJson(str: string) {
+      let inString = false;
+      let escape = false;
+      let result = '';
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (char === '\\' && !escape) {
+          escape = true;
+          result += char;
+          continue;
+        }
+        if (char === '"' && !escape) {
+          inString = !inString;
+        }
+        escape = false;
+        
+        if (inString) {
+          const code = char.charCodeAt(0);
+          if (code < 32) {
+            result += ' '; // Convert literal newlines/tabs inside strings to space
+            continue;
+          }
+        }
+        
+        if (!inString && char === ',') {
+          let nextChar = '';
+          for (let j = i + 1; j < str.length; j++) {
+            if (str[j] !== ' ' && str[j] !== '\n' && str[j] !== '\r' && str[j] !== '\t') {
+              nextChar = str[j];
+              break;
+            }
+          }
+          if (nextChar === '}' || nextChar === ']') {
+            continue; // Skip trailing comma
+          }
+        }
+        result += char;
+      }
+      return result;
+    }
+
+    jsonString = fixJson(jsonString);
     const parsedData = JSON.parse(jsonString);
 
     // Math Validation
