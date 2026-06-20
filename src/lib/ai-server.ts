@@ -1,5 +1,5 @@
 export const PROMPT = `You are an expert pharmacy data extraction AI.
-Analyze this image of a distributor pharmaceutical invoice. Extract the tabular structured data perfectly.
+Analyze these images of a multi-page distributor pharmaceutical invoice. Extract the tabular structured data perfectly, combining all items from all pages into a single continuous list.
 Pay close attention to table headers.
 Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date, 'Qty' or 'Billed' means Quantity.
 
@@ -47,13 +47,19 @@ IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting l
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
 // initialization time (Error 1102 fix).
 
-export async function runGroq(imageBase64: string, modelName: string = "meta-llama/llama-4-scout-17b-16e-instruct") {
+export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = "meta-llama/llama-4-scout-17b-16e-instruct") {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
+  
+  const content: any[] = [{ type: "text", text: PROMPT }];
+  images.forEach(img => {
+      content.push({ type: "image_url", image_url: { url: img.base64 } });
+  });
+
   const chatCompletion = await client.chat.completions.create({
     messages: [
-      { role: "user", content: [{ type: "text", text: PROMPT }, { type: "image_url", image_url: { url: imageBase64 } }] }
+      { role: "user", content: content }
     ],
     model: modelName,
     temperature: 0.1,
@@ -62,13 +68,20 @@ export async function runGroq(imageBase64: string, modelName: string = "meta-lla
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
 
-export async function runGemini(imageBase64: string, mimeType: string, modelName: string = "gemini-flash-latest") {
+export async function runGemini(images: {base64: string, mimeType: string}[], modelName: string = "gemini-flash-latest") {
   if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
-  const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+  
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1 } });
-  const result = await model.generateContent([PROMPT, { inlineData: { data: cleanBase64, mimeType: mimeType } }]);
+  
+  const parts: any[] = [PROMPT];
+  images.forEach(img => {
+      const cleanBase64 = img.base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+      parts.push({ inlineData: { data: cleanBase64, mimeType: img.mimeType } });
+  });
+
+  const result = await model.generateContent(parts);
   const response = await result.response;
   return response.text();
 }

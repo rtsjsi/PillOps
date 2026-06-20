@@ -7,18 +7,17 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-
-    const { imageBase64, mimeType, preferredModel = 'auto' } = body;
-    if (!imageBase64 || !mimeType) {
+    const { images, preferredModel = 'auto' } = body;
+    if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
     }
 
     let textResponse = "";
     
     const runners = [
-      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(imageBase64, "meta-llama/llama-4-scout-17b-16e-instruct") },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(imageBase64, mimeType, "gemini-2.5-flash") },
-      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(imageBase64, mimeType, "gemini-flash-latest") }
+      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(images, "meta-llama/llama-4-scout-17b-16e-instruct") },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(images, "gemini-2.5-flash") },
+      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(images, "gemini-flash-latest") }
     ];
 
     if (preferredModel !== 'auto') {

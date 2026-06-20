@@ -14,6 +14,7 @@ export default function AIInvoiceScanner() {
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState('llama-4-scout');
+  const [images, setImages] = useState<{base64: string, mimeType: string, previewUrl: string}[]>([]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -52,22 +53,21 @@ export default function AIInvoiceScanner() {
     });
   };
 
-  const handleScanReal = async (file: File) => {
+  const handleProcess = async () => {
+    if (images.length === 0) return;
     setScanning(true);
     setError(null);
-    setProgressText('Uploading image securely...');
+    setProgressText('Uploading images securely...');
 
     try {
-      const base64 = await fileToBase64(file);
-      
-      setProgressText('Vision AI processing document...');
+      const payloadImages = images.map(img => ({ base64: img.base64, mimeType: img.mimeType }));
+      setProgressText('Vision AI processing documents...');
       
       const response = await fetch('/api/extract-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageBase64: base64,
-          mimeType: file.type,
+          images: payloadImages,
           preferredModel: selectedModel
         })
       });
@@ -94,10 +94,23 @@ export default function AIInvoiceScanner() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleScanReal(e.target.files[0]);
+      const newImages = [...images];
+      for (let i = 0; i < e.target.files.length; i++) {
+        const file = e.target.files[i];
+        const base64 = await fileToBase64(file);
+        const previewUrl = URL.createObjectURL(file);
+        newImages.push({ base64, mimeType: file.type, previewUrl });
+      }
+      setImages(newImages);
+      // Reset input so the same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
   };
 
   if (scanning) {
@@ -150,39 +163,68 @@ export default function AIInvoiceScanner() {
            </Select>
         </div>
 
-        <h2 className="text-sm text-center text-muted-foreground">Choose an input method</h2>
-        
-        <button 
-          className="flex-1 flex flex-col items-center justify-center gap-3 text-base font-bold border-2 border-dashed border-primary bg-primary/10 rounded-xl"
-          onClick={() => {
+        {images.length > 0 && (
+          <div className="bg-card p-4 rounded-xl border">
+            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3 block">Scanned Pages ({images.length})</Label>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative shrink-0 w-24 h-32 rounded-lg border-2 border-primary/20 overflow-hidden shadow-sm">
+                  <img src={img.previewUrl} className="object-cover w-full h-full" alt={`Page ${idx + 1}`} />
+                  <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md transition-colors">
+                    ×
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-1 font-bold">
+                    Page {idx + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 h-24 shrink-0">
+          <button 
+            className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
+            onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.capture = 'environment';
+                  fileInputRef.current.multiple = false;
+                  fileInputRef.current.click();
+                }
+            }}
+          >
+            <Camera size={28} className="text-primary" />
+            Camera
+          </button>
+
+          <button 
+            className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border border-muted-foreground/30 bg-card hover:bg-accent rounded-xl transition-colors"
+            onClick={() => {
               if (fileInputRef.current) {
-                fileInputRef.current.capture = 'environment';
+                fileInputRef.current.removeAttribute('capture');
+                fileInputRef.current.multiple = true;
                 fileInputRef.current.click();
               }
-          }}
-        >
-          <Camera size={36} className="text-primary" />
-          Open Camera
-        </button>
+            }}
+          >
+            <Upload size={28} className="text-muted-foreground" />
+            Gallery
+          </button>
+        </div>
 
-        <div className="flex items-center justify-center text-muted-foreground">OR</div>
-
-        <button 
-          className="flex-1 flex flex-col items-center justify-center gap-3 text-base font-bold border border-muted/20 bg-card rounded-xl"
-          onClick={() => {
-            if (fileInputRef.current) {
-              fileInputRef.current.removeAttribute('capture');
-              fileInputRef.current.click();
-            }
-          }}
-        >
-          <Upload size={36} className="text-muted-foreground" />
-          Upload Image
-        </button>
+        {images.length > 0 && (
+          <button
+            onClick={handleProcess}
+            className="w-full mt-auto mb-4 bg-primary text-primary-foreground font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all"
+          >
+            PROCESS {images.length} PAGE{images.length !== 1 ? 'S' : ''}
+          </button>
+        )}
         
         <input 
           type="file" 
           accept="image/*" 
+          multiple
           ref={fileInputRef} 
           className="hidden" 
           onChange={handleFileChange}
