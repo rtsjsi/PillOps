@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     }
     
     // Safety fallback just in case the model wraps in markdown
-    const jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    let jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Sanitize unescaped literal control characters (like literal newlines) that break JSON.parse
+    jsonString = jsonString.replace(/[\u0000-\u001F]+/g, ' ');
     const parsedData = JSON.parse(jsonString);
 
     // Math Validation
