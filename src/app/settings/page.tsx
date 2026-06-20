@@ -20,7 +20,8 @@ export default function SettingsPage() {
     name: '',
     address: '',
     phone: '',
-    gstin: ''
+    gstin: '',
+    dl_no: ''
   });
 
   const [alertsEnabled, setAlertsEnabled] = useState(false);
@@ -37,7 +38,8 @@ export default function SettingsPage() {
           name: data.name || '',
           address: data.address || '',
           phone: data.phone || '',
-          gstin: data.gstin || ''
+          gstin: data.gstin || '',
+          dl_no: data.dl_no || ''
         });
       }
       
@@ -103,6 +105,10 @@ export default function SettingsPage() {
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GSTIN Number</Label>
                   <Input disabled={!isEditable} value={storeData.gstin} onChange={e => setStoreData({...storeData, gstin: e.target.value})} className="h-10 bg-slate-50 uppercase" pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$" title="Valid 15-character GSTIN required" />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Drug License No (DL No)</Label>
+                  <Input disabled={!isEditable} value={storeData.dl_no} onChange={e => setStoreData({...storeData, dl_no: e.target.value})} className="h-10 bg-slate-50 uppercase" />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Physical Address</Label>

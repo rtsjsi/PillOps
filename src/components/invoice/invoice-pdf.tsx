@@ -71,7 +71,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
             </View>
             <View style={[styles.p2, { width: '30%', justifyContent: 'space-between' }]}>
               <Text>MO. {storeInfo?.phone || 'N/A'}</Text>
-              <Text style={{ marginTop: 2 }}>D.L NO. {storeInfo?.drugLicense || ''}</Text>
+              <Text style={{ marginTop: 2 }}>D.L NO. {storeInfo?.dl_no || ''}</Text>
               {storeInfo?.gstin && <Text style={{ marginTop: 2 }}>GSTIN: {storeInfo?.gstin}</Text>}
             </View>
           </View>
@@ -114,14 +114,12 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
           <View style={{ minHeight: 300 }}>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.textCenter, { width: '5%' }]}>Sr.</Text>
-              <Text style={{ width: '25%' }}>Description</Text>
-              <Text style={{ width: '8%' }}>Pack</Text>
-              <Text style={{ width: '10%' }}>HSN</Text>
-              <Text style={{ width: '12%' }}>BatchNo</Text>
-              <Text style={{ width: '8%' }}>ExpDt</Text>
-              <Text style={[styles.textRight, { width: '6%' }]}>Qty</Text>
+              <Text style={{ width: '28%' }}>Description</Text>
+              <Text style={{ width: '15%' }}>HSN</Text>
+              <Text style={{ width: '18%' }}>BatchNo</Text>
+              <Text style={{ width: '10%' }}>ExpDt</Text>
               <Text style={[styles.textRight, { width: '8%' }]}>MRP</Text>
-              <Text style={[styles.textRight, { width: '8%' }]}>Disc</Text>
+              <Text style={[styles.textRight, { width: '6%' }]}>Qty</Text>
               <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>Amount</Text>
             </View>
             
@@ -129,22 +127,22 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               const amount = item.quantity * item.mrp;
               const expDt = item.expiryDate ? formatExpiryDate(item.expiryDate).split(' ').join('/') : ' ';
               const hsn = item.medicine?.hsnCode || item.hsnCode || '30049099';
-              const pack = item.medicine?.pack || item.pack || 'TAB';
-              const disc = invoice.discountPercent > 0 ? invoice.discountPercent.toFixed(2) : '0.00';
-              const medicineName = item.medicine?.name || item.medicineName || 'UNKNOWN';
+              
+              const gObj = item.medicine?.global_medicine_master;
+              const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
+              const medicineName = g.name || item.medicine?.name || item.medicineName || 'UNKNOWN';
+              
               const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
               
               return (
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.textCenter, { width: '5%' }]}>{idx + 1}</Text>
-                  <Text style={[styles.uppercase, { width: '25%' }]}>{medicineName}</Text>
-                  <Text style={[styles.uppercase, styles.textXs, { width: '8%' }]}>{pack}</Text>
-                  <Text style={{ width: '10%' }}>{hsn}</Text>
-                  <Text style={[styles.uppercase, { width: '12%' }]}>{batchNo}</Text>
-                  <Text style={{ width: '8%' }}>{expDt.substring(0, 5)}</Text>
-                  <Text style={[styles.textRight, { width: '6%' }]}>{item.quantity}</Text>
+                  <Text style={[styles.uppercase, { width: '28%' }]}>{medicineName}</Text>
+                  <Text style={{ width: '15%' }}>{hsn}</Text>
+                  <Text style={[styles.uppercase, { width: '18%' }]}>{batchNo}</Text>
+                  <Text style={{ width: '10%' }}>{expDt.substring(0, 7)}</Text>
                   <Text style={[styles.textRight, { width: '8%' }]}>{item.mrp.toFixed(2)}</Text>
-                  <Text style={[styles.textRight, { width: '8%' }]}>{disc}</Text>
+                  <Text style={[styles.textRight, { width: '6%' }]}>{item.quantity}</Text>
                   <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>{amount.toFixed(2)}</Text>
                 </View>
               );
@@ -164,8 +162,8 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                 <Text style={styles.bold}>{invoice.subtotal.toFixed(2)}</Text>
               </View>
               <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
-                <Text>OTHER +/-</Text>
-                <Text>0.00</Text>
+                <Text>DISCOUNT</Text>
+                <Text>{invoice.discountAmount ? invoice.discountAmount.toFixed(2) : '0.00'}</Text>
               </View>
               <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
                 <Text>ROUND OFF</Text>
@@ -181,7 +179,6 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
 
         {/* Bottom Info */}
         <View style={[styles.flexRow, { justifyContent: 'space-between', marginTop: 4 }]}>
-          <Text style={styles.textXs}>(G2).Software by PILLOPS : Customer Care No: +91 XXXXXXXXXX</Text>
           <Text style={styles.textXs}>USER: ADMIN</Text>
           <Text style={styles.textXs}>E. & O. E.</Text>
         </View>

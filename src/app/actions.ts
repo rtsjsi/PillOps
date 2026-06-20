@@ -194,7 +194,7 @@ export async function logoutUser() {
 
 // ─── Store Settings (mutations) ─────────────────────────────
 
-export async function updateStoreSettings(data: { name: string, address: string, phone: string, gstin: string }) {
+export async function updateStoreSettings(data: { name: string, address: string, phone: string, gstin: string, dl_no?: string }) {
   const storeId = await getStoreId();
   const adminDb = createAdminClient();
   
@@ -204,7 +204,8 @@ export async function updateStoreSettings(data: { name: string, address: string,
       name: data.name,
       address: data.address,
       phone: data.phone,
-      gstin: data.gstin
+      gstin: data.gstin,
+      dl_no: data.dl_no
     })
     .eq('id', storeId);
 
