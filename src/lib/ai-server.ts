@@ -62,7 +62,8 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
       { role: "user", content: content }
     ],
     model: modelName,
-    temperature: 0.1
+    temperature: 0.1,
+    max_tokens: 8000
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
@@ -72,7 +73,7 @@ export async function runGemini(images: {base64: string, mimeType: string}[], mo
   
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1 } });
+  const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 8192 } });
   
   const parts: any[] = [PROMPT];
   images.forEach(img => {
