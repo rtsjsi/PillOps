@@ -118,7 +118,11 @@ export function SalesItemCard({
           <FieldCell label="Batch">
             <Select value={item.storeInventoryBatchId || ''} onValueChange={handleBatchSelect}>
               <SelectTrigger className="h-9 text-sm font-medium w-full [&>span]:truncate">
-                <SelectValue />
+                {item.batchNumber ? (
+                  <span className="flex flex-1 text-left truncate">{item.batchNumber}</span>
+                ) : (
+                  <SelectValue placeholder="Select batch" />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {availableBatches.length > 0 ? (
