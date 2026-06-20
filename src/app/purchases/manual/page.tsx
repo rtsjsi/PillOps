@@ -18,7 +18,7 @@ import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purc
 export default function ManualPurchaseEntry() {
   const router = useRouter();
   const distributors = useDistinctValues('purchase_invoices', 'distributor_name');
-  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
+  const manufacturers = useDistinctValues('manufacturers', 'name', true);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);

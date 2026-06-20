@@ -51,7 +51,7 @@ function AdminDashboardContent() {
   const [stats, setStats] = useState({ totalStores: 0, totalUsers: 0, proStores: 0, enterpriseStores: 0 });
   const [loading, setLoading] = useState(true);
   
-  const manufacturers = useDistinctValues('global_medicines', 'manufacturer', true);
+  const manufacturers = useDistinctValues('manufacturers', 'name', true);
   
   // UI states
   const [searchQuery, setSearchQuery] = useState('');
