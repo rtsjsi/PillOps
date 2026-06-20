@@ -69,6 +69,11 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < str.length; i++) {
         const char = str[i];
         if (char === '\\' && !escape) {
+          const nextChar = str[i + 1];
+          // Drop invalid escapes (like \ followed by a space or invalid char)
+          if (nextChar && !['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'].includes(nextChar)) {
+            continue;
+          }
           escape = true;
           result += char;
           continue;

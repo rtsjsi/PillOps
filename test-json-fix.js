@@ -6,6 +6,10 @@ function fixJson(jsonString) {
     const char = jsonString[i];
     
     if (char === '\\' && !escape) {
+      const nextChar = jsonString[i + 1];
+      if (nextChar && !['"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'].includes(nextChar)) {
+        continue; // drop the invalid backslash
+      }
       escape = true;
       result += char;
       continue;
@@ -42,7 +46,10 @@ function fixJson(jsonString) {
 }
 
 const badJson1 = '{\n  "name": "Line 1\nLine 2",\n  "test": 1,\n}';
+const badJson3 = '{"name": "Bad\\ Escape"}';
 
 console.log(fixJson(badJson1));
+console.log(fixJson(badJson3));
 JSON.parse(fixJson(badJson1));
+JSON.parse(fixJson(badJson3));
 console.log("Passed!");
