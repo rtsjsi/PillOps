@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini, runGitHub } from '@/lib/ai-server';
+import { runGroq, runGemini } from '@/lib/ai-server';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
     let textResponse = "";
     
     const runners = [
-      { id: 'groq', name: 'Groq', run: () => runGroq(imageBase64) },
-      { id: 'github', name: 'GitHub Models', run: () => runGitHub(imageBase64) },
-      { id: 'gemini', name: 'Gemini', run: () => runGemini(imageBase64, mimeType) }
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(imageBase64, mimeType, "gemini-2.5-flash") },
+      { id: 'llama-3.2-90b', name: 'Llama 3.2 90B Vision', run: () => runGroq(imageBase64, "llama-3.2-90b-vision-preview") },
+      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(imageBase64, mimeType, "gemini-flash-latest") },
+      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(imageBase64, "meta-llama/llama-4-scout-17b-16e-instruct") }
     ];
 
     if (preferredModel !== 'auto') {

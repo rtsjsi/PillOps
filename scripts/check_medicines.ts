@@ -24,12 +24,12 @@ async function main() {
   const missingMedicines: string[] = [];
   let totalCount = 0;
 
-  fs.createReadStream('Medicine_Details.csv')
+  fs.createReadStream('medicine_data.csv')
     .pipe(csv())
     .on('data', (data) => {
       totalCount++;
-      // Get the first column value if the header is not strictly "Medicine Name"
-      const rawName = data['Medicine Name'] || Object.values(data)[0];
+      // Get the name column
+      const rawName = data['product_name'];
       if (rawName && typeof rawName === 'string') {
          const medName = rawName.trim();
          // The DB might have uppercase names or specific formatting, but we compared lowercase
@@ -48,8 +48,8 @@ async function main() {
       }
       
       // Save full list to a file for review
-      fs.writeFileSync('missing_medicines.txt', missingMedicines.join('\n'));
-      console.log('Full list of missing medicines saved to missing_medicines.txt');
+      fs.writeFileSync('missing_medicines_data.txt', missingMedicines.join('\n'));
+      console.log('Full list of missing medicines saved to missing_medicines_data.txt');
       
       await client.end();
     });
