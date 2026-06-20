@@ -9,6 +9,7 @@ CRITICAL INSTRUCTIONS:
 3. ZERO HALLUCINATION POLICY: DO NOT guess or default to 1 for quantities. Find the exact column for 'Qty', 'Billed Qty', or 'Act' and extract the exact number.
 4. OCR PRECISION: Pay extreme attention to similar-looking characters in Batch Numbers (e.g., 6 vs 8, 0 vs O, B vs 8, D vs 0). Double-check the image pixels carefully.
 5. EXPIRY FORMATS: Look for the 'Exp' column. Indian invoices typically use MM/YY or MM-YY (e.g., "08/26" or "08-26"). Read the digits carefully.
+6. EXACT MEDICINE NAMES: Do NOT clean, normalize, or truncate the medicine names. Extract the EXACT verbatim string written under the item/product name column, including all volume, packaging, and unit details (e.g. extract "CREMAFFIN SYP 225ML" exactly, NOT just "CREMAFFIN SYRUP").
 
 Return ONLY a valid JSON object matching exactly this schema:
 {
