@@ -13,7 +13,7 @@ export default function AIInvoiceScanner() {
   const [scanning, setScanning] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState('auto');
+  const [selectedModel, setSelectedModel] = useState('llama-4-scout');
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -144,7 +144,6 @@ export default function AIInvoiceScanner() {
               <SelectContent>
                  <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>
                  <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                 <SelectItem value="llama-3.2-90b">Llama 3.2 90B Vision</SelectItem>
                  <SelectItem value="gemini-flash-latest">Gemini Flash Latest</SelectItem>
                  <SelectItem value="llama-4-scout">Llama 4 Scout 17B</SelectItem>
               </SelectContent>

@@ -16,10 +16,9 @@ export async function POST(req: NextRequest) {
     let textResponse = "";
     
     const runners = [
+      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(imageBase64, "meta-llama/llama-4-scout-17b-16e-instruct") },
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(imageBase64, mimeType, "gemini-2.5-flash") },
-      { id: 'llama-3.2-90b', name: 'Llama 3.2 90B Vision', run: () => runGroq(imageBase64, "llama-3.2-90b-vision-preview") },
-      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(imageBase64, mimeType, "gemini-flash-latest") },
-      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(imageBase64, "meta-llama/llama-4-scout-17b-16e-instruct") }
+      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(imageBase64, mimeType, "gemini-flash-latest") }
     ];
 
     if (preferredModel !== 'auto') {
