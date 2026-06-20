@@ -26,7 +26,7 @@ async function main() {
     console.log(`Found ${res.rowCount} duplicate names! Showing top 20 with highest counts:`);
     
     // Fetch top 20
-    for (let i = 0; i < Math.min(20, res.rowCount); i++) {
+    for (let i = 0; i < Math.min(20, res.rowCount ?? 0); i++) {
       const name = res.rows[i].name_lower;
       const count = res.rows[i].count;
       console.log(`- "${name}" appears ${count} times`);

@@ -4,14 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { cache } from 'react';
-import { chatWithGroq } from '@/lib/ai-server';
 
-// ─── AI Helper ─────────────────────────────────────────────
-
-export async function askAI(prompt: string, context?: string) {
-  const systemPrompt = `You are a helpful pharmacy assistant for PillOps. ${context || ''}`;
-  return await chatWithGroq(prompt, systemPrompt);
-}
 
 // ─── SaaS Helpers ──────────────────────────────────────────
 
