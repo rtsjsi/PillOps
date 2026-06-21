@@ -41,6 +41,7 @@
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "pg": "^8.21.0",
