@@ -47,9 +47,9 @@ export function InvoiceHeaderCard({
       )}
 
       <Card className="bg-primary/5 border-primary/20 overflow-hidden shadow-sm">
-        <CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-3 items-end">
+        <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-3 items-end">
           {/* Row 1/Col 1: Distributor */}
-          <div className="space-y-1 col-span-2 md:col-span-1">
+          <div className="space-y-1 col-span-1 sm:col-span-2 md:col-span-1">
             <Label className={cn(
               "text-[9px] uppercase tracking-widest font-black text-muted-foreground",
               invalidFields.includes('distributorName') && "text-rose-500"
@@ -99,7 +99,7 @@ export function InvoiceHeaderCard({
           </div>
           
           {/* Row 1/Col 4: Total */}
-          <div className="space-y-1 col-span-2 md:col-span-1 md:text-right flex flex-col md:items-end justify-end">
+          <div className="space-y-1 col-span-1 sm:col-span-2 md:col-span-1 md:text-right flex flex-col md:items-end justify-end">
             <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
             <p className="text-xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
           </div>
