@@ -108,7 +108,7 @@ export function MedicineAutocomplete({
           }
         }}
         className={cn(
-          "font-bold border-none bg-slate-50 shadow-inner h-10 text-sm md:text-base w-full",
+          "font-bold border-none bg-slate-50 shadow-inner h-10 text-base md:text-sm w-full",
           className
         )}
         autoComplete="off"
@@ -118,7 +118,7 @@ export function MedicineAutocomplete({
       {(isOpen && (results.length > 0 || isLoading)) && (
         <div 
           ref={listRef}
-          className="absolute z-50 top-full left-0 w-full bg-white dark:bg-slate-900 border border-border shadow-2xl shadow-black/10 rounded-xl mt-1.5 max-h-72 overflow-y-auto overscroll-contain"
+          className="absolute z-50 top-full left-0 w-full bg-popover text-popover-foreground border border-border shadow-2xl rounded-xl mt-1.5 max-h-72 overflow-y-auto overscroll-contain"
         >
           {results.map((r, i) => {
             const isLocal = r._source === 'local';
@@ -129,9 +129,9 @@ export function MedicineAutocomplete({
               <div 
                 key={r.id || `${r.name}-${i}`}
                 className={cn(
-                  "px-3 py-2.5 cursor-pointer transition-colors border-b border-border/50 last:border-0",
-                  "hover:bg-primary/5",
-                  selectedIndex === i && "bg-primary/10"
+                  "group px-3 py-2.5 cursor-pointer transition-colors border-b border-border/50 last:border-0",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  selectedIndex === i ? "bg-accent text-accent-foreground" : "text-popover-foreground"
                 )}
                 onClick={() => handleSelect(r)}
               >
@@ -151,7 +151,11 @@ export function MedicineAutocomplete({
                 </div>
 
                 {/* Row 2: Details */}
-                <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground font-medium">
+                <div className={cn(
+                  "flex items-center gap-3 mt-0.5 text-[11px] font-medium transition-colors",
+                  selectedIndex === i ? "text-accent-foreground/80" : "text-muted-foreground",
+                  "group-hover:text-accent-foreground/80"
+                )}>
                   {r.genericName && (
                     <span className="truncate max-w-[180px]">{r.genericName}</span>
                   )}
