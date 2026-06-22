@@ -35,7 +35,7 @@ export default function ManualPurchaseEntry() {
     {
       medicineName: '', category: '', manufacturer: '',
       batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
-      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
+      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0
     }
   ]);
 
@@ -76,15 +76,13 @@ export default function ManualPurchaseEntry() {
     }
     
     // Auto-calculate total amount
-    if (['quantity', 'purchasePrice', 'discountPercent', 'gstPercent'].includes(field)) {
+    if (['quantity', 'purchasePrice', 'gstPercent'].includes(field)) {
        const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
        const price = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
-       const disc = field === 'discountPercent' ? value : newItems[idx].discountPercent || 0;
        const gst = field === 'gstPercent' ? value : newItems[idx].gstPercent || 0;
        
        const base = qty * price;
-       const afterDisc = base - (base * (disc / 100));
-       const finalTotal = afterDisc + (afterDisc * (gst / 100));
+       const finalTotal = base + (base * (gst / 100));
        newItems[idx].totalAmount = Number(finalTotal.toFixed(2));
     }
     
@@ -95,7 +93,7 @@ export default function ManualPurchaseEntry() {
     setItems([...items, {
       medicineName: '', category: '', manufacturer: '',
       batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
-      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
+      purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0
     }]);
   };
 
@@ -108,13 +106,10 @@ export default function ManualPurchaseEntry() {
     let subtotal = 0, discountAmount = 0, gstAmount = 0, total = 0;
     items.forEach(item => {
        const base = item.quantity * item.purchasePrice;
-       const disc = base * ((item.discountPercent || 0) / 100);
-       const afterDisc = base - disc;
-       const gst = afterDisc * ((item.gstPercent || 0) / 100);
+       const gst = base * ((item.gstPercent || 0) / 100);
        subtotal += base;
-       discountAmount += disc;
        gstAmount += gst;
-       total += (afterDisc + gst);
+       total += (base + gst);
     });
     return { subtotal, discountAmount, gstAmount, total };
   };

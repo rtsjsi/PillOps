@@ -80,6 +80,12 @@ export function PurchaseItemCard({
     onChange(index, 'expiryDate', v);
   };
 
+  const isBatchNumberInvalid = hasError && !item.batchNumber;
+  const isExpiryDateInvalid = hasError && (!item.expiryDate || !/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate));
+  const isQuantityInvalid = hasError && (item.quantity === undefined || item.quantity === null || isNaN(item.quantity));
+  const isPurchasePriceInvalid = hasError && (item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice));
+  const isMrpInvalid = hasError && (item.mrp === undefined || item.mrp === null || isNaN(item.mrp));
+
   return (
     <Card className={cn(
       "transition-all border-l-4 shadow-sm hover:shadow-md",
@@ -137,26 +143,56 @@ export function PurchaseItemCard({
               className="h-9 text-sm font-medium"
             />
           </FieldCell>
-          <FieldCell label="Batch">
-            <Input value={item.batchNumber} onChange={e => onChange(index, 'batchNumber', e.target.value)} className="h-9 text-sm font-medium" />
+          <FieldCell label="Batch" error={isBatchNumberInvalid}>
+            <Input 
+              value={item.batchNumber} 
+              onChange={e => onChange(index, 'batchNumber', e.target.value)} 
+              className={cn("h-9 text-sm font-medium", isBatchNumberInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            />
           </FieldCell>
-          <FieldCell label="Exp (MM-YYYY)">
-            <Input value={item.expiryDate} onChange={e => handleExpiryInput(e.target.value)} className="h-9 text-sm font-medium" />
+          <FieldCell label="Exp (MM-YYYY)" error={isExpiryDateInvalid}>
+            <Input 
+              value={item.expiryDate} 
+              onChange={e => handleExpiryInput(e.target.value)} 
+              className={cn("h-9 text-sm font-medium", isExpiryDateInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            />
           </FieldCell>
-          <FieldCell label="Rate (₹)">
-            <Input type="number" step="0.01" value={item.purchasePrice || ''} onChange={e => onChange(index, 'purchasePrice', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
+          <FieldCell label="Rate (₹)" error={isPurchasePriceInvalid}>
+            <Input 
+              type="number" 
+              step="0.01" 
+              value={item.purchasePrice || ''} 
+              onChange={e => onChange(index, 'purchasePrice', parseFloat(e.target.value))} 
+              className={cn("h-9 text-sm font-medium", isPurchasePriceInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            />
           </FieldCell>
-          <FieldCell label="MRP (₹)">
-            <Input type="number" step="0.01" value={item.mrp || ''} onChange={e => onChange(index, 'mrp', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
+          <FieldCell label="MRP (₹)" error={isMrpInvalid}>
+            <Input 
+              type="number" 
+              step="0.01" 
+              value={item.mrp || ''} 
+              onChange={e => onChange(index, 'mrp', parseFloat(e.target.value))} 
+              className={cn("h-9 text-sm font-medium", isMrpInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            />
           </FieldCell>
           <FieldCell label="Disc %">
             <Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e => onChange(index, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
           </FieldCell>
-          <FieldCell label="Qty">
-            <Input type="number" value={item.quantity || ''} onChange={e => onChange(index, 'quantity', parseInt(e.target.value))} className="h-9 text-sm font-medium" />
+          <FieldCell label="Qty" error={isQuantityInvalid}>
+            <Input 
+              type="number" 
+              value={item.quantity || ''} 
+              onChange={e => onChange(index, 'quantity', parseInt(e.target.value))} 
+              className={cn("h-9 text-sm font-medium", isQuantityInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            />
           </FieldCell>
           <FieldCell label="Free">
-            <Input type="number" value={item.freeQuantity || ''} onChange={e => onChange(index, 'freeQuantity', parseInt(e.target.value))} className="h-9 text-sm font-medium" />
+            <Input 
+              type="number" 
+              value={item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ? '' : item.freeQuantity} 
+              onChange={e => onChange(index, 'freeQuantity', parseInt(e.target.value))} 
+              className="h-9 text-sm font-medium" 
+            />
           </FieldCell>
           <FieldCell label="GST %">
             <Input type="number" step="0.1" value={item.gstPercent ?? ''} onChange={e => onChange(index, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
@@ -167,10 +203,13 @@ export function PurchaseItemCard({
   );
 }
 
-function FieldCell({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldCell({ label, children, error }: { label: string; children: React.ReactNode; error?: boolean }) {
   return (
     <div className="space-y-1">
-      <Label className="text-[10px] md:text-xs uppercase tracking-widest font-black text-muted-foreground leading-none">{label}</Label>
+      <Label className={cn(
+        "text-[10px] md:text-xs uppercase tracking-widest font-black leading-none",
+        error ? "text-rose-500 font-bold" : "text-muted-foreground"
+      )}>{label}</Label>
       {children}
     </div>
   );

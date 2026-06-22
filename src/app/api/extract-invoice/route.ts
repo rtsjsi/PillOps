@@ -121,10 +121,6 @@ export async function POST(req: NextRequest) {
         const mrp = Number(item.mrp) || 0;
         const total = Number(item.totalAmount) || 0;
         
-        if (mrp > 0 && price > 0 && mrp >= price && !item.discountPercent) {
-            item.discountPercent = Number((((mrp - price) / mrp) * 100).toFixed(2));
-        }
-
         const expectedTotal = qty * price * (1 + gst / 100);
         // Check if there is a discrepancy (allowing for > 10% error or > 10 rupees difference)
         const diff = Math.abs(expectedTotal - total);

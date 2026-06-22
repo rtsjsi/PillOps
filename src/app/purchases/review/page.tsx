@@ -60,14 +60,6 @@ export default function ReviewExtraction() {
        }
     }
     
-    if (field === 'mrp' || field === 'purchasePrice') {
-       const mrp = field === 'mrp' ? value : newItems[idx].mrp || 0;
-       const rate = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
-       if (mrp > 0 && rate > 0 && mrp >= rate) {
-           newItems[idx].discountPercent = Number((((mrp - rate) / mrp) * 100).toFixed(2));
-       }
-    }
-    
     // Auto-calc total
     if (['quantity', 'purchasePrice', 'gstPercent'].includes(field)) {
        const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
@@ -91,7 +83,7 @@ export default function ReviewExtraction() {
       ...data, 
       items: [...data.items, {
         medicineName: '', extractedName: '', batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
-        purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 12, totalAmount: 0
+        purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0
       }]
     });
   };
@@ -115,13 +107,24 @@ export default function ReviewExtraction() {
                  items: (draft.purchase_invoice_items || []).map((item: any) => ({
                      medicineName: item.medicine_name || '',
                      batchNumber: item.batch_number || '',
-                     expiryDate: item.expiry_date || '',
+                     expiryDate: (() => {
+                       const date = item.expiry_date || '';
+                       if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                         const [yyyy, mm] = date.split('-');
+                         return `${mm}-${yyyy}`;
+                       }
+                       if (/^\d{4}-\d{2}$/.test(date)) {
+                         const [yyyy, mm] = date.split('-');
+                         return `${mm}-${yyyy}`;
+                       }
+                       return date;
+                     })(),
                      purchasePrice: item.purchase_price || 0,
                      mrp: item.mrp || 0,
                      discountPercent: item.discount_percent || 0,
                      quantity: item.quantity || 0,
                      freeQuantity: item.free_quantity || 0,
-                     gstPercent: item.gst_percent || 12,
+                     gstPercent: item.gst_percent || 5,
                      totalAmount: item.total_amount || 0
                  }))
              };
@@ -151,7 +154,41 @@ export default function ReviewExtraction() {
           
           const enrichedItems = await Promise.all(parsed.items.map(async (item: any) => {
              const extracted = item.medicineName;
-             let enrichedItem = { ...item, extractedName: extracted }; // Save original OCR name
+             let enrichedItem = { 
+               ...item, 
+               extractedName: extracted,
+               discountPercent: item.discountPercent === undefined || item.discountPercent === null || isNaN(Number(item.discountPercent)) ? 0 : Number(item.discountPercent),
+               freeQuantity: item.freeQuantity === undefined || item.freeQuantity === null || isNaN(Number(item.freeQuantity)) ? 0 : Number(item.freeQuantity),
+               gstPercent: item.gstPercent === undefined || item.gstPercent === null || isNaN(Number(item.gstPercent)) ? 5 : Number(item.gstPercent),
+               quantity: item.quantity === undefined || item.quantity === null || isNaN(Number(item.quantity)) ? 1 : Number(item.quantity),
+               purchasePrice: item.purchasePrice === undefined || item.purchasePrice === null || isNaN(Number(item.purchasePrice)) ? 0 : Number(item.purchasePrice),
+               mrp: item.mrp === undefined || item.mrp === null || isNaN(Number(item.mrp)) ? 0 : Number(item.mrp),
+               expiryDate: (() => {
+                 const expiry = item.expiryDate || '';
+                 const clean = expiry.trim();
+                 
+                 // YYYY-MM-DD
+                 if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+                   const [yyyy, mm] = clean.split('-');
+                   return `${mm}-${yyyy}`;
+                 }
+                 // YYYY-MM
+                 if (/^\d{4}-\d{2}$/.test(clean)) {
+                   const [yyyy, mm] = clean.split('-');
+                   return `${mm}-${yyyy}`;
+                 }
+                 // MM/YYYY or MM-YYYY
+                 if (/^(0[1-9]|1[0-2])[-/]\d{4}$/.test(clean)) {
+                   return clean.replace('/', '-');
+                 }
+                 // MM/YY or MM-YY
+                 if (/^(0[1-9]|1[0-2])[-/]\d{2}$/.test(clean)) {
+                   const parts = clean.split(/[-/]/);
+                   return `${parts[0]}-20${parts[1]}`;
+                 }
+                 return clean;
+               })()
+             }; // Save original OCR name
              
              if (extracted) {
                 // Check for learned alias first!
@@ -248,10 +285,7 @@ export default function ReviewExtraction() {
             !item.batchNumber || !item.expiryDate ||
             item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
             item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
-            item.mrp === undefined || item.mrp === null || isNaN(item.mrp) ||
-            item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ||
-            item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ||
-            item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent)
+            item.mrp === undefined || item.mrp === null || isNaN(item.mrp)
         ) {
           isInvalid = true;
         }
@@ -290,7 +324,19 @@ export default function ReviewExtraction() {
              const [mm, yyyy] = item.expiryDate.split('-');
              expiry = `${yyyy}-${mm}`;
            }
-           return { ...item, expiryDate: expiry };
+           
+           // Normalize/default numeric fields to ensure database integrity
+           const discountPercent = item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ? 0 : item.discountPercent;
+           const freeQuantity = item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ? 0 : item.freeQuantity;
+           const gstPercent = item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent) ? 5 : item.gstPercent;
+           
+           return { 
+             ...item, 
+             expiryDate: expiry,
+             discountPercent,
+             freeQuantity,
+             gstPercent
+           };
         });
 
         const supabase = createClient();
