@@ -423,7 +423,7 @@ export default function ReviewExtraction() {
       {/* Header Navigation */}
       <header className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" render={<Link href="/purchases/scan" />} className="rounded-full">
+          <Button variant="ghost" size="icon" render={<Link href="/purchases" />} className="rounded-full">
               <ArrowLeft size={24} />
           </Button>
           <h1 className="text-lg font-bold tracking-tight">Review Invoice Data</h1>
