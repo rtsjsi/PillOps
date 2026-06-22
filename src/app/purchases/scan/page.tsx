@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Camera, Focus, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ export default function AIInvoiceScanner() {
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState('llama-4-scout');
   const [images, setImages] = useState<{base64: string, mimeType: string, previewUrl: string}[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -164,7 +165,7 @@ export default function AIInvoiceScanner() {
         </div>
 
         {images.length > 0 && (
-          <div className="bg-card p-4 rounded-xl border">
+          <div className="bg-card p-4 rounded-xl border animate-page-in">
             <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3 block">Scanned Pages ({images.length})</Label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {images.map((img, idx) => (
@@ -178,44 +179,55 @@ export default function AIInvoiceScanner() {
                   </div>
                 </div>
               ))}
+              
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="flex flex-col items-center justify-center shrink-0 w-24 h-32 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary gap-1"
+              >
+                <Plus size={24} />
+                <span className="text-[10px] font-bold">Add Page</span>
+              </button>
             </div>
           </div>
         )}
 
-        <div className="flex gap-3 h-24 shrink-0">
-          <button 
-            className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
-            onClick={() => {
+        {images.length === 0 && (
+          <div className="flex gap-3 h-24 shrink-0 animate-page-in">
+            <button 
+              className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors"
+              onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.capture = 'environment';
+                    fileInputRef.current.multiple = false;
+                    fileInputRef.current.click();
+                  }
+              }}
+            >
+              <Camera size={28} className="text-primary" />
+              Camera
+            </button>
+
+            <button 
+              className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border border-muted-foreground/30 bg-card hover:bg-accent rounded-xl transition-colors"
+              onClick={() => {
                 if (fileInputRef.current) {
-                  fileInputRef.current.capture = 'environment';
-                  fileInputRef.current.multiple = false;
+                  fileInputRef.current.removeAttribute('capture');
+                  fileInputRef.current.multiple = true;
                   fileInputRef.current.click();
                 }
-            }}
-          >
-            <Camera size={28} className="text-primary" />
-            Camera
-          </button>
-
-          <button 
-            className="flex-1 flex flex-col items-center justify-center gap-2 text-sm font-bold border border-muted-foreground/30 bg-card hover:bg-accent rounded-xl transition-colors"
-            onClick={() => {
-              if (fileInputRef.current) {
-                fileInputRef.current.removeAttribute('capture');
-                fileInputRef.current.multiple = true;
-                fileInputRef.current.click();
-              }
-            }}
-          >
-            <Upload size={28} className="text-muted-foreground" />
-            Gallery
-          </button>
-        </div>
+              }}
+            >
+              <Upload size={28} className="text-muted-foreground" />
+              Gallery
+            </button>
+          </div>
+        )}
 
         {images.length > 0 && (
           <button
             onClick={handleProcess}
-            className="w-full mt-auto mb-4 bg-primary text-primary-foreground font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all"
+            className="w-full mt-auto mb-4 bg-primary text-primary-foreground font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all animate-page-in"
           >
             PROCESS {images.length} PAGE{images.length !== 1 ? 'S' : ''}
           </button>
@@ -230,6 +242,73 @@ export default function AIInvoiceScanner() {
           onChange={handleFileChange}
         />
       </div>
+
+      {/* Choice modal popup */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in-0 duration-200">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-border shadow-2xl p-5 flex flex-col gap-4 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Add Page</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Select how you want to add the next page</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAddModal(false)}
+                className="text-muted-foreground hover:text-foreground text-sm font-black p-1 hover:bg-muted rounded-full w-6 h-6 flex items-center justify-center transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <button
+                type="button"
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary transition-all duration-200"
+                onClick={() => {
+                  setShowAddModal(false);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.capture = 'environment';
+                    fileInputRef.current.multiple = false;
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                <div className="p-3 bg-primary/5 rounded-full text-primary">
+                  <Camera size={24} />
+                </div>
+                <span className="text-sm font-bold">Use Camera</span>
+              </button>
+
+              <button
+                type="button"
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary transition-all duration-200"
+                onClick={() => {
+                  setShowAddModal(false);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.removeAttribute('capture');
+                    fileInputRef.current.multiple = true;
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                <div className="p-3 bg-muted rounded-full text-muted-foreground">
+                  <Upload size={24} />
+                </div>
+                <span className="text-sm font-bold">Open Gallery</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="w-full py-2.5 mt-2 bg-muted hover:bg-muted/80 text-foreground font-bold text-xs rounded-lg transition-colors border border-border"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
