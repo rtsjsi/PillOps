@@ -8,11 +8,30 @@ import { FileScan, Box, History } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import { createClient } from '@/utils/supabase/client';
+import { toast } from 'sonner';
 
 export default function Purchases() {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'completed' | 'drafts'>('completed');
+
+  const handleDeleteDraft = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this draft invoice?")) return;
+    
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from('purchase_invoices').delete().eq('id', id);
+      
+      if (error) throw error;
+      
+      toast.success("Draft invoice deleted successfully.");
+      setPurchases(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) {
+      console.error("Failed to delete draft:", err);
+      toast.error(err.message || "Failed to delete draft invoice.");
+    }
+  };
 
   useEffect(() => {
     async function loadPurchases() {
@@ -93,7 +112,15 @@ export default function Purchases() {
                       </div>
                       
                       {activeTab === 'drafts' && (
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-2 flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full text-rose-500 border-rose-200 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 font-bold"
+                            onClick={() => handleDeleteDraft(inv.id)}
+                          >
+                            Delete Draft
+                          </Button>
                           <Button render={<Link href={`/purchases/review?draftId=${inv.id}`} />} size="sm" className="rounded-full">
                             Complete Draft
                           </Button>

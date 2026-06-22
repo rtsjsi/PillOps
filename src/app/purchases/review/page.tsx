@@ -34,9 +34,32 @@ export default function ReviewExtraction() {
   const [invalidFields, setInvalidFields] = useState<{ header: string[], items: number[] }>({ header: [], items: [] });
   const [isSaving, setIsSaving] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isEnriching, setIsEnriching] = useState(true);
   
   const [medicines, setMedicines] = useState<any[]>([]);
+
+  const handleDeleteDraft = async () => {
+    if (!draftId) return;
+    if (!window.confirm("Are you sure you want to delete this draft invoice?")) return;
+    
+    setIsDeleting(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from('purchase_invoices').delete().eq('id', draftId);
+      
+      if (error) throw error;
+      
+      toast.success("Draft invoice deleted successfully.");
+      sessionStorage.removeItem('pillops_extracted_invoice');
+      router.push('/purchases');
+    } catch (err: any) {
+      console.error("Failed to delete draft:", err);
+      toast.error(err.message || "Failed to delete draft invoice.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const manufacturers = useDistinctValues('manufacturers', 'name', true);
   const distributors = useDistinctValues('distributors', 'name', false);
 
@@ -428,9 +451,21 @@ export default function ReviewExtraction() {
           </Button>
           <h1 className="text-lg font-bold tracking-tight">Review Invoice Data</h1>
         </div>
-        <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
-          Rescan Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          {draftId && (
+            <Button
+              variant="outline"
+              disabled={isSaving || isDrafting || isDeleting}
+              onClick={handleDeleteDraft}
+              className="font-bold rounded-full text-rose-500 border-rose-200 bg-rose-50/20 hover:bg-rose-50 hover:text-rose-600"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Draft'}
+            </Button>
+          )}
+          <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
+            Rescan Invoice
+          </Button>
+        </div>
       </header>
 
       {/* ─── Sticky Invoice Header ─── */}
