@@ -11,7 +11,7 @@ interface ImageCropperProps {
 
 export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
   const [currentImageSrc, setCurrentImageSrc] = useState(src);
-  const [crop, setCrop] = useState({ x: 10, y: 10, w: 80, h: 80 }); // Percentages
+  const [crop, setCrop] = useState({ x: 0, y: 0, w: 100, h: 100 }); // Percentages
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [isRotating, setIsRotating] = useState(false);
 
@@ -22,7 +22,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
   // Reset/sync when source image changes
   useEffect(() => {
     setCurrentImageSrc(src);
-    setCrop({ x: 10, y: 10, w: 80, h: 80 });
+    setCrop({ x: 0, y: 0, w: 100, h: 100 });
   }, [src]);
 
   // Pointer event start handler
@@ -129,7 +129,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
       });
 
       setCurrentImageSrc(rotated);
-      setCrop({ x: 10, y: 10, w: 80, h: 80 }); // Reset crop bounds to standard
+      setCrop({ x: 0, y: 0, w: 100, h: 100 }); // Reset crop bounds to standard
     } catch (err) {
       console.error('Error rotating image:', err);
     } finally {
@@ -239,23 +239,35 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
             }}
             onPointerDown={(e) => handlePointerDown(e, 'move')}
           >
-            {/* Corner Drag Handles */}
+            {/* Corner Drag Handles with larger hitboxes */}
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'tl'); }}
-              className="absolute w-4 h-4 rounded-full bg-primary border-2 border-white -left-2 -top-2 cursor-nwse-resize shadow-md"
-            />
+              className="absolute -left-5 -top-5 w-10 h-10 flex items-center justify-center cursor-nwse-resize z-20"
+              style={{ touchAction: 'none' }}
+            >
+              <div className="w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md pointer-events-none" />
+            </div>
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'tr'); }}
-              className="absolute w-4 h-4 rounded-full bg-primary border-2 border-white -right-2 -top-2 cursor-nesw-resize shadow-md"
-            />
+              className="absolute -right-5 -top-5 w-10 h-10 flex items-center justify-center cursor-nesw-resize z-20"
+              style={{ touchAction: 'none' }}
+            >
+              <div className="w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md pointer-events-none" />
+            </div>
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'bl'); }}
-              className="absolute w-4 h-4 rounded-full bg-primary border-2 border-white -left-2 -bottom-2 cursor-nesw-resize shadow-md"
-            />
+              className="absolute -left-5 -bottom-5 w-10 h-10 flex items-center justify-center cursor-nesw-resize z-20"
+              style={{ touchAction: 'none' }}
+            >
+              <div className="w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md pointer-events-none" />
+            </div>
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'br'); }}
-              className="absolute w-4 h-4 rounded-full bg-primary border-2 border-white -right-2 -bottom-2 cursor-nwse-resize shadow-md"
-            />
+              className="absolute -right-5 -bottom-5 w-10 h-10 flex items-center justify-center cursor-nwse-resize z-20"
+              style={{ touchAction: 'none' }}
+            >
+              <div className="w-4 h-4 rounded-full bg-primary border-2 border-white shadow-md pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>
@@ -273,7 +285,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
           </button>
           
           <button
-            onClick={() => setCrop({ x: 10, y: 10, w: 80, h: 80 })}
+            onClick={() => setCrop({ x: 0, y: 0, w: 100, h: 100 })}
             className="inline-flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors border border-slate-700"
           >
             <RefreshCw className="w-4 h-4" />
