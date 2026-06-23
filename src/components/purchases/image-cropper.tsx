@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { RotateCw, Crop, Check, X, RefreshCw } from 'lucide-react';
 
 interface ImageCropperProps {
@@ -14,6 +15,12 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 100, h: 100 }); // Percentages
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [isRotating, setIsRotating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -183,7 +190,9 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
     onCrop(croppedBase64);
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col justify-between overflow-hidden">
       {/* Header */}
       <header className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
@@ -344,6 +353,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
           </button>
         </div>
       </footer>
-    </div>
+    </div>,
+    document.body
   );
 }
