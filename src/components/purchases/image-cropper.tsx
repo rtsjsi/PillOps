@@ -213,10 +213,10 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
       </header>
 
       {/* Workspace */}
-      <div className="flex-1 flex items-center justify-center p-3 sm:p-6 relative overflow-hidden select-none bg-slate-950">
+      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center p-6 sm:p-10 relative overflow-hidden select-none bg-slate-950">
         <div
           ref={containerRef}
-          className="relative max-w-full max-h-[calc(100vh-150px)] sm:max-h-[82vh] shadow-2xl border border-slate-800 overflow-hidden"
+          className="relative inline-flex max-w-full max-h-full shadow-2xl border border-slate-800"
           style={{ touchAction: 'none' }}
         >
           {/* Main Image */}
@@ -224,7 +224,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
             ref={imageRef}
             src={currentImageSrc}
             alt="To Crop"
-            className="max-w-full max-h-[calc(100vh-150px)] sm:max-h-[82vh] object-contain block pointer-events-none"
+            className="max-w-full max-h-full object-contain block pointer-events-none"
           />
 
           {/* Dark Backdrop Overlays surrounding the crop box */}
@@ -263,22 +263,22 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
             {/* Edge Drag Handles */}
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 't'); }}
-              className="absolute top-[-6px] left-2 right-2 h-3 cursor-ns-resize z-10"
+              className="absolute -top-3 left-4 right-4 h-6 cursor-ns-resize z-10"
               style={{ touchAction: 'none' }}
             />
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'b'); }}
-              className="absolute bottom-[-6px] left-2 right-2 h-3 cursor-ns-resize z-10"
+              className="absolute -bottom-3 left-4 right-4 h-6 cursor-ns-resize z-10"
               style={{ touchAction: 'none' }}
             />
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'l'); }}
-              className="absolute left-[-6px] top-2 bottom-2 w-3 cursor-ew-resize z-10"
+              className="absolute -left-3 top-4 bottom-4 w-6 cursor-ew-resize z-10"
               style={{ touchAction: 'none' }}
             />
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'r'); }}
-              className="absolute right-[-6px] top-2 bottom-2 w-3 cursor-ew-resize z-10"
+              className="absolute -right-3 top-4 bottom-4 w-6 cursor-ew-resize z-10"
               style={{ touchAction: 'none' }}
             />
 
