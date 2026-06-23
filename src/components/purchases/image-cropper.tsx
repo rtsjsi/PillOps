@@ -83,6 +83,18 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
         } else if (dragTarget === 'br') {
           w = Math.max(minSize, Math.min(100 - x, w + dx));
           h = Math.max(minSize, Math.min(100 - y, h + dy));
+        } else if (dragTarget === 't') {
+          const newY = Math.max(0, Math.min(y + h - minSize, y + dy));
+          h = h - (newY - y);
+          y = newY;
+        } else if (dragTarget === 'b') {
+          h = Math.max(minSize, Math.min(100 - y, h + dy));
+        } else if (dragTarget === 'l') {
+          const newX = Math.max(0, Math.min(x + w - minSize, x + dx));
+          w = w - (newX - x);
+          x = newX;
+        } else if (dragTarget === 'r') {
+          w = Math.max(minSize, Math.min(100 - x, w + dx));
         }
 
         return { x, y, w, h };
@@ -192,10 +204,10 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
       </header>
 
       {/* Workspace */}
-      <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden select-none bg-slate-950">
+      <div className="flex-1 flex items-center justify-center p-3 sm:p-6 relative overflow-hidden select-none bg-slate-950">
         <div
           ref={containerRef}
-          className="relative max-w-full max-h-[60vh] shadow-2xl border border-slate-800 overflow-hidden"
+          className="relative max-w-full max-h-[calc(100vh-150px)] sm:max-h-[82vh] shadow-2xl border border-slate-800 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
           {/* Main Image */}
@@ -203,7 +215,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
             ref={imageRef}
             src={currentImageSrc}
             alt="To Crop"
-            className="max-w-full max-h-[60vh] object-contain block pointer-events-none"
+            className="max-w-full max-h-[calc(100vh-150px)] sm:max-h-[82vh] object-contain block pointer-events-none"
           />
 
           {/* Dark Backdrop Overlays surrounding the crop box */}
@@ -239,6 +251,28 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
             }}
             onPointerDown={(e) => handlePointerDown(e, 'move')}
           >
+            {/* Edge Drag Handles */}
+            <div
+              onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 't'); }}
+              className="absolute top-[-6px] left-2 right-2 h-3 cursor-ns-resize z-10"
+              style={{ touchAction: 'none' }}
+            />
+            <div
+              onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'b'); }}
+              className="absolute bottom-[-6px] left-2 right-2 h-3 cursor-ns-resize z-10"
+              style={{ touchAction: 'none' }}
+            />
+            <div
+              onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'l'); }}
+              className="absolute left-[-6px] top-2 bottom-2 w-3 cursor-ew-resize z-10"
+              style={{ touchAction: 'none' }}
+            />
+            <div
+              onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'r'); }}
+              className="absolute right-[-6px] top-2 bottom-2 w-3 cursor-ew-resize z-10"
+              style={{ touchAction: 'none' }}
+            />
+
             {/* Corner Drag Handles with larger hitboxes */}
             <div
               onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e, 'tl'); }}
