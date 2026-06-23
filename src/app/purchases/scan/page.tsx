@@ -6,6 +6,7 @@ import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-re
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { ImageCropper } from '@/components/purchases/image-cropper';
 
 export default function AIInvoiceScanner() {
   const router = useRouter();
@@ -16,6 +17,9 @@ export default function AIInvoiceScanner() {
   const [selectedModel, setSelectedModel] = useState('llama-4-scout');
   const [images, setImages] = useState<{base64: string, mimeType: string, previewUrl: string}[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [croppingImage, setCroppingImage] = useState<string | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropQueueIndex, setCropQueueIndex] = useState(0);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -97,16 +101,43 @@ export default function AIInvoiceScanner() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newImages = [...images];
-      for (let i = 0; i < e.target.files.length; i++) {
-        const file = e.target.files[i];
-        const base64 = await fileToBase64(file);
-        const previewUrl = URL.createObjectURL(file);
-        newImages.push({ base64, mimeType: file.type, previewUrl });
-      }
-      setImages(newImages);
+      const filesArray = Array.from(e.target.files);
+      setCropQueue(filesArray);
+      setCropQueueIndex(0);
+      
+      const firstBase64 = await fileToBase64(filesArray[0]);
+      setCroppingImage(firstBase64);
+
       // Reset input so the same file can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropSave = (croppedBase64: string) => {
+    const newImages = [...images];
+    const currentFile = cropQueue[cropQueueIndex];
+    const previewUrl = URL.createObjectURL(currentFile);
+    
+    newImages.push({ base64: croppedBase64, mimeType: currentFile.type, previewUrl });
+    setImages(newImages);
+
+    moveToNextInCropQueue();
+  };
+
+  const handleCropCancel = () => {
+    moveToNextInCropQueue();
+  };
+
+  const moveToNextInCropQueue = async () => {
+    const nextIndex = cropQueueIndex + 1;
+    if (nextIndex < cropQueue.length) {
+      setCropQueueIndex(nextIndex);
+      const base64 = await fileToBase64(cropQueue[nextIndex]);
+      setCroppingImage(base64);
+    } else {
+      setCroppingImage(null);
+      setCropQueue([]);
+      setCropQueueIndex(0);
     }
   };
 
@@ -289,6 +320,14 @@ export default function AIInvoiceScanner() {
           onChange={handleFileChange}
         />
       </div>
+
+      {croppingImage && (
+        <ImageCropper
+          src={croppingImage}
+          onCrop={handleCropSave}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
