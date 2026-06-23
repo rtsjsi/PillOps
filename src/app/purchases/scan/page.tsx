@@ -116,9 +116,8 @@ export default function AIInvoiceScanner() {
   const handleCropSave = (croppedBase64: string) => {
     const newImages = [...images];
     const currentFile = cropQueue[cropQueueIndex];
-    const previewUrl = URL.createObjectURL(currentFile);
     
-    newImages.push({ base64: croppedBase64, mimeType: currentFile.type, previewUrl });
+    newImages.push({ base64: croppedBase64, mimeType: currentFile.type, previewUrl: croppedBase64 });
     setImages(newImages);
 
     moveToNextInCropQueue();
