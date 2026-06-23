@@ -131,7 +131,7 @@ export default function AIInvoiceScanner() {
   }
 
   return (
-    <div className="p-4 flex flex-col h-screen bg-background">
+    <div className="p-4 flex flex-col bg-background">
       <header className="flex items-center gap-4 mb-6">
         <Link href="/purchases" className="p-2 border-none">
            <ArrowLeft size={24} />
@@ -148,7 +148,7 @@ export default function AIInvoiceScanner() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <div className="bg-card p-4 rounded-xl border mb-2">
            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
            <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
@@ -180,14 +180,61 @@ export default function AIInvoiceScanner() {
                 </div>
               ))}
               
-              <button
-                type="button"
-                onClick={() => setShowAddModal(true)}
-                className="flex flex-col items-center justify-center shrink-0 w-24 h-32 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary gap-1"
-              >
-                <Plus size={24} />
-                <span className="text-[10px] font-bold">Add Page</span>
-              </button>
+              <div className="relative shrink-0 w-24 h-32">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="flex flex-col items-center justify-center w-full h-full rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary gap-1"
+                >
+                  <Plus size={24} />
+                  <span className="text-[10px] font-bold">Add Page</span>
+                </button>
+
+                {showAddModal && (
+                  <div className="absolute inset-0 bg-white dark:bg-slate-900 border-2 border-primary rounded-lg flex flex-col p-1.5 gap-1.5 animate-in fade-in zoom-in-95 duration-100 z-10 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.capture = 'environment';
+                          fileInputRef.current.multiple = false;
+                          fileInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1 flex flex-col items-center justify-center gap-0.5 rounded bg-primary/5 text-primary text-[10px] font-bold hover:bg-primary/10 transition-colors"
+                    >
+                      <Camera size={14} />
+                      <span>Camera</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.removeAttribute('capture');
+                          fileInputRef.current.multiple = true;
+                          fileInputRef.current.click();
+                        }
+                      }}
+                      className="flex-1 flex flex-col items-center justify-center gap-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                    >
+                      <Upload size={14} />
+                      <span>Gallery</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAddModal(false);
+                      }}
+                      className="text-[9px] text-muted-foreground hover:text-foreground font-semibold py-0.5 text-center bg-slate-50 dark:bg-slate-800 rounded border border-border"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -227,7 +274,7 @@ export default function AIInvoiceScanner() {
         {images.length > 0 && (
           <button
             onClick={handleProcess}
-            className="w-full mt-auto mb-4 bg-primary text-primary-foreground font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all animate-page-in"
+            className="w-full mt-4 mb-4 bg-primary text-primary-foreground font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all animate-page-in"
           >
             PROCESS {images.length} PAGE{images.length !== 1 ? 'S' : ''}
           </button>
@@ -242,73 +289,6 @@ export default function AIInvoiceScanner() {
           onChange={handleFileChange}
         />
       </div>
-
-      {/* Choice modal popup */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in-0 duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-border shadow-2xl p-5 flex flex-col gap-4 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-base font-bold text-foreground">Add Page</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Select how you want to add the next page</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setShowAddModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm font-black p-1 hover:bg-muted rounded-full w-6 h-6 flex items-center justify-center transition-colors"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              <button
-                type="button"
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary transition-all duration-200"
-                onClick={() => {
-                  setShowAddModal(false);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.capture = 'environment';
-                    fileInputRef.current.multiple = false;
-                    fileInputRef.current.click();
-                  }
-                }}
-              >
-                <div className="p-3 bg-primary/5 rounded-full text-primary">
-                  <Camera size={24} />
-                </div>
-                <span className="text-sm font-bold">Use Camera</span>
-              </button>
-
-              <button
-                type="button"
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary transition-all duration-200"
-                onClick={() => {
-                  setShowAddModal(false);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.removeAttribute('capture');
-                    fileInputRef.current.multiple = true;
-                    fileInputRef.current.click();
-                  }
-                }}
-              >
-                <div className="p-3 bg-muted rounded-full text-muted-foreground">
-                  <Upload size={24} />
-                </div>
-                <span className="text-sm font-bold">Open Gallery</span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowAddModal(false)}
-              className="w-full py-2.5 mt-2 bg-muted hover:bg-muted/80 text-foreground font-bold text-xs rounded-lg transition-colors border border-border"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
