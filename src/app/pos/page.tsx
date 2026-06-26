@@ -68,9 +68,14 @@ export default function POSLanding() {
                </div>
                <div className="flex justify-between items-center text-xs text-muted-foreground font-medium mt-auto pt-4 border-t border-border/50">
                   <div className="bg-muted px-2 py-1 rounded font-mono text-[10px]">#{inv.invoiceNumber}</div>
-                  <Button render={<Link href={`/invoice/${inv.id}`} />} variant="ghost" size="sm" className="h-8 px-3 text-xs font-bold">
-                       <Printer size={14} className="mr-1.5" /> Print
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button render={<Link href={`/pos/${inv.id}/edit`} />} variant="ghost" size="sm" className="h-8 px-3 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                         Edit
+                    </Button>
+                    <Button render={<Link href={`/invoice/${inv.id}`} />} variant="ghost" size="sm" className="h-8 px-3 text-xs font-bold">
+                         <Printer size={14} className="mr-1.5" /> Print
+                    </Button>
+                  </div>
                </div>
              </Card>
           ))}
