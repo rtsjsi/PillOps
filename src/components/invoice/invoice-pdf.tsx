@@ -63,18 +63,25 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
             <View style={[styles.p2, styles.borderRight, { width: '45%' }]}>
               <Text style={[styles.textXl, styles.uppercase]}>{storeInfo?.name || 'MEDICAL STORE'}</Text>
               <Text style={[styles.uppercase, { marginTop: 4 }]}>{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</Text>
+              <Text style={{ marginTop: 4, fontWeight: 'bold' }}>MO. {storeInfo?.phone || 'N/A'}</Text>
             </View>
             <View style={[styles.p2, styles.borderRight, { width: '25%', justifyContent: 'space-between' }]}>
-              <Text style={styles.uppercase}>BILL OF SUPPLY</Text>
+              <Text style={[styles.uppercase, styles.bold, { fontSize: 11 }]}>TAX INVOICE</Text>
               <View style={[styles.flexRow, { justifyContent: 'space-between', marginTop: 10 }]}>
-                <Text>ORIGINAL</Text>
-                <Text>Page: 1/1</Text>
+                <Text style={styles.bold}>ORIGINAL</Text>
               </View>
             </View>
-            <View style={[styles.p2, { width: '30%', justifyContent: 'space-between' }]}>
-              <Text>MO. {storeInfo?.phone || 'N/A'}</Text>
-              <Text style={{ marginTop: 2 }}>D.L NO. {storeInfo?.dl_no || ''}</Text>
-              {storeInfo?.gstin && <Text style={{ marginTop: 2 }}>GSTIN: {storeInfo?.gstin}</Text>}
+            <View style={[styles.p2, { width: '30%', justifyContent: 'center' }]}>
+              <View style={{ marginBottom: 4 }}>
+                <Text style={{ fontWeight: 'bold' }}>D.L NO.</Text>
+                <Text style={{ marginTop: 2 }}>{storeInfo?.dl_no || '20 G SUR 71645/21 G SUR 71646'}</Text>
+              </View>
+              {(storeInfo?.gstin || '24AUZPP2770P1ZK') && (
+                <View>
+                  <Text style={{ fontWeight: 'bold' }}>GSTIN:</Text>
+                  <Text style={{ marginTop: 2 }}>{storeInfo?.gstin || '24AUZPP2770P1ZK'}</Text>
+                </View>
+              )}
             </View>
           </View>
 
