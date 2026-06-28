@@ -52,7 +52,13 @@ IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting l
 export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = "meta-llama/llama-4-scout-17b-16e-instruct") {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
+  const client = new OpenAI({ 
+    baseURL: "https://api.groq.com/openai/v1", 
+    apiKey: process.env.GROQ_API_KEY,
+    defaultHeaders: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  });
   
   const content: any[] = [{ type: "text", text: PROMPT }];
   images.forEach(img => {
@@ -83,9 +89,16 @@ export async function runGemini(images: {base64: string, mimeType: string}[], mo
       parts.push({ inlineData: { data: cleanBase64, mimeType: img.mimeType } });
   });
 
-  const result = await model.generateContent(parts);
-  const response = await result.response;
-  return response.text();
+  try {
+    const result = await model.generateContent(parts);
+    const response = await result.response;
+    return response.text();
+  } catch (err: any) {
+    if (err.message?.includes('User location is not supported')) {
+      throw new Error("Google Gemini API is currently unavailable in the Cloudflare datacenter region processing your request. Please select 'Llama 4 Scout 17B' from the dropdown to use Groq instead.");
+    }
+    throw err;
+  }
 }
 
 
@@ -95,7 +108,13 @@ export async function runGemini(images: {base64: string, mimeType: string}[], mo
 export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: string, manufacturer?: string, category?: string}[]) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ baseURL: "https://api.groq.com/openai/v1", apiKey: process.env.GROQ_API_KEY });
+  const client = new OpenAI({ 
+    baseURL: "https://api.groq.com/openai/v1", 
+    apiKey: process.env.GROQ_API_KEY,
+    defaultHeaders: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  });
   
   const systemPrompt = `You are a strict Indian pharmaceutical data AI. 
 You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
@@ -194,15 +213,22 @@ Return ONLY a valid JSON object with the following schema:
 }`;
 
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash", 
+    model: "gemini-flash-latest", 
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 } 
   });
   
-  const result = await model.generateContent([
-    systemPrompt,
-    JSON.stringify(medicines)
-  ]);
-  
-  const response = await result.response;
-  return response.text();
+  try {
+    const result = await model.generateContent([
+      systemPrompt,
+      JSON.stringify(medicines)
+    ]);
+    
+    const response = await result.response;
+    return response.text();
+  } catch (err: any) {
+    if (err.message?.includes('User location is not supported')) {
+      throw new Error("Google Gemini API is currently unavailable in the Cloudflare datacenter region processing your request. The Groq API also failed. Please try again later or check your API keys.");
+    }
+    throw err;
+  }
 }
