@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { searchGlobalMedicines, autoEnrichMedicines } from './actions';
+import { searchGlobalMedicines, autoEnrichMedicines, enrichSingleMedicine } from './actions';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -27,6 +27,7 @@ export default function MedicinesDirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichingId, setEnrichingId] = useState<string | null>(null);
 
   const fetchMedicines = useCallback(async (q: string) => {
     setIsLoading(true);
@@ -58,6 +59,26 @@ export default function MedicinesDirectoryPage() {
       setError(err.message || 'Failed to auto-enrich');
     } finally {
       setIsEnriching(false);
+    }
+  };
+
+  const handleEnrichSingle = async (med: any) => {
+    setEnrichingId(med.id);
+    setError(null);
+    try {
+      const res = await enrichSingleMedicine({
+        id: med.id,
+        name: med.name,
+        manufacturer: med.manufacturer,
+        category: med.category
+      });
+      if (!res.success) throw new Error(res.error || 'Failed to enrich medicine');
+      alert(`Successfully enriched ${med.name}!`);
+      fetchMedicines(debouncedQuery);
+    } catch (err: any) {
+      setError(err.message || 'Failed to enrich medicine');
+    } finally {
+      setEnrichingId(null);
     }
   };
 
@@ -128,12 +149,22 @@ export default function MedicinesDirectoryPage() {
             <Card key={med.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardHeader className="bg-muted/30 pb-4">
                 <div className="flex justify-between items-start">
-                  <div className="space-y-1">
+                  <div className="space-y-1 pr-2">
                     <CardTitle className="text-base">{med.name}</CardTitle>
                     <CardDescription className="text-xs font-medium text-primary">
                       {med.genericName || 'No Generic Name'}
                     </CardDescription>
                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 text-xs px-2 shrink-0" 
+                    onClick={() => handleEnrichSingle(med)}
+                    disabled={enrichingId === med.id}
+                  >
+                    {enrichingId === med.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wand2 className="w-3 h-3 mr-1" />}
+                    Enrich
+                  </Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Badge variant="outline" className="text-[10px]">{med.category}</Badge>

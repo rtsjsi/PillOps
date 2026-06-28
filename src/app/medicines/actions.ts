@@ -434,3 +434,59 @@ export async function fetchMedicineDetailsFromAI(name: string) {
   }
 }
 
+export async function enrichSingleMedicine(medicine: { id: string, name: string, manufacturer?: string, category?: string }) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Unauthorized');
+
+    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+    const aiResponseString = await enrichMedicineBatchWithGroq([medicine]);
+    
+    let enrichedData;
+    try {
+      enrichedData = JSON.parse(aiResponseString);
+    } catch (e) {
+      throw new Error('Failed to parse AI response: ' + aiResponseString);
+    }
+
+    if (!enrichedData?.medicines || !Array.isArray(enrichedData.medicines) || enrichedData.medicines.length === 0) {
+      throw new Error('AI returned no data');
+    }
+
+    const { createAdminClient } = await import('@/utils/supabase/admin');
+    const adminDb = createAdminClient();
+
+    const med = enrichedData.medicines[0];
+    const { id, correctedName, category, manufacturer, packSize, hsnCode, gstPercent, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
+    
+    const updatePayload: any = {
+        category: category || undefined,
+        manufacturer: manufacturer || undefined,
+        pack_size: packSize || undefined,
+        hsn_code: hsnCode || undefined,
+        gst_percent: gstPercent || undefined,
+        ingredients: ingredients || [],
+        substitutes: substitutes || [],
+        storage_conditions: storageConditions || null,
+        is_narcotic: isNarcotic || false,
+        prescription_required: prescriptionRequired || false
+    };
+
+    if (correctedName) {
+       updatePayload.name = correctedName.toUpperCase();
+    }
+
+    const { error: updateError } = await adminDb
+      .from('global_medicine_master')
+      .update(updatePayload)
+      .eq('id', id);
+      
+    if (updateError) throw new Error(updateError.message);
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to enrich medicine' };
+  }
+}
+
