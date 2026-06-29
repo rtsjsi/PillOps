@@ -35,4 +35,14 @@ For **ANY** database operation, schema modification, or data manipulation, follo
 Edit the new migration file (CREATE, ALTER, DROP, etc.).
 
 ### Step 3: Push
+Prefer `DATABASE_URL` from `.env.local` with the **session pooler** port **5432** (not transaction pooler **6543**) — `db push` / `migration repair` fail on `:6543` with prepared-statement errors (`SQLSTATE 42P05`).
+
+```powershell
+$dbUrl = (Get-Content .env.local | ConvertFrom-StringData).DATABASE_URL.Trim('"')
+$directUrl = $dbUrl -replace ':6543/', ':5432/'
+npx supabase db push --db-url $directUrl --yes
+```
+
+Fallback (linked project + password env vars):
+
 `$env:SUPABASE_DB_PASSWORD=(Get-Content .env.local | ConvertFrom-StringData).SUPABASE_DB_PASSWORD.Trim('"'); $env:SUPABASE_PROJECT_ID=(Get-Content .env.local | ConvertFrom-StringData).SUPABASE_PROJECT_ID.Trim('"'); npx supabase db push`

@@ -9,6 +9,7 @@ import {
   chunkArray,
   mergeInvoiceExtractions,
   normalizeImageDataUrl,
+  stripJsonFences,
   validateGroqImages,
   type GroqImagePayload,
   type InvoiceExtractionPartial,
@@ -196,6 +197,12 @@ async function runGroqSingle(
     options.totalPages
   );
 
+  // Qwen 3.6 is a reasoning model — JSON mode requires hidden/parsed reasoning_format
+  // and reasoning_effort "none" saves output tokens for large item lists.
+  const qwenParams = isCompactGroqVisionModel(modelName)
+    ? { reasoning_format: 'hidden' as const, reasoning_effort: 'none' as const }
+    : {};
+
   const chatCompletion = await client.chat.completions.create({
     messages: [{ role: 'user', content: content as any }],
     model: modelName,
@@ -203,9 +210,18 @@ async function runGroqSingle(
     max_tokens: maxOutputTokens,
     // Scout + Qwen support JSON mode per https://console.groq.com/docs/vision
     response_format: { type: 'json_object' },
-  });
+    ...qwenParams,
+  } as any);
 
-  return chatCompletion.choices[0]?.message?.content || '{}';
+  const choice = chatCompletion.choices[0];
+  if (choice?.finish_reason === 'length') {
+    throw Object.assign(
+      new Error('Model output was truncated (token limit). Try fewer pages, a smaller image, or Llama 4 Scout.'),
+      { status: 413 }
+    );
+  }
+
+  return choice?.message?.content || '{}';
 }
 
 /** Multi-page invoice OCR — batches into groups of 5 (Groq vision limit) and merges results */
@@ -223,6 +239,7 @@ export async function runGroqInvoiceOcr(
 
   const chunks = chunkArray(images, GROQ_VISION_LIMITS.maxImagesPerRequest);
   const totalPages = images.length;
+  const compact = isCompactGroqVisionModel(modelName);
   const partials: InvoiceExtractionPartial[] = [];
   let pageOffset = 0;
 
@@ -237,11 +254,18 @@ export async function runGroqInvoiceOcr(
         : await runGroqSingle(chunk, modelName, {
             totalPages,
             pageOffset,
-            prompt: buildContinuationPrompt(pageStart, pageEnd, totalPages),
+            prompt: buildContinuationPrompt(pageStart, pageEnd, totalPages, compact),
           });
 
-    const cleaned = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
-    partials.push(JSON.parse(cleaned) as InvoiceExtractionPartial);
+    const cleaned = stripJsonFences(rawJson);
+    try {
+      partials.push(JSON.parse(cleaned) as InvoiceExtractionPartial);
+    } catch {
+      throw Object.assign(
+        new Error('Model returned invalid JSON (output may be truncated). Try Llama 4 Scout or fewer pages.'),
+        { status: 400 }
+      );
+    }
     pageOffset += chunk.length;
   }
 

@@ -100,7 +100,21 @@ export function mergeInvoiceExtractions(partials: InvoiceExtractionPartial[]): I
   return merged;
 }
 
-export function buildContinuationPrompt(pageStart: number, pageEnd: number, totalPages: number): string {
+export function buildContinuationPrompt(
+  pageStart: number,
+  pageEnd: number,
+  totalPages: number,
+  compact = false
+): string {
+  if (compact) {
+    return `Pages ${pageStart}-${pageEnd} of ${totalPages} — same Indian pharma invoice. Extract EVERY line item on these pages only. Return valid JSON:
+{
+  "rawTranscription": "",
+  "items": [ /* same item schema as before */ ]
+}
+Do NOT repeat header fields. Each printed row is a separate item. JSON only, no markdown.`;
+  }
+
   return `These are pages ${pageStart}-${pageEnd} of ${totalPages} from the same Indian pharmaceutical distributor invoice.
 
 Extract EVERY line item visible on these pages only. Return valid JSON:
@@ -110,4 +124,9 @@ Extract EVERY line item visible on these pages only. Return valid JSON:
 }
 
 Do NOT repeat distributor/invoice header unless it appears on these pages. Do not skip duplicate medicine names — each printed row is a separate item.`;
+}
+
+/** Strip markdown fences from Groq vision JSON responses */
+export function stripJsonFences(raw: string): string {
+  return raw.replace(/```json/g, '').replace(/```/g, '').trim();
 }
