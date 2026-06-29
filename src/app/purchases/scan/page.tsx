@@ -101,18 +101,11 @@ export default function AIInvoiceScanner() {
         await worker.terminate();
         console.log('[Tesseract] Combined text length:', combinedText.trim().length);
 
-        data = {
-          rawTranscription: combinedText.trim(),
-          distributorName: '',
-          invoiceNumber: '',
-          invoiceDate: '',
-          items: [],
-          subtotal: 0,
-          discountAmount: 0,
-          gstAmount: 0,
-          total: 0,
-          offlineOcrNote: 'Extracted using browser-based Tesseract OCR. Only raw text is available — structured fields need manual entry.'
-        };
+        // Step 2: Parse the raw text into structured invoice data (no AI needed)
+        setProgressText('Parsing invoice structure...');
+        const { parseInvoiceText } = await import('@/lib/invoice-text-parser');
+        data = parseInvoiceText(combinedText);
+        console.log('[Parser] Result:', data.items.length, 'items,', 'confidence:', data.parsingConfidence);
       } else {
         // --- SERVER-SIDE OCR via API ---
         setProgressText('Uploading images securely...');
