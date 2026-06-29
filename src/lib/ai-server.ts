@@ -3,6 +3,16 @@
  * Groq vision models: https://console.groq.com/docs/vision
  * Gemini models require GEMINI_API_KEY (may fail from some Cloudflare regions).
  */
+import {
+  GROQ_VISION_LIMITS,
+  buildContinuationPrompt,
+  chunkArray,
+  mergeInvoiceExtractions,
+  normalizeImageDataUrl,
+  validateGroqImages,
+  type GroqImagePayload,
+  type InvoiceExtractionPartial,
+} from '@/lib/groq-vision';
 export type OcrModelProvider = 'groq' | 'gemini' | 'offline';
 
 export interface OcrModelOption {
@@ -87,35 +97,117 @@ function getGroqModelLimits(modelName: string) {
   };
 }
 
-export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = DEFAULT_GROQ_VISION_MODEL) {
-  if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
+function buildGroqVisionContent(
+  images: GroqImagePayload[],
+  prompt: string,
+  pageOffset = 0,
+  totalPages?: number
+) {
+  const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+    { type: 'text', text: prompt },
+  ];
+
+  const total = totalPages ?? images.length;
+  images.forEach((img, i) => {
+    const pageNum = pageOffset + i + 1;
+    if (total > 1) {
+      content.push({ type: 'text', text: `Invoice page ${pageNum} of ${total}:` });
+    }
+    content.push({
+      type: 'image_url',
+      image_url: { url: normalizeImageDataUrl(img.base64, img.mimeType) },
+    });
+  });
+
+  return content;
+}
+
+async function runGroqSingle(
+  images: GroqImagePayload[],
+  modelName: string,
+  options: {
+    prompt?: string;
+    pageOffset?: number;
+    totalPages?: number;
+  } = {}
+): Promise<string> {
+  if (!process.env.GROQ_API_KEY) throw new Error('Missing GROQ_API_KEY');
+
+  const imageError = validateGroqImages(images);
+  if (imageError) throw new Error(imageError);
+
   const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ 
-    baseURL: "https://api.groq.com/openai/v1", 
+  const client = new OpenAI({
+    baseURL: 'https://api.groq.com/openai/v1',
     apiKey: process.env.GROQ_API_KEY,
     defaultHeaders: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
   });
 
   const { maxOutputTokens } = getGroqModelLimits(modelName);
-  
-  const content: any[] = [{ type: "text", text: PROMPT }];
-  images.forEach(img => {
-      content.push({ type: "image_url", image_url: { url: img.base64 } });
-  });
+  const prompt = options.prompt ?? PROMPT;
+  const content = buildGroqVisionContent(
+    images,
+    prompt,
+    options.pageOffset ?? 0,
+    options.totalPages
+  );
 
   const chatCompletion = await client.chat.completions.create({
-    messages: [
-      { role: "user", content: content }
-    ],
+    messages: [{ role: 'user', content: content as any }],
     model: modelName,
     temperature: 0.1,
     max_tokens: maxOutputTokens,
-    // Groq vision models (Scout, Qwen) support JSON mode — improves structured invoice output
+    // Scout + Qwen support JSON mode per https://console.groq.com/docs/vision
     response_format: { type: 'json_object' },
   });
+
   return chatCompletion.choices[0]?.message?.content || '{}';
+}
+
+/** Multi-page invoice OCR — batches into groups of 5 (Groq vision limit) and merges results */
+export async function runGroqInvoiceOcr(
+  images: GroqImagePayload[],
+  modelName: string = DEFAULT_GROQ_VISION_MODEL
+): Promise<string> {
+  const imageError = validateGroqImages(images);
+  if (imageError) throw new Error(imageError);
+
+  if (images.length <= GROQ_VISION_LIMITS.maxImagesPerRequest) {
+    return runGroqSingle(images, modelName, { totalPages: images.length });
+  }
+
+  const chunks = chunkArray(images, GROQ_VISION_LIMITS.maxImagesPerRequest);
+  const totalPages = images.length;
+  const partials: InvoiceExtractionPartial[] = [];
+  let pageOffset = 0;
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const pageStart = pageOffset + 1;
+    const pageEnd = pageOffset + chunk.length;
+
+    const rawJson =
+      i === 0
+        ? await runGroqSingle(chunk, modelName, { totalPages, pageOffset: 0 })
+        : await runGroqSingle(chunk, modelName, {
+            totalPages,
+            pageOffset,
+            prompt: buildContinuationPrompt(pageStart, pageEnd, totalPages),
+          });
+
+    const cleaned = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+    partials.push(JSON.parse(cleaned) as InvoiceExtractionPartial);
+    pageOffset += chunk.length;
+  }
+
+  return JSON.stringify(mergeInvoiceExtractions(partials));
+}
+
+export async function runGroq(images: GroqImagePayload[], modelName: string = DEFAULT_GROQ_VISION_MODEL) {
+  return runGroqInvoiceOcr(images, modelName);
 }
 
 export async function runGemini(images: {base64: string, mimeType: string}[], modelName: string = "gemini-flash-latest") {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGroq, runGemini, GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
+import { validateGroqImages } from '@/lib/groq-vision';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -12,6 +13,20 @@ export async function POST(req: NextRequest) {
     console.log('[OCR] Available runner IDs:', GROQ_OCR_MODELS.map(m => m.id));
     if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
+    }
+
+    const isGroqRoute =
+      preferredModel === 'auto' ||
+      GROQ_OCR_MODELS.some(m => m.id === preferredModel && m.provider === 'groq');
+
+    if (isGroqRoute) {
+      const groqValidation = validateGroqImages(images);
+      if (groqValidation) {
+        return NextResponse.json({ error: groqValidation }, { status: 400 });
+      }
+      if (images.length > 5) {
+        console.log(`[OCR] ${images.length} pages — will batch into groups of 5 (Groq vision limit)`);
+      }
     }
 
     let textResponse = "";
@@ -58,7 +73,7 @@ export async function POST(req: NextRequest) {
          textResponse = await selectedRunner.run();
          console.log(`[OCR] Success on user-selected model: ${selectedRunner.name}`);
        } catch (e: any) {
-         const isTokenLimit = e.status === 413 || /too large|tpm/i.test(e.message ?? '');
+         const isTokenLimit = e.status === 413 || /too large|tpm|413/i.test(e.message ?? '');
          const isModelUnavailable = e.status === 404 || /does not exist|you do not have access/i.test(e.message ?? '');
 
          if (isModelUnavailable && (await tryScoutFallback(selectedRunner.name, 'unavailable'))) {

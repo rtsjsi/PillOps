@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
+import { GROQ_VISION_LIMITS } from '@/lib/groq-vision';
+import { compressDataUrlForGroq, fileToGroqJpegDataUrl } from '@/lib/groq-image-compress';
 import { ImageCropper } from '@/components/purchases/image-cropper';
 export default function AIInvoiceScanner() {
   const router = useRouter();
@@ -21,77 +23,21 @@ export default function AIInvoiceScanner() {
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [cropQueueIndex, setCropQueueIndex] = useState(0);
 
-  const fileToBase64 = (file: File, maxDim = 2000): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height && width > maxDim) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else if (height > maxDim) {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return resolve(e.target?.result as string); // fallback
-          
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Removed B&W binarization to let Vision LLMs use natural colors/shadows
-          resolve(canvas.toDataURL('image/jpeg', 0.9)); // 90% quality JPEG compression
-        };
-        img.onerror = () => reject(new Error('Failed to load image for compression'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const downscaleDataUrl = (dataUrl: string, maxDim: number): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width <= maxDim && height <= maxDim) {
-          resolve(dataUrl);
-          return;
-        }
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(dataUrl);
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.onerror = () => reject(new Error('Failed to downscale image'));
-      img.src = dataUrl;
-    });
-  };
-
   const getModelMaxImageDim = (modelId: string) => {
     if (modelId === 'auto') {
       return GROQ_OCR_MODELS.find(m => m.id === DEFAULT_GROQ_VISION_MODEL)?.maxImageDim ?? 2000;
     }
     return GROQ_OCR_MODELS.find(m => m.id === modelId)?.maxImageDim ?? 2000;
+  };
+
+  const prepareImagesForApi = async () => {
+    const maxDim = getModelMaxImageDim(selectedModel);
+    return Promise.all(
+      images.map(async img => ({
+        base64: await compressDataUrlForGroq(img.base64, maxDim),
+        mimeType: 'image/jpeg',
+      }))
+    );
   };
 
   const handleProcess = async () => {
@@ -145,14 +91,12 @@ export default function AIInvoiceScanner() {
       } else {
         // --- SERVER-SIDE OCR via API ---
         setProgressText('Uploading images securely...');
-        const maxDim = getModelMaxImageDim(selectedModel);
-        const payloadImages = await Promise.all(
-          images.map(async img => ({
-            base64: await downscaleDataUrl(img.base64, maxDim),
-            mimeType: img.mimeType,
-          }))
+        const payloadImages = await prepareImagesForApi();
+        setProgressText(
+          payloadImages.length > GROQ_VISION_LIMITS.maxImagesPerRequest
+            ? `Vision AI processing ${payloadImages.length} pages in batches...`
+            : 'Vision AI processing documents...'
         );
-        setProgressText('Vision AI processing documents...');
 
         const response = await fetch('/api/extract-invoice', {
           method: 'POST',
@@ -192,7 +136,7 @@ export default function AIInvoiceScanner() {
       setCropQueue(filesArray);
       setCropQueueIndex(0);
       
-      const firstBase64 = await fileToBase64(filesArray[0]);
+      const firstBase64 = await fileToGroqJpegDataUrl(filesArray[0]);
       setCroppingImage(firstBase64);
 
       // Reset input so the same file can be selected again if needed
@@ -218,7 +162,7 @@ export default function AIInvoiceScanner() {
     const nextIndex = cropQueueIndex + 1;
     if (nextIndex < cropQueue.length) {
       setCropQueueIndex(nextIndex);
-      const base64 = await fileToBase64(cropQueue[nextIndex]);
+      const base64 = await fileToGroqJpegDataUrl(cropQueue[nextIndex]);
       setCroppingImage(base64);
     } else {
       setCroppingImage(null);
@@ -288,7 +232,14 @@ export default function AIInvoiceScanner() {
 
         {images.length > 0 && (
           <div className="bg-card p-4 rounded-xl border animate-page-in">
-            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3 block">Scanned Pages ({images.length})</Label>
+            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3 block">
+              Scanned Pages ({images.length})
+              {images.length > GROQ_VISION_LIMITS.maxImagesPerRequest && selectedModel !== 'offline' && (
+                <span className="normal-case font-medium text-muted-foreground/80 ml-1">
+                  — processed in batches of {GROQ_VISION_LIMITS.maxImagesPerRequest}
+                </span>
+              )}
+            </Label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {images.map((img, idx) => (
                 <div key={idx} className="relative shrink-0 w-24 h-32 rounded-lg border-2 border-primary/20 overflow-hidden shadow-sm">
