@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             : runGroq(images, m.id),
       }));
 
-    // Auto-fallback order: Groq Scout → Groq Qwen → Gemini options
+    // Auto-fallback order: Groq Scout → Groq Maverick → Groq Qwen → Gemini options
     const autoRunners = [
       apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL)!,
       ...apiRunners.filter(r => r.id !== DEFAULT_GROQ_VISION_MODEL),
