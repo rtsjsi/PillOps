@@ -8,7 +8,8 @@ export const GROQ_OCR_MODELS = [
   { id: "phi-3-vision-mini-4k-instruct", label: "Phi‑3 Vision Mini (4k)" },
   { id: "gemma-2-9b-vision", label: "Gemma 2 9B Vision" },
   // Fallback text‑only model (use after local OCR)
-  { id: "llama-3-8b-8192", label: "Llama 3 8B (text‑only)" }
+  { id: "llama-3-8b-8192", label: "Llama 3 8B (text‑only)" },
+  { id: "offline", label: "Offline OCR (No API)" }
 ];
 
 export const PROMPT = `You are an expert pharmacy data extraction AI.

@@ -20,7 +20,19 @@ export async function POST(req: NextRequest) {
     const runners = GROQ_OCR_MODELS.map(m => ({
       id: m.id,
       name: m.label,
-      run: () => runGroq(images, m.id)
+      run: m.id === 'offline'
+        ? () => Promise.resolve(JSON.stringify({
+            rawTranscription: '',
+            distributorName: '',
+            invoiceNumber: '',
+            invoiceDate: '',
+            items: [],
+            subtotal: 0,
+            discountAmount: 0,
+            gstAmount: 0,
+            total: 0
+          }))
+        : () => runGroq(images, m.id)
     }));
 
     // Add Gemini fallbacks if the user selected a non‑Groq model
