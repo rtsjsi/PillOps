@@ -26,7 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { icon: Package, label: 'Inventory', href: '/inventory' },
   { icon: Database, label: 'Medicine Directory', href: '/medicines' },
   { icon: ArrowDownToLine, label: 'Purchases', href: '/purchases' },
-  { icon: ShoppingCart, label: 'Point of Sale', href: '/pos' },
+  { icon: ShoppingCart, label: 'Sales', href: '/pos' },
   { icon: Clock, label: 'Expiry Radar', href: '/expiry' },
   { icon: FileText, label: 'Reports', href: '/reports', roles: ['owner', 'super_admin', 'staff'] },
   { icon: ShieldAlert, label: 'Super Admin', href: '/admin', roles: ['super_admin'] },
