@@ -59,24 +59,10 @@ export async function POST(req: NextRequest) {
       }));
 
     // Auto-fallback order: Groq Scout → Groq Qwen → Gemini options
-    const scoutRunner = apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL)!;
     const autoRunners = [
-      scoutRunner,
+      apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL)!,
       ...apiRunners.filter(r => r.id !== DEFAULT_GROQ_VISION_MODEL),
     ];
-
-    const tryScoutFallback = async (failedRunnerName: string, reason: string): Promise<boolean> => {
-      if (preferredModel === DEFAULT_GROQ_VISION_MODEL) return false;
-      console.warn(`[OCR] ${failedRunnerName} ${reason}, retrying with ${scoutRunner.name}`);
-      try {
-        textResponse = await scoutRunner.run();
-        console.log(`[OCR] Success on Scout fallback after ${failedRunnerName}`);
-        return true;
-      } catch (fallbackErr: any) {
-        console.warn(`[OCR] Scout fallback also failed: ${fallbackErr.message}`);
-        return false;
-      }
-    };
 
     if (preferredModel !== 'auto') {
        const selectedRunner = apiRunners.find(r => r.id === preferredModel);
@@ -91,23 +77,26 @@ export async function POST(req: NextRequest) {
        } catch (e: any) {
          const isTokenLimit = e.status === 413 || /too large|tpm|413/i.test(e.message ?? '');
          const isModelUnavailable = e.status === 404 || /does not exist|you do not have access/i.test(e.message ?? '');
+         const isJsonValidation = e.status === 400 && /failed to validate json|invalid json|json/i.test(e.message ?? '');
 
-         if (isModelUnavailable && (await tryScoutFallback(selectedRunner.name, 'unavailable'))) {
-           // recovered via Scout
-         } else if (isTokenLimit && (await tryScoutFallback(selectedRunner.name, 'hit token limit'))) {
-           // recovered via Scout
-         } else if (isModelUnavailable) {
+         console.warn(`[OCR] User-selected model ${selectedRunner.name} failed: ${e.message}`);
+
+         if (isModelUnavailable) {
            return NextResponse.json({
-             error: `Model unavailable on Groq. Use Llama 4 Scout or Auto-Fallback. (${e.message})`,
+             error: `Model unavailable on Groq. (${e.message})`,
            }, { status: 503 });
-         } else if (isTokenLimit) {
-           return NextResponse.json({
-             error: `Selected model hit Groq's token limit. Llama 4 Scout fallback also failed.`,
-           }, { status: 503 });
-         } else {
-           console.warn(`[OCR] User-selected model ${selectedRunner.name} failed: ${e.message}`);
-           return NextResponse.json({ error: `Selected model failed: ${e.message}` }, { status: 503 });
          }
+         if (isTokenLimit) {
+           return NextResponse.json({
+             error: `Selected model hit Groq's token limit. Try a smaller image or use Auto.`,
+           }, { status: 503 });
+         }
+         if (isJsonValidation) {
+           return NextResponse.json({
+             error: `Selected model returned invalid JSON. Try Llama 4 Scout or Auto for large invoices.`,
+           }, { status: 503 });
+         }
+         return NextResponse.json({ error: `Selected model failed: ${e.message}` }, { status: 503 });
        }
     } else {
        let executingTier = 1;

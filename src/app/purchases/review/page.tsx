@@ -25,12 +25,61 @@ interface InvoiceData extends InvoiceHeaderData {
   offlineOcrNote?: string;
 }
 
+function formatExpiryForForm(date: string): string {
+  if (!date) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [yyyy, mm] = date.split('-');
+    return `${mm}-${yyyy}`;
+  }
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    const [yyyy, mm] = date.split('-');
+    return `${mm}-${yyyy}`;
+  }
+  return date;
+}
+
+function mapDbInvoiceToForm(draft: any): InvoiceData {
+  return {
+    id: draft.id,
+    distributorName: draft.distributor_name || '',
+    invoiceDate: draft.invoice_date || '',
+    invoiceNumber: draft.invoice_number || '',
+    total: draft.total || 0,
+    items: (draft.purchase_invoice_items || []).map((item: any) => ({
+      medicineName: item.medicine_name || '',
+      batchNumber: item.batch_number || '',
+      expiryDate: formatExpiryForForm(item.expiry_date || ''),
+      purchasePrice: item.purchase_price || 0,
+      mrp: item.mrp || 0,
+      discountPercent: item.discount_percent || 0,
+      quantity: item.quantity || 0,
+      freeQuantity: item.free_quantity || 0,
+      gstPercent: item.gst_percent || 5,
+      totalAmount: item.total_amount || 0,
+    })),
+  };
+}
+
+function calculateLineTotals(items: PurchaseItem[]) {
+  let subtotal = 0;
+  let gstAmount = 0;
+  items.forEach(item => {
+    const base = (item.quantity || 0) * (item.purchasePrice || 0);
+    const gst = base * ((item.gstPercent || 0) / 100);
+    subtotal += base;
+    gstAmount += gst;
+  });
+  return { subtotal, gstAmount, discountAmount: 0 };
+}
+
 export default function ReviewExtraction() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const draftId = searchParams.get('draftId');
+  const invoiceId = searchParams.get('invoiceId') || searchParams.get('draftId');
 
   const [data, setData] = useState<InvoiceData | null>(null);
+  const [editStatus, setEditStatus] = useState<'draft' | 'completed' | null>(null);
+  const [savedAsEdit, setSavedAsEdit] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [invalidFields, setInvalidFields] = useState<{ header: string[], items: number[] }>({ header: [], items: [] });
@@ -42,13 +91,13 @@ export default function ReviewExtraction() {
   const [medicines, setMedicines] = useState<any[]>([]);
 
   const handleDeleteDraft = async () => {
-    if (!draftId) return;
+    if (!invoiceId || editStatus !== 'draft') return;
     if (!window.confirm("Are you sure you want to delete this draft invoice?")) return;
     
     setIsDeleting(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.from('purchase_invoices').delete().eq('id', draftId);
+      const { error } = await supabase.from('purchase_invoices').delete().eq('id', invoiceId);
       
       if (error) throw error;
       
@@ -113,56 +162,30 @@ export default function ReviewExtraction() {
     });
   };
 
-  // ─── Data Loading: Draft or OCR ──────────────────────────────
+  // ─── Data Loading: Existing invoice, draft, or OCR ───────────
   useEffect(() => {
-    if (draftId) {
-      const fetchDraft = async () => {
+    if (invoiceId) {
+      const fetchExistingInvoice = async () => {
          try {
              const supabase = createClient();
-             const { data: draft, error } = await supabase.from('purchase_invoices').select('*, purchase_invoice_items(*)').eq('id', draftId).single();
+             const { data: invoice, error } = await supabase
+               .from('purchase_invoices')
+               .select('*, purchase_invoice_items(*)')
+               .eq('id', invoiceId)
+               .single();
              
-             if (error || !draft) throw new Error("Draft not found.");
+             if (error || !invoice) throw new Error("Invoice not found.");
              
-             const mappedData: InvoiceData = {
-                 id: draft.id,
-                 distributorName: draft.distributor_name || '',
-                 invoiceDate: draft.invoice_date || '',
-                 invoiceNumber: draft.invoice_number || '',
-                 total: draft.total || 0,
-                 items: (draft.purchase_invoice_items || []).map((item: any) => ({
-                     medicineName: item.medicine_name || '',
-                     batchNumber: item.batch_number || '',
-                     expiryDate: (() => {
-                       const date = item.expiry_date || '';
-                       if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-                         const [yyyy, mm] = date.split('-');
-                         return `${mm}-${yyyy}`;
-                       }
-                       if (/^\d{4}-\d{2}$/.test(date)) {
-                         const [yyyy, mm] = date.split('-');
-                         return `${mm}-${yyyy}`;
-                       }
-                       return date;
-                     })(),
-                     purchasePrice: item.purchase_price || 0,
-                     mrp: item.mrp || 0,
-                     discountPercent: item.discount_percent || 0,
-                     quantity: item.quantity || 0,
-                     freeQuantity: item.free_quantity || 0,
-                     gstPercent: item.gst_percent || 5,
-                     totalAmount: item.total_amount || 0
-                 }))
-             };
-             
-             setData(mappedData);
+             setEditStatus(invoice.status === 'draft' ? 'draft' : 'completed');
+             setData(mapDbInvoiceToForm(invoice));
          } catch (e: any) {
-             console.error("Fetch draft error:", e);
-             setFatalError(e.message || "Failed to load draft invoice.");
+             console.error("Fetch invoice error:", e);
+             setFatalError(e.message || "Failed to load invoice.");
          } finally {
              setIsEnriching(false);
          }
       };
-      fetchDraft();
+      fetchExistingInvoice();
       return;
     }
 
@@ -286,7 +309,7 @@ export default function ReviewExtraction() {
       setFatalError("No invoice data found. Please scan an invoice first.");
       setIsEnriching(false);
     }
-  }, []);
+  }, [invoiceId]);
 
   // ─── Save / Confirm Handler ──────────────────────────────────
   const handleConfirm = async (status: 'draft' | 'completed' = 'completed') => {
@@ -299,6 +322,7 @@ export default function ReviewExtraction() {
     // Validation
     if (!data.distributorName) headerErrors.push('distributorName');
     if (!data.invoiceNumber) headerErrors.push('invoiceNumber');
+    if (status === 'completed' && (!data.total || data.total <= 0)) headerErrors.push('total');
     
     if (status === 'completed') {
       if (!data.invoiceDate) headerErrors.push('invoiceDate');
@@ -364,9 +388,18 @@ export default function ReviewExtraction() {
            };
         });
 
+        const lineTotals = calculateLineTotals(formattedItems);
+        const purchasePayload = {
+          ...data,
+          ...lineTotals,
+          total: data.total,
+          storeId: profile.store_id,
+          status,
+        };
+
         const supabase = createClient();
         const { error } = await supabase.rpc('save_purchase_invoice', {
-          purchase_data: { ...data, storeId: profile.store_id, status },
+          purchase_data: purchasePayload,
           items: formattedItems,
         });
 
@@ -381,6 +414,7 @@ export default function ReviewExtraction() {
         }
 
         sessionStorage.removeItem('pillops_extracted_invoice');
+        setSavedAsEdit(editStatus === 'completed' || !!data.id);
         setIsSuccess(true);
         setTimeout(() => {
             router.push('/purchases');
@@ -435,12 +469,23 @@ export default function ReviewExtraction() {
           <div className="container min-h-[80vh] flex flex-col items-center justify-center gap-6 text-center">
               <CheckCircle2 size={80} className="text-emerald-500 animate-bounce" />
               <div className="grid gap-2">
-                <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Stock Added!</h2>
-                <p className="text-muted-foreground font-medium">Inventory updated successfully. Redirecting...</p>
+                <h2 className="text-xl font-extrabold tracking-tight text-slate-900">
+                  {savedAsEdit ? 'Invoice Updated!' : 'Stock Added!'}
+                </h2>
+                <p className="text-muted-foreground font-medium">
+                  {savedAsEdit ? 'Changes saved successfully. Redirecting...' : 'Inventory updated successfully. Redirecting...'}
+                </p>
               </div>
           </div>
       );
   }
+
+  const isEditingCompleted = editStatus === 'completed';
+  const pageTitle = isEditingCompleted
+    ? 'Edit Purchase Invoice'
+    : editStatus === 'draft'
+      ? 'Complete Draft Invoice'
+      : 'Review Invoice Data';
 
   // ─── Main Review UI ──────────────────────────────────────────
   return (
@@ -451,10 +496,10 @@ export default function ReviewExtraction() {
           <Button variant="ghost" size="icon" render={<Link href="/purchases" />} className="rounded-full">
               <ArrowLeft size={24} />
           </Button>
-          <h1 className="text-lg font-bold tracking-tight">Review Invoice Data</h1>
+          <h1 className="text-lg font-bold tracking-tight">{pageTitle}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {draftId && (
+          {editStatus === 'draft' && (
             <Button
               variant="outline"
               disabled={isSaving || isDrafting || isDeleting}
@@ -464,9 +509,11 @@ export default function ReviewExtraction() {
               {isDeleting ? 'Deleting...' : 'Delete Draft'}
             </Button>
           )}
-          <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
-            Rescan Invoice
-          </Button>
+          {!isEditingCompleted && (
+            <Button variant="outline" render={<Link href="/purchases/scan" />} className="font-bold rounded-full text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
+              Rescan Invoice
+            </Button>
+          )}
         </div>
       </header>
 
@@ -477,6 +524,7 @@ export default function ReviewExtraction() {
         invalidFields={invalidFields.header}
         distributors={distributors}
         warning={data.duplicateWarning}
+        editableTotal
       />
 
       {/* ─── Offline OCR Raw Text ─── */}
@@ -531,22 +579,28 @@ export default function ReviewExtraction() {
       {/* ─── Bottom Action Bar ─── */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/80 backdrop-blur-xl border-t border-border z-50 shadow-lg">
          <div className="container max-w-4xl flex flex-col sm:flex-row gap-2 sm:gap-3">
+           {!isEditingCompleted && (
+             <Button 
+                variant="secondary"
+                className="w-full sm:w-1/3 h-12 sm:h-11 text-sm font-bold rounded-xl shadow-md flex gap-2"
+                disabled={isSaving || isDrafting}
+                onClick={() => handleConfirm('draft')}
+             >
+                {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+                {isDrafting ? 'Saving...' : 'Save as Draft'}
+             </Button>
+           )}
            <Button 
-              variant="secondary"
-              className="w-full sm:w-1/3 h-12 sm:h-11 text-sm font-bold rounded-xl shadow-md flex gap-2"
-              disabled={isSaving || isDrafting}
-              onClick={() => handleConfirm('draft')}
-           >
-              {isDrafting ? <Loader2 className="animate-spin" /> : <Save size={20} />}
-              {isDrafting ? 'Saving...' : 'Save as Draft'}
-           </Button>
-           <Button 
-              className="w-full sm:w-2/3 h-12 sm:h-11 text-sm font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2"
+              className={`w-full h-12 sm:h-11 text-sm font-bold rounded-xl shadow-lg shadow-primary/15 flex gap-2 ${isEditingCompleted ? 'sm:w-full' : 'sm:w-2/3'}`}
               disabled={isSaving || isDrafting}
               onClick={() => handleConfirm('completed')}
            >
               {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
-              {isSaving ? 'Finalizing Stock...' : `Confirm & Add to Inventory (${data.items.length} items)`}
+              {isSaving
+                ? (isEditingCompleted ? 'Saving Changes...' : 'Finalizing Stock...')
+                : isEditingCompleted
+                  ? `Save Changes (${data.items.length} items)`
+                  : `Confirm & Add to Inventory (${data.items.length} items)`}
            </Button>
          </div>
       </div>

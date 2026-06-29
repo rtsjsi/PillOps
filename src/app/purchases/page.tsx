@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchPurchases } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { FileScan, Box, History } from 'lucide-react';
+import { FileScan, Box, History, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
@@ -111,6 +111,20 @@ export default function Purchases() {
                          <div>{inv.invoiceDate ? formatDate(inv.invoiceDate) : 'No Date'}</div>
                       </div>
                       
+                      {activeTab === 'completed' && (
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            render={<Link href={`/purchases/review?invoiceId=${inv.id}`} />}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full font-bold"
+                          >
+                            <Pencil size={14} className="mr-1.5" />
+                            Edit Invoice
+                          </Button>
+                        </div>
+                      )}
+
                       {activeTab === 'drafts' && (
                         <div className="mt-2 flex justify-end gap-2">
                           <Button
@@ -121,7 +135,7 @@ export default function Purchases() {
                           >
                             Delete Draft
                           </Button>
-                          <Button render={<Link href={`/purchases/review?draftId=${inv.id}`} />} size="sm" className="rounded-full">
+                          <Button render={<Link href={`/purchases/review?invoiceId=${inv.id}`} />} size="sm" className="rounded-full">
                             Complete Draft
                           </Button>
                         </div>

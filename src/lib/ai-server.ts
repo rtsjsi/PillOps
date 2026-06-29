@@ -32,70 +32,99 @@ export interface OcrModelOption {
 
 /** Default Groq vision model — free tier, supports images + JSON mode */
 export const DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+export const QWEN_GROQ_VISION_MODEL = 'qwen/qwen3.6-27b';
 
 // Only models listed on https://console.groq.com/docs/vision — text-only models (e.g. Maverick) return 404 with images.
 export const GROQ_OCR_MODELS: OcrModelOption[] = [
   { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq', maxOutputTokens: 8000, maxImageDim: 2000 },
-  // Groq on_demand tier caps Qwen at 8K tokens/request (prompt + images + max_tokens)
-  { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B (Groq)', provider: 'groq', maxOutputTokens: 3500, maxImageDim: 1200 },
+  // Qwen has a smaller per-request token budget — use compact prompt + moderate max_tokens
+  { id: QWEN_GROQ_VISION_MODEL, label: 'Qwen 3.6 27B (Groq)', provider: 'groq', maxOutputTokens: 4096, maxImageDim: 1200 },
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google)', provider: 'gemini' },
   { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
 ];
 
-export function buildInvoiceExtractionPrompt(context?: StoreContext): string {
+const INVOICE_JSON_SCHEMA = `{
+  "rawTranscription": "",
+  "distributorName": "",
+  "invoiceNumber": "",
+  "invoiceDate": "YYYY-MM-DD",
+  "items": [
+    {
+      "medicineName": "",
+      "pack": "",
+      "hsnCode": "",
+      "manufacturer": "",
+      "batchNumber": "",
+      "quantity": 0,
+      "freeQuantity": 0,
+      "purchasePrice": 0,
+      "discountPercent": 0,
+      "mrp": 0,
+      "gstPercent": 0,
+      "expiryDate": "MM-YYYY",
+      "totalAmount": 0
+    }
+  ],
+  "subtotal": 0,
+  "discountAmount": 0,
+  "gstAmount": 0,
+  "total": 0
+}`;
+
+export interface InvoicePromptOptions {
+  /** Shorter prompt for models with tight output limits (e.g. Qwen) */
+  compact?: boolean;
+}
+
+export function buildInvoiceExtractionPrompt(
+  context?: StoreContext,
+  options: InvoicePromptOptions = {}
+): string {
+  const compact = options.compact ?? false;
+
+  const distributorRules = compact
+    ? `10. distributorName must be the wholesaler/issuer (top-left or "For ..." signatory). Ignore the retail customer (M/s, medical stores).${context?.storeName ? ` Never use "${context.storeName}".` : ''}${context?.storeGstin ? ` Ignore GSTIN ${context.storeGstin}.` : ''}`
+    : buildDistributorExtractionInstructions(context);
+
+  const totalRules = compact
+    ? '11. total must be this invoice Grand Total or Net Amount in the footer. Ignore Outstanding, O/S, or ledger balance in the header.'
+    : buildInvoiceTotalExtractionInstructions();
+
+  const transcriptionRule = compact
+    ? '1. Set rawTranscription to an empty string "" — do not transcribe the full table (output token limit).'
+    : '1. Chain of Thought: First, in the "rawTranscription" field, write out a literal transcription of the entire items table exactly as you see it row-by-row. This scratchpad helps you maintain spatial alignment.';
+
   return `You are an expert pharmacy data extraction AI.
 Analyze these images of a multi-page distributor pharmaceutical invoice. Extract the tabular structured data perfectly, combining all items from all pages into a single continuous list.
 Pay close attention to table headers.
 Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date, 'Qty' or 'Billed' means Quantity.
 
 CRITICAL INSTRUCTIONS:
-1. Chain of Thought: First, in the "rawTranscription" field, write out a literal transcription of the entire items table exactly as you see it row-by-row. This scratchpad helps you maintain spatial alignment.
+${transcriptionRule}
 2. Extract EVERY SINGLE ROW in the invoice items table. DO NOT skip, summarize, or truncate any items.
 3. ZERO HALLUCINATION POLICY: DO NOT guess or default to 1 for quantities. Find the exact column for 'Qty', 'Billed Qty', or 'Act' and extract the exact number.
 4. OCR PRECISION: Pay extreme attention to similar-looking characters in Batch Numbers (e.g., 6 vs 8, 0 vs O, B vs 8, D vs 0). Double-check the image pixels carefully.
 5. EXPIRY FORMATS: Look for the 'Exp' column. Indian invoices typically use MM/YY or MM-YY (e.g., "08/26" or "08-26"). Read the digits carefully.
 6. EXACT MEDICINE NAMES: Do NOT clean, normalize, or truncate the medicine names. Extract the EXACT verbatim string written under the item/product name column, including all volume, packaging, and unit details (e.g. extract "CREMAFFIN SYP 225ML" exactly, NOT just "CREMAFFIN SYRUP").
-7. DUPLICATE ROWS & REPEATED ITEMS: Be extremely careful not to skip rows that have the same medicine name. Some invoices list the same item twice on consecutive lines. Treat them as separate items and extract BOTH rows. 
+7. DUPLICATE ROWS & REPEATED ITEMS: Be extremely careful not to skip rows that have the same medicine name. Some invoices list the same item twice on consecutive lines. Treat them as separate items and extract BOTH rows.
 8. IGNORE HANDWRITTEN MARKS: The invoice may have handwritten checkmarks (e.g., blue pen ticks) over the printed quantities or amounts. Ignore these pen marks. Read only the printed digits.
 9. QTY vs PACK: Do NOT confuse the "Pack" column (e.g. "60T", "10ML") with the "Qty" column. Make sure the quantity reflects the printed number in the Qty column.
-${buildDistributorExtractionInstructions(context)}
-${buildInvoiceTotalExtractionInstructions()}
+${distributorRules}
+${totalRules}
 
-Return ONLY a valid JSON object matching exactly this schema:
-{
-  "rawTranscription": "string (The literal row-by-row transcription)",
-  "distributorName": "string",
-  "invoiceNumber": "string",
-  "invoiceDate": "string (format YYYY-MM-DD)",
-  "items": [
-    {
-      "medicineName": "string",
-      "pack": "string",
-      "hsnCode": "string",
-      "manufacturer": "string",
-      "batchNumber": "string (Look closely at 6 vs 8, 0 vs O)",
-      "quantity": number (DO NOT default to 1. Find the Qty/Billed column. Must be exact.),
-      "freeQuantity": number (default to 0, often "FQ" or "Scheme"),
-      "purchasePrice": number (the Rate/price per unit BEFORE tax/discount),
-      "discountPercent": number,
-      "mrp": number,
-      "gstPercent": number,
-      "expiryDate": "string (format MM-YYYY. Convert MM/YY to MM-YYYY. Look very closely at the digits)",
-      "totalAmount": number 
-    }
-  ],
-  "subtotal": number,
-  "discountAmount": number,
-  "gstAmount": number,
-  "total": number (THIS invoice's Grand Total / Net Amount only — NOT Outstanding or ledger balance)
-}
+Return ONLY a valid JSON object matching this shape (replace placeholders with extracted values; all numbers must be numeric, not strings):
+${INVOICE_JSON_SCHEMA}
 
-IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting like \`\`\`json, and do not include any conversational text or preamble. Output JSON immediately.`;
+IMPORTANT: You MUST return ONLY valid JSON. No markdown fences, no comments, no trailing commas, no preamble. Output JSON immediately.`;
 }
 
 /** Default prompt without store context — prefer buildInvoiceExtractionPrompt when store is known */
 export const PROMPT = buildInvoiceExtractionPrompt();
+
+export function isCompactGroqVisionModel(modelName: string): boolean {
+  return modelName === QWEN_GROQ_VISION_MODEL;
+}
 
 // --- TIER EXECUTORS ---
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
@@ -224,7 +253,8 @@ export async function runGroq(
   modelName: string = DEFAULT_GROQ_VISION_MODEL,
   context?: StoreContext
 ) {
-  const prompt = buildInvoiceExtractionPrompt(context);
+  const compact = isCompactGroqVisionModel(modelName);
+  const prompt = buildInvoiceExtractionPrompt(context, { compact });
   return runGroqInvoiceOcr(images, modelName, prompt);
 }
 

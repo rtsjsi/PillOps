@@ -16,11 +16,13 @@ export interface InvoiceHeaderData {
 
 interface InvoiceHeaderCardProps {
   data: InvoiceHeaderData;
-  onChange: (field: keyof InvoiceHeaderData, value: string) => void;
+  onChange: (field: keyof InvoiceHeaderData, value: string | number) => void;
   invalidFields?: string[];
   distributors?: string[];
   /** Warning message shown at the top of the card (e.g. duplicate detection) */
   warning?: string | null;
+  /** Allow manual override of invoice total (review screen) */
+  editableTotal?: boolean;
   /** Sticky positioning for scroll context */
   sticky?: boolean;
 }
@@ -35,6 +37,7 @@ export function InvoiceHeaderCard({
   invalidFields = [],
   distributors = [],
   warning,
+  editableTotal = false,
 }: InvoiceHeaderCardProps) {
   return (
     <div className="mb-4">
@@ -100,8 +103,25 @@ export function InvoiceHeaderCard({
           
           {/* Row 1/Col 4: Total */}
           <div className="space-y-1 col-span-1 sm:col-span-2 md:col-span-1 md:text-right flex flex-col md:items-end justify-end">
-            <Label className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Net Amount</Label>
-            <p className="text-xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
+            <Label className={cn(
+              "text-[9px] uppercase tracking-widest font-black text-muted-foreground",
+              invalidFields.includes('total') && "text-rose-500"
+            )}>Net Amount</Label>
+            {editableTotal ? (
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={Number.isFinite(data.total) ? data.total : ''}
+                onChange={e => onChange('total', e.target.value === '' ? 0 : Number(e.target.value))}
+                className={cn(
+                  "h-9 text-lg font-black text-emerald-600 bg-white md:text-right",
+                  invalidFields.includes('total') && "border-rose-500 focus-visible:ring-rose-500"
+                )}
+              />
+            ) : (
+              <p className="text-xl font-black text-emerald-600 tracking-tighter">{formatCurrency(data.total)}</p>
+            )}
           </div>
         </CardContent>
       </Card>
