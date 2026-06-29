@@ -66,7 +66,12 @@ export default function AIInvoiceScanner() {
 
     try {
       const payloadImages = images.map(img => ({ base64: img.base64, mimeType: img.mimeType }));
-      setProgressText('Vision AI processing documents...');
+      // Show specific progress for offline mode
+      if (selectedModel === 'offline') {
+        setProgressText('Running offline OCR (no API)...');
+      } else {
+        setProgressText('Vision AI processing documents...');
+      }
       
       const response = await fetch('/api/extract-invoice', {
         method: 'POST',

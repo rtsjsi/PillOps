@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini, GROQ_OCR_MODELS } from '@/lib/ai-server';
+import { runGroq, runGemini, runOfflineOcr, GROQ_OCR_MODELS } from '@/lib/ai-server';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -21,17 +21,7 @@ export async function POST(req: NextRequest) {
       id: m.id,
       name: m.label,
       run: m.id === 'offline'
-        ? () => Promise.resolve(JSON.stringify({
-            rawTranscription: '',
-            distributorName: '',
-            invoiceNumber: '',
-            invoiceDate: '',
-            items: [],
-            subtotal: 0,
-            discountAmount: 0,
-            gstAmount: 0,
-            total: 0
-          }))
+        ? () => runOfflineOcr(images)
         : () => runGroq(images, m.id)
     }));
 

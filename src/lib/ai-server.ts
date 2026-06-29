@@ -96,6 +96,63 @@ export async function runGemini(images: {base64: string, mimeType: string}[], mo
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 8192 } });
+
+  const parts: any[] = [PROMPT];
+  images.forEach(img => {
+      const cleanBase64 = img.base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64/, "");
+      parts.push({ inlineData: { data: cleanBase64, mimeType: img.mimeType } });
+  });
+
+  try {
+    const result = await model.generateContent(parts);
+    const response = await result.response;
+    return response.text();
+  } catch (err: any) {
+    if (err.message?.includes('User location is not supported')) {
+      throw new Error("Google Gemini API is currently unavailable in the Cloudflare datacenter region processing your request. Please select 'Llama 4 Scout 17B' from the dropdown to use Groq instead.");
+    }
+    throw err;
+  }
+}
+
+/** Offline OCR using Tesseract.js (pure JS, no external API) */
+export async function runOfflineOcr(images: { base64: string, mimeType: string }[]) {
+  // Dynamically import tesseract.js to avoid bundling it in production if not used
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker({ logger: m => console.log('[Tesseract]', m) });
+  await worker.load();
+  await worker.loadLanguage('eng');
+  await worker.initialize('eng');
+
+  let combinedText = '';
+  for (const img of images) {
+    // Tesseract can accept a base64 data URL directly
+    const { data: { text } } = await worker.recognize(img.base64);
+    combinedText += text + '\n';
+  }
+  await worker.terminate();
+
+  // Return a JSON string matching the expected invoice schema (mostly empty placeholders)
+  const placeholder = {
+    rawTranscription: combinedText.trim(),
+    distributorName: '',
+    invoiceNumber: '',
+    invoiceDate: '',
+    items: [],
+    subtotal: 0,
+    discountAmount: 0,
+    gstAmount: 0,
+    total: 0
+  };
+  return JSON.stringify(placeholder);
+}
+
+export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: string, manufacturer?: string, category?: string}[]) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
+  
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 8192 } });
   
   const parts: any[] = [PROMPT];
   images.forEach(img => {
