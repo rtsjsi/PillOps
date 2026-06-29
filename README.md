@@ -7,7 +7,7 @@ Indian pharmacy management app: inventory, purchases (invoice OCR), POS, reports
 - **Frontend:** Next.js 16 App Router, React 19, Tailwind 4
 - **Backend:** Supabase (Postgres + Auth + RLS)
 - **Deploy:** Cloudflare via OpenNext (`npm run build:cloudflare`)
-- **AI/OCR:** Groq vision (`meta-llama/llama-4-scout-17b-16e-instruct`), optional Gemini, offline Tesseract
+- **AI/OCR:** Groq vision (`meta-llama/llama-4-scout-17b-16e-instruct`), optional Gemini + OpenRouter fallbacks, offline Tesseract
 
 ## Setup
 
@@ -34,7 +34,7 @@ npm run dev
 
 Build command: `npm run build:cloudflare`
 
-Set `GROQ_API_KEY`, `GEMINI_API_KEY` (optional), and Supabase vars in Cloudflare dashboard.
+Set `GROQ_API_KEY`, `GEMINI_API_KEY` and/or `OPENROUTER_API_KEY` (optional fallbacks), and Supabase vars in Cloudflare dashboard.
 
 ## Scripts
 

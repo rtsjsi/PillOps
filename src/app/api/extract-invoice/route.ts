@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini, GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
+import {
+  runGroq,
+  runGemini,
+  runOpenRouter,
+  GROQ_OCR_MODELS,
+  AUTO_OCR_FALLBACK_ORDER,
+} from '@/lib/ai-server';
 import { validateGroqImages } from '@/lib/groq-vision';
 import { correctDistributorName, type StoreContext } from '@/lib/invoice-distributor';
 import { correctInvoiceTotal } from '@/lib/invoice-totals';
@@ -30,11 +36,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
     }
 
-    const isGroqRoute =
+    const isVisionApiRoute =
       preferredModel === 'auto' ||
-      GROQ_OCR_MODELS.some(m => m.id === preferredModel && m.provider === 'groq');
+      GROQ_OCR_MODELS.some(
+        m => m.id === preferredModel && (m.provider === 'groq' || m.provider === 'openrouter')
+      );
 
-    if (isGroqRoute) {
+    if (isVisionApiRoute) {
       const groqValidation = validateGroqImages(images);
       if (groqValidation) {
         return NextResponse.json({ error: groqValidation }, { status: 400 });
@@ -52,17 +60,17 @@ export async function POST(req: NextRequest) {
       .map(m => ({
         id: m.id,
         name: m.label,
-        run: () =>
-          m.provider === 'gemini'
-            ? runGemini(images, m.id, storeContext)
-            : runGroq(images, m.id, storeContext),
+        run: () => {
+          if (m.provider === 'gemini') return runGemini(images, m.id, storeContext);
+          if (m.provider === 'openrouter') return runOpenRouter(images, m.id, storeContext);
+          return runGroq(images, m.id, storeContext);
+        },
       }));
 
-    // Auto-fallback order: Groq Scout → Groq Qwen → Gemini options
-    const autoRunners = [
-      apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL)!,
-      ...apiRunners.filter(r => r.id !== DEFAULT_GROQ_VISION_MODEL),
-    ];
+    // Auto-fallback: Groq Scout → Qwen → Gemini → OpenRouter free
+    const autoRunners = AUTO_OCR_FALLBACK_ORDER.map(id => apiRunners.find(r => r.id === id)).filter(
+      (r): r is (typeof apiRunners)[number] => r != null
+    );
 
     if (preferredModel !== 'auto') {
        const selectedRunner = apiRunners.find(r => r.id === preferredModel);
@@ -116,7 +124,7 @@ export async function POST(req: NextRequest) {
        
        if (!success) {
          return NextResponse.json(
-            { error: 'All Vision API Fallbacks failed or are missing API keys.' },
+            { error: 'All vision API fallbacks failed. Check GROQ_API_KEY, GEMINI_API_KEY, and OPENROUTER_API_KEY.' },
             { status: 503 }
          );
        }

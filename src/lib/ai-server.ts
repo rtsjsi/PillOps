@@ -2,6 +2,7 @@
  * OCR model options for invoice extraction.
  * Groq vision models: https://console.groq.com/docs/vision
  * Gemini models require GEMINI_API_KEY (may fail from some Cloudflare regions).
+ * OpenRouter: https://openrouter.ai/docs — free vision router + paid fallbacks.
  */
 import {
   GROQ_VISION_LIMITS,
@@ -19,13 +20,13 @@ import {
   type StoreContext,
 } from '@/lib/invoice-distributor';
 import { buildInvoiceTotalExtractionInstructions } from '@/lib/invoice-totals';
-export type OcrModelProvider = 'groq' | 'gemini' | 'offline';
+export type OcrModelProvider = 'groq' | 'gemini' | 'openrouter' | 'offline';
 
 export interface OcrModelOption {
   id: string;
   label: string;
   provider: OcrModelProvider;
-  /** Max output tokens — keep prompt + images + max_tokens under Groq TPM cap */
+  /** Max output tokens — keep prompt + images + max_tokens under provider caps */
   maxOutputTokens?: number;
   /** Longest image edge (px) before sending to the API */
   maxImageDim?: number;
@@ -34,14 +35,40 @@ export interface OcrModelOption {
 /** Default Groq vision model — free tier, supports images + JSON mode */
 export const DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 export const QWEN_GROQ_VISION_MODEL = 'qwen/qwen3.6-27b';
+/** Pinned OpenRouter free vision models for invoice OCR (excludes openrouter/free random router + content-safety). */
+export const OPENROUTER_OCR_MODEL_CHAIN = [
+  'google/gemma-4-26b-a4b-it:free',
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-nano-12b-v2-vl:free',
+] as const;
+
+/** Dropdown / auto-fallback id — tries OPENROUTER_OCR_MODEL_CHAIN in order */
+export const OPENROUTER_OCR_AUTO_ID = 'openrouter/auto';
+export const DEFAULT_OPENROUTER_VISION_MODEL = OPENROUTER_OCR_AUTO_ID;
+
+/** Explicit auto-fallback order when preferredModel is "auto" */
+export const AUTO_OCR_FALLBACK_ORDER = [
+  DEFAULT_GROQ_VISION_MODEL,
+  QWEN_GROQ_VISION_MODEL,
+  'gemini-3-flash-preview',
+  'gemini-2.5-flash',
+  OPENROUTER_OCR_AUTO_ID,
+] as const;
 
 // Only models listed on https://console.groq.com/docs/vision — text-only models (e.g. Maverick) return 404 with images.
 export const GROQ_OCR_MODELS: OcrModelOption[] = [
   { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq', maxOutputTokens: 8000, maxImageDim: 2000 },
   // Qwen has a smaller per-request token budget — use compact prompt + moderate max_tokens
   { id: QWEN_GROQ_VISION_MODEL, label: 'Qwen 3.6 27B (Groq)', provider: 'groq', maxOutputTokens: 4096, maxImageDim: 1200 },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google)', provider: 'gemini' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini', maxOutputTokens: 8192, maxImageDim: 2000 },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google)', provider: 'gemini', maxOutputTokens: 8192, maxImageDim: 2000 },
+  {
+    id: OPENROUTER_OCR_AUTO_ID,
+    label: 'OpenRouter (Gemma 4 26B free)',
+    provider: 'openrouter',
+    maxOutputTokens: 8192,
+    maxImageDim: 2000,
+  },
   { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
 ];
 
@@ -127,12 +154,29 @@ export function isCompactGroqVisionModel(modelName: string): boolean {
   return modelName === QWEN_GROQ_VISION_MODEL;
 }
 
+export function isOpenRouterOcrModel(modelName: string): boolean {
+  return (
+    modelName === OPENROUTER_OCR_AUTO_ID ||
+    (OPENROUTER_OCR_MODEL_CHAIN as readonly string[]).includes(modelName)
+  );
+}
+
+export function resolveOpenRouterModelChain(modelName: string): string[] {
+  if (modelName === OPENROUTER_OCR_AUTO_ID) return [...OPENROUTER_OCR_MODEL_CHAIN];
+  if ((OPENROUTER_OCR_MODEL_CHAIN as readonly string[]).includes(modelName)) return [modelName];
+  return [modelName];
+}
+
 // --- TIER EXECUTORS ---
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
 // initialization time (Error 1102 fix).
 
-function getGroqModelLimits(modelName: string) {
-  const option = GROQ_OCR_MODELS.find(m => m.id === modelName);
+function getOcrModelLimits(modelName: string) {
+  const option =
+    GROQ_OCR_MODELS.find(m => m.id === modelName) ??
+    (isOpenRouterOcrModel(modelName)
+      ? GROQ_OCR_MODELS.find(m => m.id === OPENROUTER_OCR_AUTO_ID)
+      : undefined);
   return {
     maxOutputTokens: option?.maxOutputTokens ?? 8000,
     maxImageDim: option?.maxImageDim ?? 2000,
@@ -164,6 +208,74 @@ function buildGroqVisionContent(
   return content;
 }
 
+type VisionSingleRunner = (
+  images: GroqImagePayload[],
+  modelName: string,
+  options: {
+    prompt?: string;
+    pageOffset?: number;
+    totalPages?: number;
+  }
+) => Promise<string>;
+
+/** Multi-page invoice OCR — batches into groups of 5 and merges results */
+async function runBatchedInvoiceOcr(
+  images: GroqImagePayload[],
+  modelName: string,
+  prompt: string,
+  runSingle: VisionSingleRunner
+): Promise<string> {
+  const imageError = validateGroqImages(images);
+  if (imageError) throw new Error(imageError);
+
+  if (images.length <= GROQ_VISION_LIMITS.maxImagesPerRequest) {
+    return runSingle(images, modelName, { totalPages: images.length, prompt });
+  }
+
+  const chunks = chunkArray(images, GROQ_VISION_LIMITS.maxImagesPerRequest);
+  const totalPages = images.length;
+  const compact = isCompactGroqVisionModel(modelName);
+  const partials: InvoiceExtractionPartial[] = [];
+  let pageOffset = 0;
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const pageStart = pageOffset + 1;
+    const pageEnd = pageOffset + chunk.length;
+
+    const rawJson =
+      i === 0
+        ? await runSingle(chunk, modelName, { totalPages, pageOffset: 0, prompt })
+        : await runSingle(chunk, modelName, {
+            totalPages,
+            pageOffset,
+            prompt: buildContinuationPrompt(pageStart, pageEnd, totalPages, compact),
+          });
+
+    const cleaned = stripJsonFences(rawJson);
+    try {
+      partials.push(JSON.parse(cleaned) as InvoiceExtractionPartial);
+    } catch {
+      throw Object.assign(
+        new Error('Model returned invalid JSON (output may be truncated). Try Llama 4 Scout or fewer pages.'),
+        { status: 400 }
+      );
+    }
+    pageOffset += chunk.length;
+  }
+
+  return JSON.stringify(mergeInvoiceExtractions(partials));
+}
+
+function throwIfTruncated(choice: { finish_reason?: string | null } | undefined) {
+  if (choice?.finish_reason === 'length') {
+    throw Object.assign(
+      new Error('Model output was truncated (token limit). Try fewer pages, a smaller image, or Llama 4 Scout.'),
+      { status: 413 }
+    );
+  }
+}
+
 async function runGroqSingle(
   images: GroqImagePayload[],
   modelName: string,
@@ -188,7 +300,7 @@ async function runGroqSingle(
     },
   });
 
-  const { maxOutputTokens } = getGroqModelLimits(modelName);
+  const { maxOutputTokens } = getOcrModelLimits(modelName);
   const prompt = options.prompt ?? PROMPT;
   const content = buildGroqVisionContent(
     images,
@@ -214,14 +326,67 @@ async function runGroqSingle(
   } as any);
 
   const choice = chatCompletion.choices[0];
-  if (choice?.finish_reason === 'length') {
-    throw Object.assign(
-      new Error('Model output was truncated (token limit). Try fewer pages, a smaller image, or Llama 4 Scout.'),
-      { status: 413 }
-    );
-  }
+  throwIfTruncated(choice);
 
   return choice?.message?.content || '{}';
+}
+
+async function runOpenRouterSingle(
+  images: GroqImagePayload[],
+  modelName: string,
+  options: {
+    prompt?: string;
+    pageOffset?: number;
+    totalPages?: number;
+  } = {}
+): Promise<string> {
+  if (!process.env.OPENROUTER_API_KEY) throw new Error('Missing OPENROUTER_API_KEY');
+
+  const imageError = validateGroqImages(images);
+  if (imageError) throw new Error(imageError);
+
+  const { default: OpenAI } = await import('openai');
+  const client = new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY,
+    defaultHeaders: {
+      'HTTP-Referer':
+        process.env.OPENROUTER_SITE_URL ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        'https://pillops.app',
+      'X-Title': process.env.OPENROUTER_APP_NAME || 'PillOps',
+    },
+  });
+
+  const { maxOutputTokens } = getOcrModelLimits(modelName);
+  const prompt = options.prompt ?? PROMPT;
+  const content = buildGroqVisionContent(
+    images,
+    prompt,
+    options.pageOffset ?? 0,
+    options.totalPages
+  );
+
+  const chatCompletion = await client.chat.completions.create({
+    messages: [{ role: 'user', content: content as any }],
+    model: modelName,
+    temperature: 0.1,
+    max_tokens: maxOutputTokens,
+    response_format: { type: 'json_object' },
+  } as any);
+
+  const choice = chatCompletion.choices[0];
+  if (!choice) {
+    throw new Error(`OpenRouter (${modelName}) returned no choices`);
+  }
+  throwIfTruncated(choice);
+
+  const actualModel = chatCompletion.model;
+  if (actualModel && actualModel !== modelName) {
+    console.log(`[OCR] OpenRouter routed ${modelName} → ${actualModel}`);
+  }
+
+  return choice.message?.content || '{}';
 }
 
 /** Multi-page invoice OCR — batches into groups of 5 (Groq vision limit) and merges results */
@@ -230,46 +395,15 @@ export async function runGroqInvoiceOcr(
   modelName: string = DEFAULT_GROQ_VISION_MODEL,
   prompt: string = PROMPT
 ): Promise<string> {
-  const imageError = validateGroqImages(images);
-  if (imageError) throw new Error(imageError);
+  return runBatchedInvoiceOcr(images, modelName, prompt, runGroqSingle);
+}
 
-  if (images.length <= GROQ_VISION_LIMITS.maxImagesPerRequest) {
-    return runGroqSingle(images, modelName, { totalPages: images.length, prompt });
-  }
-
-  const chunks = chunkArray(images, GROQ_VISION_LIMITS.maxImagesPerRequest);
-  const totalPages = images.length;
-  const compact = isCompactGroqVisionModel(modelName);
-  const partials: InvoiceExtractionPartial[] = [];
-  let pageOffset = 0;
-
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    const pageStart = pageOffset + 1;
-    const pageEnd = pageOffset + chunk.length;
-
-    const rawJson =
-      i === 0
-        ? await runGroqSingle(chunk, modelName, { totalPages, pageOffset: 0, prompt })
-        : await runGroqSingle(chunk, modelName, {
-            totalPages,
-            pageOffset,
-            prompt: buildContinuationPrompt(pageStart, pageEnd, totalPages, compact),
-          });
-
-    const cleaned = stripJsonFences(rawJson);
-    try {
-      partials.push(JSON.parse(cleaned) as InvoiceExtractionPartial);
-    } catch {
-      throw Object.assign(
-        new Error('Model returned invalid JSON (output may be truncated). Try Llama 4 Scout or fewer pages.'),
-        { status: 400 }
-      );
-    }
-    pageOffset += chunk.length;
-  }
-
-  return JSON.stringify(mergeInvoiceExtractions(partials));
+export async function runOpenRouterInvoiceOcr(
+  images: GroqImagePayload[],
+  modelName: string = DEFAULT_OPENROUTER_VISION_MODEL,
+  prompt: string = PROMPT
+): Promise<string> {
+  return runBatchedInvoiceOcr(images, modelName, prompt, runOpenRouterSingle);
 }
 
 export async function runGroq(
@@ -280,6 +414,29 @@ export async function runGroq(
   const compact = isCompactGroqVisionModel(modelName);
   const prompt = buildInvoiceExtractionPrompt(context, { compact });
   return runGroqInvoiceOcr(images, modelName, prompt);
+}
+
+export async function runOpenRouter(
+  images: GroqImagePayload[],
+  modelName: string = OPENROUTER_OCR_AUTO_ID,
+  context?: StoreContext
+) {
+  const prompt = buildInvoiceExtractionPrompt(context);
+  const models = resolveOpenRouterModelChain(modelName);
+  let lastError: unknown;
+
+  for (const slug of models) {
+    try {
+      console.log(`[OCR] OpenRouter trying: ${slug}`);
+      return await runOpenRouterInvoiceOcr(images, slug, prompt);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      console.warn(`[OCR] OpenRouter ${slug} failed: ${e.message ?? err}`);
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error('All OpenRouter vision models failed');
 }
 
 export async function runGemini(
