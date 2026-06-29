@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -10,6 +10,8 @@ import { GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
 import { GROQ_VISION_LIMITS } from '@/lib/groq-vision';
 import { compressDataUrlForGroq, fileToGroqJpegDataUrl } from '@/lib/groq-image-compress';
 import { ImageCropper } from '@/components/purchases/image-cropper';
+import { fetchUserProfile } from '@/lib/queries';
+import type { StoreContext } from '@/lib/invoice-distributor';
 export default function AIInvoiceScanner() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,6 +24,16 @@ export default function AIInvoiceScanner() {
   const [croppingImage, setCroppingImage] = useState<string | null>(null);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [cropQueueIndex, setCropQueueIndex] = useState(0);
+  const [storeContext, setStoreContext] = useState<StoreContext>({});
+
+  useEffect(() => {
+    fetchUserProfile().then(profile => {
+      const store = profile?.store as { name?: string; gstin?: string } | undefined;
+      if (store?.name || store?.gstin) {
+        setStoreContext({ storeName: store?.name, storeGstin: store?.gstin });
+      }
+    }).catch(() => {});
+  }, []);
 
   const getModelMaxImageDim = (modelId: string) => {
     if (modelId === 'auto') {
@@ -86,7 +98,7 @@ export default function AIInvoiceScanner() {
         // Step 2: Parse the raw text into structured invoice data (no AI needed)
         setProgressText('Parsing invoice structure...');
         const { parseInvoiceText } = await import('@/lib/invoice-text-parser');
-        data = parseInvoiceText(combinedText);
+        data = parseInvoiceText(combinedText, storeContext);
         console.log('[Parser] Result:', data.items.length, 'items,', 'confidence:', data.parsingConfidence);
       } else {
         // --- SERVER-SIDE OCR via API ---

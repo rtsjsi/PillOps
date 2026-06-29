@@ -13,6 +13,11 @@ import {
   type GroqImagePayload,
   type InvoiceExtractionPartial,
 } from '@/lib/groq-vision';
+import {
+  buildDistributorExtractionInstructions,
+  type StoreContext,
+} from '@/lib/invoice-distributor';
+import { buildInvoiceTotalExtractionInstructions } from '@/lib/invoice-totals';
 export type OcrModelProvider = 'groq' | 'gemini' | 'offline';
 
 export interface OcrModelOption {
@@ -38,7 +43,8 @@ export const GROQ_OCR_MODELS: OcrModelOption[] = [
   { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
 ];
 
-export const PROMPT = `You are an expert pharmacy data extraction AI.
+export function buildInvoiceExtractionPrompt(context?: StoreContext): string {
+  return `You are an expert pharmacy data extraction AI.
 Analyze these images of a multi-page distributor pharmaceutical invoice. Extract the tabular structured data perfectly, combining all items from all pages into a single continuous list.
 Pay close attention to table headers.
 Often, 'Rate' means Purchase Price, 'Disc' means Discount %, 'G%' means GST %, 'Exp' means Expiry Date, 'Qty' or 'Billed' means Quantity.
@@ -53,6 +59,8 @@ CRITICAL INSTRUCTIONS:
 7. DUPLICATE ROWS & REPEATED ITEMS: Be extremely careful not to skip rows that have the same medicine name. Some invoices list the same item twice on consecutive lines. Treat them as separate items and extract BOTH rows. 
 8. IGNORE HANDWRITTEN MARKS: The invoice may have handwritten checkmarks (e.g., blue pen ticks) over the printed quantities or amounts. Ignore these pen marks. Read only the printed digits.
 9. QTY vs PACK: Do NOT confuse the "Pack" column (e.g. "60T", "10ML") with the "Qty" column. Make sure the quantity reflects the printed number in the Qty column.
+${buildDistributorExtractionInstructions(context)}
+${buildInvoiceTotalExtractionInstructions()}
 
 Return ONLY a valid JSON object matching exactly this schema:
 {
@@ -80,10 +88,14 @@ Return ONLY a valid JSON object matching exactly this schema:
   "subtotal": number,
   "discountAmount": number,
   "gstAmount": number,
-  "total": number
+  "total": number (THIS invoice's Grand Total / Net Amount only — NOT Outstanding or ledger balance)
 }
 
 IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting like \`\`\`json, and do not include any conversational text or preamble. Output JSON immediately.`;
+}
+
+/** Default prompt without store context — prefer buildInvoiceExtractionPrompt when store is known */
+export const PROMPT = buildInvoiceExtractionPrompt();
 
 // --- TIER EXECUTORS ---
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
@@ -170,13 +182,14 @@ async function runGroqSingle(
 /** Multi-page invoice OCR — batches into groups of 5 (Groq vision limit) and merges results */
 export async function runGroqInvoiceOcr(
   images: GroqImagePayload[],
-  modelName: string = DEFAULT_GROQ_VISION_MODEL
+  modelName: string = DEFAULT_GROQ_VISION_MODEL,
+  prompt: string = PROMPT
 ): Promise<string> {
   const imageError = validateGroqImages(images);
   if (imageError) throw new Error(imageError);
 
   if (images.length <= GROQ_VISION_LIMITS.maxImagesPerRequest) {
-    return runGroqSingle(images, modelName, { totalPages: images.length });
+    return runGroqSingle(images, modelName, { totalPages: images.length, prompt });
   }
 
   const chunks = chunkArray(images, GROQ_VISION_LIMITS.maxImagesPerRequest);
@@ -191,7 +204,7 @@ export async function runGroqInvoiceOcr(
 
     const rawJson =
       i === 0
-        ? await runGroqSingle(chunk, modelName, { totalPages, pageOffset: 0 })
+        ? await runGroqSingle(chunk, modelName, { totalPages, pageOffset: 0, prompt })
         : await runGroqSingle(chunk, modelName, {
             totalPages,
             pageOffset,
@@ -206,18 +219,27 @@ export async function runGroqInvoiceOcr(
   return JSON.stringify(mergeInvoiceExtractions(partials));
 }
 
-export async function runGroq(images: GroqImagePayload[], modelName: string = DEFAULT_GROQ_VISION_MODEL) {
-  return runGroqInvoiceOcr(images, modelName);
+export async function runGroq(
+  images: GroqImagePayload[],
+  modelName: string = DEFAULT_GROQ_VISION_MODEL,
+  context?: StoreContext
+) {
+  const prompt = buildInvoiceExtractionPrompt(context);
+  return runGroqInvoiceOcr(images, modelName, prompt);
 }
 
-export async function runGemini(images: {base64: string, mimeType: string}[], modelName: string = "gemini-flash-latest") {
+export async function runGemini(
+  images: {base64: string, mimeType: string}[],
+  modelName: string = "gemini-flash-latest",
+  context?: StoreContext
+) {
   if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
   
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 8192 } });
 
-  const parts: any[] = [PROMPT];
+  const parts: any[] = [buildInvoiceExtractionPrompt(context)];
   images.forEach(img => {
       const cleanBase64 = img.base64.replace(/^data:image\/(png|jpeg|jpg|webp);base64/, "");
       parts.push({ inlineData: { data: cleanBase64, mimeType: img.mimeType } });

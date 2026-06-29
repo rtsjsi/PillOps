@@ -10,6 +10,14 @@
  * - Footer: Subtotal, discount, GST, total
  */
 
+import {
+  correctDistributorName,
+  extractDistributorFromHeader,
+  extractDistributorFromSignature,
+  type StoreContext,
+} from '@/lib/invoice-distributor';
+import { correctInvoiceTotal, extractInvoiceTotalFromText, isIgnoredTotalLabel } from '@/lib/invoice-totals';
+
 interface ParsedItem {
   medicineName: string;
   pack: string;
@@ -63,9 +71,9 @@ const INVOICE_NUM_PATTERNS = [
   /\b([A-Z]{1,5}[\/\-]\d{4,}[\/\-]?\d*)\b/,
 ];
 
-// ─── Common Indian pharma distributor keywords ─────────────────
+// ─── Common Indian pharma distributor keywords (wholesale, not retail store) ─
 const DISTRIBUTOR_KEYWORDS = [
-  'pharma', 'distributors', 'agencies', 'enterprise', 'medical',
+  'pharma', 'distributors', 'distributor', 'agencies', 'enterprise',
   'wholesale', 'trading', 'drug', 'remedies', 'healthcare',
   'surgical', 'corporation', 'company', 'associates', 'brothers'
 ];
@@ -90,13 +98,13 @@ const TABLE_HEADER_KEYWORDS = [
 /**
  * Main parser function: takes raw OCR text and returns structured invoice data.
  */
-export function parseInvoiceText(rawText: string): ParsedInvoice {
+export function parseInvoiceText(rawText: string, storeContext: StoreContext = {}): ParsedInvoice {
   const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   
   console.log(`[Parser] Starting parse of ${lines.length} lines`);
 
   // Step 1: Extract header info
-  const header = extractHeader(lines);
+  const header = extractHeader(lines, rawText, storeContext);
   console.log('[Parser] Header:', header);
 
   // Step 2: Find where the items table starts and ends
@@ -114,6 +122,8 @@ export function parseInvoiceText(rawText: string): ParsedInvoice {
   const confidence = items.length > 0 ? 
     (items.length >= 3 ? 'medium' : 'low') : 'very-low';
 
+  const footerTotal = correctInvoiceTotal(footer.total, items, rawText);
+
   return {
     rawTranscription: rawText,
     distributorName: header.distributorName,
@@ -123,7 +133,7 @@ export function parseInvoiceText(rawText: string): ParsedInvoice {
     subtotal: footer.subtotal,
     discountAmount: footer.discountAmount,
     gstAmount: footer.gstAmount,
-    total: footer.total,
+    total: footerTotal,
     offlineOcrNote: `Parsed offline from OCR text (${items.length} items detected, confidence: ${confidence}). Please verify all fields carefully.`,
     parsingConfidence: confidence,
   };
@@ -131,20 +141,30 @@ export function parseInvoiceText(rawText: string): ParsedInvoice {
 
 // ─── HEADER EXTRACTION ─────────────────────────────────────────
 
-function extractHeader(lines: string[]) {
+function extractHeader(lines: string[], rawText: string, storeContext: StoreContext = {}) {
   let distributorName = '';
   let invoiceNumber = '';
   let invoiceDate = '';
 
+  const fromSignature = extractDistributorFromSignature(rawText);
+  if (fromSignature) distributorName = fromSignature;
+
+  if (!distributorName) {
+    const fromHeader = extractDistributorFromHeader(rawText, storeContext.storeName);
+    if (fromHeader) distributorName = fromHeader;
+  }
+
   // Scan first 15 lines for header info
   const headerLines = lines.slice(0, Math.min(15, lines.length));
 
-  // Find distributor name (usually the first or second prominent line)
-  for (const line of headerLines) {
-    const lower = line.toLowerCase();
-    if (DISTRIBUTOR_KEYWORDS.some(kw => lower.includes(kw))) {
-      distributorName = line;
-      break;
+  // Fallback: keyword match, skipping retail-store patterns
+  if (!distributorName) {
+    for (const line of headerLines) {
+      const lower = line.toLowerCase();
+      if (DISTRIBUTOR_KEYWORDS.some(kw => lower.includes(kw))) {
+        distributorName = line;
+        break;
+      }
     }
   }
   // Fallback: first long line that isn't a skip keyword
@@ -158,6 +178,11 @@ function extractHeader(lines: string[]) {
       }
     }
   }
+
+  distributorName = correctDistributorName(distributorName, {
+    ...storeContext,
+    rawTranscription: rawText,
+  });
 
   // Find invoice number
   for (const line of headerLines) {
@@ -453,6 +478,8 @@ function extractFooter(lines: string[]) {
 
   for (const line of footerLines) {
     const lower = line.toLowerCase();
+    if (isIgnoredTotalLabel(line)) continue;
+
     const numMatch = line.match(/([\d,]+\.?\d*)\s*$/);
     const value = numMatch ? parseFloat(numMatch[1].replace(/,/g, '')) : 0;
 
@@ -463,7 +490,7 @@ function extractFooter(lines: string[]) {
       total = value;
     } else if (lower.includes('sub') && lower.includes('total')) {
       subtotal = value;
-    } else if (lower.includes('total') && !lower.includes('sub')) {
+    } else if (lower.includes('total') && !lower.includes('sub') && !isIgnoredTotalLabel(line)) {
       // Generic "total" — could be grand total
       if (value > total) total = value;
     } else if (lower.includes('discount') || lower.includes('disc')) {
@@ -471,6 +498,11 @@ function extractFooter(lines: string[]) {
     } else if (lower.includes('cgst') || lower.includes('sgst') || lower.includes('igst') || lower.includes('gst')) {
       gstAmount += value;
     }
+  }
+
+  if (!total) {
+    const fromText = extractInvoiceTotalFromText(lines.join('\n'));
+    if (fromText) total = fromText;
   }
 
   return { subtotal, discountAmount, gstAmount, total };

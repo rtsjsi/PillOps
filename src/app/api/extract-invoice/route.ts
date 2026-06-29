@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGroq, runGemini, GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
 import { validateGroqImages } from '@/lib/groq-vision';
+import { correctDistributorName, type StoreContext } from '@/lib/invoice-distributor';
+import { correctInvoiceTotal } from '@/lib/invoice-totals';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
+
+async function getStoreContext(): Promise<StoreContext> {
+  try {
+    const profile = await fetchUserProfile();
+    const store = profile?.store as { name?: string; gstin?: string } | undefined;
+    return {
+      storeName: store?.name,
+      storeGstin: store?.gstin,
+    };
+  } catch {
+    return {};
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     let textResponse = "";
+    const storeContext = await getStoreContext();
 
     const apiRunners = GROQ_OCR_MODELS
       .filter(m => m.provider !== 'offline')
@@ -38,8 +54,8 @@ export async function POST(req: NextRequest) {
         name: m.label,
         run: () =>
           m.provider === 'gemini'
-            ? runGemini(images, m.id)
-            : runGroq(images, m.id),
+            ? runGemini(images, m.id, storeContext)
+            : runGroq(images, m.id, storeContext),
       }));
 
     // Auto-fallback order: Groq Scout → Groq Qwen → Gemini options
@@ -169,6 +185,29 @@ export async function POST(req: NextRequest) {
 
     jsonString = fixJson(jsonString);
     const parsedData = JSON.parse(jsonString);
+
+    const correctedDistributor = correctDistributorName(parsedData.distributorName, {
+      ...storeContext,
+      rawTranscription: parsedData.rawTranscription,
+    });
+    if (correctedDistributor !== parsedData.distributorName) {
+      console.log(
+        `[OCR] Corrected distributor: "${parsedData.distributorName}" -> "${correctedDistributor}"`
+      );
+      parsedData.distributorName = correctedDistributor;
+    }
+
+    const correctedTotal = correctInvoiceTotal(
+      parsedData.total,
+      parsedData.items,
+      parsedData.rawTranscription
+    );
+    if (correctedTotal !== Number(parsedData.total)) {
+      console.log(
+        `[OCR] Corrected invoice total: ${parsedData.total} -> ${correctedTotal}`
+      );
+      parsedData.total = correctedTotal;
+    }
 
     // Math Validation
     const validationWarnings: string[] = [];
