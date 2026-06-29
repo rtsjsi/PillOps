@@ -62,30 +62,61 @@ export default function AIInvoiceScanner() {
     if (images.length === 0) return;
     setScanning(true);
     setError(null);
-    setProgressText('Uploading images securely...');
 
     try {
-      const payloadImages = images.map(img => ({ base64: img.base64, mimeType: img.mimeType }));
-      // Show specific progress for offline mode
+      let data: any;
+
       if (selectedModel === 'offline') {
-        setProgressText('Running offline OCR (no API)...');
+        // --- CLIENT-SIDE OCR using Tesseract.js (runs in the browser) ---
+        setProgressText('Loading Tesseract OCR engine...');
+        const Tesseract = await import('tesseract.js');
+
+        let combinedText = '';
+        for (let i = 0; i < images.length; i++) {
+          setProgressText(`OCR processing page ${i + 1} of ${images.length}...`);
+          const result = await Tesseract.recognize(images[i].base64, 'eng', {
+            logger: (m: any) => {
+              if (m.status === 'recognizing text') {
+                const pct = Math.round((m.progress || 0) * 100);
+                setProgressText(`Page ${i + 1}/${images.length}: Recognizing text… ${pct}%`);
+              }
+            }
+          });
+          combinedText += result.data.text + '\n';
+        }
+
+        data = {
+          rawTranscription: combinedText.trim(),
+          distributorName: '',
+          invoiceNumber: '',
+          invoiceDate: '',
+          items: [],
+          subtotal: 0,
+          discountAmount: 0,
+          gstAmount: 0,
+          total: 0,
+          offlineOcrNote: 'Extracted using browser-based Tesseract OCR. Only raw text is available — structured fields need manual entry.'
+        };
       } else {
+        // --- SERVER-SIDE OCR via API ---
+        setProgressText('Uploading images securely...');
+        const payloadImages = images.map(img => ({ base64: img.base64, mimeType: img.mimeType }));
         setProgressText('Vision AI processing documents...');
-      }
-      
-      const response = await fetch('/api/extract-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: payloadImages,
-          preferredModel: selectedModel
-        })
-      });
 
-      const data = await response.json();
+        const response = await fetch('/api/extract-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            images: payloadImages,
+            preferredModel: selectedModel
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to extract data');
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to extract data');
+        }
       }
 
       setProgressText('Extraction complete! Redirecting...');

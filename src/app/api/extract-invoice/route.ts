@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini, runOfflineOcr, GROQ_OCR_MODELS } from '@/lib/ai-server';
+import { runGroq, runGemini, GROQ_OCR_MODELS } from '@/lib/ai-server';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -16,14 +16,14 @@ export async function POST(req: NextRequest) {
 
     let textResponse = "";
 
-    // Build runners based on the exported Groq model list
-    const runners = GROQ_OCR_MODELS.map(m => ({
-      id: m.id,
-      name: m.label,
-      run: m.id === 'offline'
-        ? () => runOfflineOcr(images)
-        : () => runGroq(images, m.id)
-    }));
+    // Build runners based on the exported Groq model list (exclude 'offline' — handled client-side)
+    const runners = GROQ_OCR_MODELS
+      .filter(m => m.id !== 'offline')
+      .map(m => ({
+        id: m.id,
+        name: m.label,
+        run: () => runGroq(images, m.id)
+      }));
 
     // Add Gemini fallbacks if the user selected a non‑Groq model
     if (!GROQ_OCR_MODELS.some(m => m.id === preferredModel)) {
