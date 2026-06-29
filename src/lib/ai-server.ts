@@ -72,6 +72,17 @@ export const GROQ_OCR_MODELS: OcrModelOption[] = [
   { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
 ];
 
+/** Longest image edge (px) for client compression — Auto uses the tightest model in the chain (Qwen 1200). */
+export function getOcrMaxImageDim(modelId: string): number {
+  if (modelId === 'auto') {
+    const dims = AUTO_OCR_FALLBACK_ORDER.map(
+      id => GROQ_OCR_MODELS.find(m => m.id === id)?.maxImageDim
+    ).filter((d): d is number => d != null);
+    return dims.length ? Math.min(...dims) : 2000;
+  }
+  return GROQ_OCR_MODELS.find(m => m.id === modelId)?.maxImageDim ?? 2000;
+}
+
 const INVOICE_JSON_SCHEMA = `{
   "rawTranscription": "",
   "distributorName": "",

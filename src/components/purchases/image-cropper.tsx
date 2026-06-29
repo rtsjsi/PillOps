@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RotateCw, Crop, Check, X, RefreshCw } from 'lucide-react';
+import { exportCanvasForOcr } from '@/lib/groq-image-compress';
 
 interface ImageCropperProps {
   src: string;
@@ -141,7 +142,7 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
           ctx.translate(canvas.width / 2, canvas.height / 2);
           ctx.rotate((90 * Math.PI) / 180);
           ctx.drawImage(img, -img.width / 2, -img.height / 2);
-          resolve(canvas.toDataURL('image/jpeg', 0.95));
+          resolve(exportCanvasForOcr(canvas).base64);
         };
         img.onerror = () => reject(new Error('Failed to load image for rotation'));
         img.src = currentImageSrc;
@@ -186,8 +187,8 @@ export function ImageCropper({ src, onCrop, onCancel }: ImageCropperProps) {
       cropH
     );
 
-    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.95);
-    onCrop(croppedBase64);
+    const { base64 } = exportCanvasForOcr(canvas);
+    onCrop(base64);
   };
 
   if (!mounted) return null;

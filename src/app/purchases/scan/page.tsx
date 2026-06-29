@@ -6,9 +6,9 @@ import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-re
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
+import { GROQ_OCR_MODELS, getOcrMaxImageDim } from '@/lib/ai-server';
 import { GROQ_VISION_LIMITS } from '@/lib/groq-vision';
-import { compressDataUrlForGroq, fileToGroqJpegDataUrl } from '@/lib/groq-image-compress';
+import { fileToDataUrl, mimeFromDataUrl, prepareImageForVisionApi } from '@/lib/groq-image-compress';
 import { ImageCropper } from '@/components/purchases/image-cropper';
 import { fetchUserProfile } from '@/lib/queries';
 import type { StoreContext } from '@/lib/invoice-distributor';
@@ -35,21 +35,9 @@ export default function AIInvoiceScanner() {
     }).catch(() => {});
   }, []);
 
-  const getModelMaxImageDim = (modelId: string) => {
-    if (modelId === 'auto') {
-      return GROQ_OCR_MODELS.find(m => m.id === DEFAULT_GROQ_VISION_MODEL)?.maxImageDim ?? 2000;
-    }
-    return GROQ_OCR_MODELS.find(m => m.id === modelId)?.maxImageDim ?? 2000;
-  };
-
   const prepareImagesForApi = async () => {
-    const maxDim = getModelMaxImageDim(selectedModel);
-    return Promise.all(
-      images.map(async img => ({
-        base64: await compressDataUrlForGroq(img.base64, maxDim),
-        mimeType: 'image/jpeg',
-      }))
-    );
+    const maxDim = getOcrMaxImageDim(selectedModel);
+    return Promise.all(images.map(img => prepareImageForVisionApi(img.base64, maxDim)));
   };
 
   const handleProcess = async () => {
@@ -148,7 +136,7 @@ export default function AIInvoiceScanner() {
       setCropQueue(filesArray);
       setCropQueueIndex(0);
       
-      const firstBase64 = await fileToGroqJpegDataUrl(filesArray[0]);
+      const firstBase64 = await fileToDataUrl(filesArray[0]);
       setCroppingImage(firstBase64);
 
       // Reset input so the same file can be selected again if needed
@@ -158,9 +146,11 @@ export default function AIInvoiceScanner() {
 
   const handleCropSave = (croppedBase64: string) => {
     const newImages = [...images];
-    const currentFile = cropQueue[cropQueueIndex];
-    
-    newImages.push({ base64: croppedBase64, mimeType: currentFile.type, previewUrl: croppedBase64 });
+    newImages.push({
+      base64: croppedBase64,
+      mimeType: mimeFromDataUrl(croppedBase64),
+      previewUrl: croppedBase64,
+    });
     setImages(newImages);
 
     moveToNextInCropQueue();
@@ -174,7 +164,7 @@ export default function AIInvoiceScanner() {
     const nextIndex = cropQueueIndex + 1;
     if (nextIndex < cropQueue.length) {
       setCropQueueIndex(nextIndex);
-      const base64 = await fileToGroqJpegDataUrl(cropQueue[nextIndex]);
+      const base64 = await fileToDataUrl(cropQueue[nextIndex]);
       setCroppingImage(base64);
     } else {
       setCroppingImage(null);
