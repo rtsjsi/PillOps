@@ -18,9 +18,9 @@ export interface OcrModelOption {
 /** Default Groq vision model — free tier, supports images + JSON mode */
 export const DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
+// Only models listed on https://console.groq.com/docs/vision — text-only models (e.g. Maverick) return 404 with images.
 export const GROQ_OCR_MODELS: OcrModelOption[] = [
   { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq', maxOutputTokens: 8000, maxImageDim: 2000 },
-  { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick 17B (Groq)', provider: 'groq', maxOutputTokens: 8000, maxImageDim: 2000 },
   // Groq on_demand tier caps Qwen at 8K tokens/request (prompt + images + max_tokens)
   { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B (Groq)', provider: 'groq', maxOutputTokens: 3500, maxImageDim: 1200 },
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini' },
@@ -112,7 +112,7 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
     model: modelName,
     temperature: 0.1,
     max_tokens: maxOutputTokens,
-    // Llama 4 vision models on Groq support JSON mode — improves structured invoice output
+    // Groq vision models (Scout, Qwen) support JSON mode — improves structured invoice output
     response_format: { type: 'json_object' },
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
