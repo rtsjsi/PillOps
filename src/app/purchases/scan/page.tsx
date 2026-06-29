@@ -234,7 +234,7 @@ export default function AIInvoiceScanner() {
                   <SelectContent>
                     {/* Auto fallback option */}
                     <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>
-                    {/* Dynamically list Groq vision models */}
+                    {/* Dynamically list OCR models (Groq, Gemini, offline) */}
                     {GROQ_OCR_MODELS.map(m => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.label}

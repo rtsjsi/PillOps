@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini, GROQ_OCR_MODELS } from '@/lib/ai-server';
+import { runGroq, runGemini, GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -16,25 +16,25 @@ export async function POST(req: NextRequest) {
 
     let textResponse = "";
 
-    // Build runners based on the exported Groq model list (exclude 'offline' — handled client-side)
-    const runners = GROQ_OCR_MODELS
-      .filter(m => m.id !== 'offline')
+    const apiRunners = GROQ_OCR_MODELS
+      .filter(m => m.provider !== 'offline')
       .map(m => ({
         id: m.id,
         name: m.label,
-        run: () => runGroq(images, m.id)
+        run: () =>
+          m.provider === 'gemini'
+            ? runGemini(images, m.id)
+            : runGroq(images, m.id),
       }));
 
-    // Add Gemini fallbacks if the user selected a non‑Groq model
-    if (!GROQ_OCR_MODELS.some(m => m.id === preferredModel)) {
-      runners.push(
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(images, 'gemini-2.5-flash') },
-        { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(images, 'gemini-flash-latest') }
-      );
-    }
+    // Auto-fallback order: Groq Scout → Groq Qwen → Gemini options
+    const autoRunners = [
+      apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL)!,
+      ...apiRunners.filter(r => r.id !== DEFAULT_GROQ_VISION_MODEL),
+    ];
 
     if (preferredModel !== 'auto') {
-       const selectedRunner = runners.find(r => r.id === preferredModel);
+       const selectedRunner = apiRunners.find(r => r.id === preferredModel);
        if (!selectedRunner) {
            return NextResponse.json({ error: 'Invalid model selected' }, { status: 400 });
        }
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     } else {
        let executingTier = 1;
        let success = false;
-       for (const runner of runners) {
+       for (const runner of autoRunners) {
           console.log(`[OCR] Attempting Tier ${executingTier}: ${runner.name}`);
           try {
              textResponse = await runner.run();

@@ -1,15 +1,25 @@
 /*
- * Groq OCR model options – vision‑enabled models that work well for invoice extraction.
- * Each entry contains the model identifier used by the Groq API and a friendly display name.
+ * OCR model options for invoice extraction.
+ * Groq vision models: https://console.groq.com/docs/vision
+ * Gemini models require GEMINI_API_KEY (may fail from some Cloudflare regions).
  */
-export const GROQ_OCR_MODELS = [
-  { id: "llava-1.5-7b-vision", label: "LLaVA 7B Vision" },
-  { id: "llava-1.5-13b-vision", label: "LLaVA 13B Vision" },
-  { id: "phi-3-vision-mini-4k-instruct", label: "Phi‑3 Vision Mini (4k)" },
-  { id: "gemma-2-9b-vision", label: "Gemma 2 9B Vision" },
-  // Fallback text‑only model (use after local OCR)
-  { id: "llama-3-8b-8192", label: "Llama 3 8B (text‑only)" },
-  { id: "offline", label: "Offline OCR (No API)" }
+export type OcrModelProvider = 'groq' | 'gemini' | 'offline';
+
+export interface OcrModelOption {
+  id: string;
+  label: string;
+  provider: OcrModelProvider;
+}
+
+/** Default Groq vision model — free tier, supports images + JSON mode */
+export const DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+
+export const GROQ_OCR_MODELS: OcrModelOption[] = [
+  { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq' },
+  { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B (Groq)', provider: 'groq' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google)', provider: 'gemini' },
+  { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
 ];
 
 export const PROMPT = `You are an expert pharmacy data extraction AI.
@@ -63,7 +73,7 @@ IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting l
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
 // initialization time (Error 1102 fix).
 
-export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = "meta-llama/llama-4-scout-17b-16e-instruct") {
+export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = DEFAULT_GROQ_VISION_MODEL) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ 
@@ -85,7 +95,9 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
     ],
     model: modelName,
     temperature: 0.1,
-    max_tokens: 8000
+    max_tokens: 8000,
+    // Scout + Qwen on Groq support JSON mode — improves structured invoice output
+    response_format: { type: 'json_object' },
   });
   return chatCompletion.choices[0]?.message?.content || '{}';
 }
