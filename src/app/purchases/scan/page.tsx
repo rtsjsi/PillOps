@@ -2,10 +2,19 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-react';
+import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus, ZoomIn, Crop } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { GROQ_OCR_MODELS, getOcrMaxImageDim } from '@/lib/ai-server';
 import { GROQ_VISION_LIMITS } from '@/lib/groq-vision';
 import { fileToDataUrl, mimeFromDataUrl, prepareImageForVisionApi } from '@/lib/groq-image-compress';
@@ -24,6 +33,8 @@ export default function AIInvoiceScanner() {
   const [croppingImage, setCroppingImage] = useState<string | null>(null);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [cropQueueIndex, setCropQueueIndex] = useState(0);
+  const [previewPageIndex, setPreviewPageIndex] = useState<number | null>(null);
+  const [editingPageIndex, setEditingPageIndex] = useState<number | null>(null);
   const [storeContext, setStoreContext] = useState<StoreContext>({});
 
   useEffect(() => {
@@ -145,15 +156,30 @@ export default function AIInvoiceScanner() {
   };
 
   const handleCropSave = (croppedBase64: string) => {
-    const newImages = [...images];
-    newImages.push({
+    const entry = {
       base64: croppedBase64,
       mimeType: mimeFromDataUrl(croppedBase64),
       previewUrl: croppedBase64,
-    });
+    };
+
+    if (editingPageIndex !== null) {
+      setImages(prev => prev.map((img, i) => (i === editingPageIndex ? entry : img)));
+      setEditingPageIndex(null);
+      setCroppingImage(null);
+      return;
+    }
+
+    const newImages = [...images];
+    newImages.push(entry);
     setImages(newImages);
 
     moveToNextInCropQueue();
+  };
+
+  const handleRecropPage = (index: number) => {
+    setPreviewPageIndex(null);
+    setEditingPageIndex(index);
+    setCroppingImage(images[index].base64);
   };
 
   const handleCropCancel = () => {
@@ -236,6 +262,7 @@ export default function AIInvoiceScanner() {
           <div className="bg-card p-4 rounded-xl border animate-page-in">
             <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3 block">
               Scanned Pages ({images.length})
+              <span className="normal-case font-medium text-muted-foreground/80 ml-1">— tap a page to preview</span>
               {images.length > GROQ_VISION_LIMITS.maxImagesPerRequest && selectedModel !== 'offline' && (
                 <span className="normal-case font-medium text-muted-foreground/80 ml-1">
                   — processed in batches of {GROQ_VISION_LIMITS.maxImagesPerRequest}
@@ -244,12 +271,33 @@ export default function AIInvoiceScanner() {
             </Label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {images.map((img, idx) => (
-                <div key={idx} className="relative shrink-0 w-24 h-32 rounded-lg border-2 border-primary/20 overflow-hidden shadow-sm">
-                  <img src={img.previewUrl} className="object-cover w-full h-full" alt={`Page ${idx + 1}`} />
-                  <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md transition-colors">
+                <div key={idx} className="relative shrink-0 w-24 h-32 rounded-lg border-2 border-primary/20 overflow-hidden shadow-sm bg-muted">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPageIndex(idx)}
+                    className="absolute inset-0 w-full h-full group"
+                    aria-label={`Preview page ${idx + 1}`}
+                  >
+                    <img
+                      src={img.previewUrl}
+                      className="object-contain w-full h-full"
+                      alt={`Page ${idx + 1}`}
+                    />
+                    <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 drop-shadow-md transition-opacity" />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeImage(idx);
+                    }}
+                    className="absolute top-1 right-1 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md transition-colors"
+                  >
                     ×
                   </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-1 font-bold">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-1 font-bold pointer-events-none">
                     Page {idx + 1}
                   </div>
                 </div>
@@ -369,9 +417,55 @@ export default function AIInvoiceScanner() {
         <ImageCropper
           src={croppingImage}
           onCrop={handleCropSave}
-          onCancel={handleCropCancel}
+          onCancel={() => {
+            if (editingPageIndex !== null) {
+              setEditingPageIndex(null);
+              setCroppingImage(null);
+              return;
+            }
+            handleCropCancel();
+          }}
         />
       )}
+
+      <Dialog
+        open={previewPageIndex !== null}
+        onOpenChange={(open) => !open && setPreviewPageIndex(null)}
+      >
+        <DialogContent className="sm:max-w-4xl w-[calc(100%-1rem)] max-h-[95vh] p-3 gap-3">
+          <DialogHeader>
+            <DialogTitle>
+              Page {previewPageIndex !== null ? previewPageIndex + 1 : ''} preview
+            </DialogTitle>
+            <DialogDescription>
+              Verify the crop before processing. Use Re-crop if the invoice edges are cut off.
+            </DialogDescription>
+          </DialogHeader>
+          {previewPageIndex !== null && (
+            <div className="overflow-auto rounded-lg border bg-muted/40 max-h-[70vh] flex items-center justify-center p-2">
+              <img
+                src={images[previewPageIndex].previewUrl}
+                alt={`Page ${previewPageIndex + 1} full preview`}
+                className="max-w-full max-h-[68vh] w-auto h-auto object-contain"
+              />
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => previewPageIndex !== null && handleRecropPage(previewPageIndex)}
+              disabled={previewPageIndex === null}
+            >
+              <Crop className="w-4 h-4" />
+              Re-crop
+            </Button>
+            <Button type="button" onClick={() => setPreviewPageIndex(null)}>
+              Looks good
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
