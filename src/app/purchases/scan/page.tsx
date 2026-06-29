@@ -71,19 +71,35 @@ export default function AIInvoiceScanner() {
         setProgressText('Loading Tesseract OCR engine...');
         const Tesseract = await import('tesseract.js');
 
+        // Create a persistent worker for all pages (faster than recognize() shorthand)
+        const worker = await Tesseract.createWorker('eng', undefined, {
+          logger: (m: any) => {
+            if (m.status === 'recognizing text') {
+              const pct = Math.round((m.progress || 0) * 100);
+              setProgressText(`Recognizing text… ${pct}%`);
+            } else {
+              setProgressText(m.status || 'Initializing...');
+            }
+          }
+        });
+
         let combinedText = '';
         for (let i = 0; i < images.length; i++) {
           setProgressText(`OCR processing page ${i + 1} of ${images.length}...`);
-          const result = await Tesseract.recognize(images[i].base64, 'eng', {
-            logger: (m: any) => {
-              if (m.status === 'recognizing text') {
-                const pct = Math.round((m.progress || 0) * 100);
-                setProgressText(`Page ${i + 1}/${images.length}: Recognizing text… ${pct}%`);
-              }
-            }
-          });
-          combinedText += result.data.text + '\n';
+
+          // Convert data URL to Blob for reliable Tesseract processing
+          const dataUrl = images[i].base64;
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+
+          const result = await worker.recognize(blob);
+          const pageText = result.data.text || '';
+          console.log(`[Tesseract] Page ${i + 1} text (${pageText.length} chars):`, pageText.substring(0, 200));
+          combinedText += pageText + '\n';
         }
+
+        await worker.terminate();
+        console.log('[Tesseract] Combined text length:', combinedText.trim().length);
 
         data = {
           rawTranscription: combinedText.trim(),

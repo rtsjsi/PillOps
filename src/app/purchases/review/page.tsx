@@ -21,6 +21,8 @@ interface InvoiceData extends InvoiceHeaderData {
   items: PurchaseItem[];
   validationWarnings?: string[];
   duplicateWarning?: string;
+  rawTranscription?: string;
+  offlineOcrNote?: string;
 }
 
 export default function ReviewExtraction() {
@@ -476,6 +478,29 @@ export default function ReviewExtraction() {
         distributors={distributors}
         warning={data.duplicateWarning}
       />
+
+      {/* ─── Offline OCR Raw Text ─── */}
+      {data.offlineOcrNote && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+          <div className="flex items-start gap-3 mb-3">
+            <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Offline OCR Mode</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{data.offlineOcrNote}</p>
+            </div>
+          </div>
+          {data.rawTranscription && (
+            <details className="mt-2">
+              <summary className="text-xs font-bold text-amber-700 dark:text-amber-400 cursor-pointer hover:underline">
+                View Raw OCR Text ({data.rawTranscription.length} characters)
+              </summary>
+              <pre className="mt-2 p-3 bg-white dark:bg-black/30 rounded-lg border text-xs whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                {data.rawTranscription}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
 
       {/* ─── Items Section ─── */}
       <div>
