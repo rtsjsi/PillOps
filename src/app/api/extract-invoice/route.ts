@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGroq, runGemini } from '@/lib/ai-server';
+import { runGroq, runGemini, GROQ_OCR_MODELS } from '@/lib/ai-server';
 import { createClient } from '@/utils/supabase/server';
 import { fetchUserProfile } from '@/lib/queries';
 
@@ -8,17 +8,28 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const { images, preferredModel = 'auto' } = body;
+    console.log('[OCR] Received preferredModel:', preferredModel);
+    console.log('[OCR] Available runner IDs:', GROQ_OCR_MODELS.map(m => m.id));
     if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: 'Missing image data' }, { status: 400 });
     }
 
     let textResponse = "";
-    
-    const runners = [
-      { id: 'llama-4-scout', name: 'Llama 4 Scout 17B', run: () => runGroq(images, "meta-llama/llama-4-scout-17b-16e-instruct") },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(images, "gemini-2.5-flash") },
-      { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(images, "gemini-flash-latest") }
-    ];
+
+    // Build runners based on the exported Groq model list
+    const runners = GROQ_OCR_MODELS.map(m => ({
+      id: m.id,
+      name: m.label,
+      run: () => runGroq(images, m.id)
+    }));
+
+    // Add Gemini fallbacks if the user selected a non‑Groq model
+    if (!GROQ_OCR_MODELS.some(m => m.id === preferredModel)) {
+      runners.push(
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', run: () => runGemini(images, 'gemini-2.5-flash') },
+        { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', run: () => runGemini(images, 'gemini-flash-latest') }
+      );
+    }
 
     if (preferredModel !== 'auto') {
        const selectedRunner = runners.find(r => r.id === preferredModel);
