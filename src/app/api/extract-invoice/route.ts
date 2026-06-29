@@ -44,8 +44,29 @@ export async function POST(req: NextRequest) {
          textResponse = await selectedRunner.run();
          console.log(`[OCR] Success on user-selected model: ${selectedRunner.name}`);
        } catch (e: any) {
-         console.warn(`[OCR] User-selected model ${selectedRunner.name} failed: ${e.message}`);
-         return NextResponse.json({ error: `Selected model failed: ${e.message}` }, { status: 503 });
+         const isTokenLimit = e.status === 413 || /too large|tpm/i.test(e.message ?? '');
+         if (isTokenLimit && preferredModel !== DEFAULT_GROQ_VISION_MODEL) {
+           const scoutRunner = apiRunners.find(r => r.id === DEFAULT_GROQ_VISION_MODEL);
+           if (scoutRunner) {
+             console.warn(`[OCR] ${selectedRunner.name} hit token limit, retrying with ${scoutRunner.name}`);
+             try {
+               textResponse = await scoutRunner.run();
+               console.log(`[OCR] Success on fallback: ${scoutRunner.name}`);
+             } catch (fallbackErr: any) {
+               console.warn(`[OCR] Fallback also failed: ${fallbackErr.message}`);
+               return NextResponse.json({
+                 error: `Selected model hit Groq's token limit. Llama 4 Scout fallback also failed: ${fallbackErr.message}`,
+               }, { status: 503 });
+             }
+           } else {
+             return NextResponse.json({
+               error: `Selected model hit Groq's 8K token limit (on_demand tier). Use Llama 4 Scout or Auto-Fallback for multi-page invoices.`,
+             }, { status: 503 });
+           }
+         } else {
+           console.warn(`[OCR] User-selected model ${selectedRunner.name} failed: ${e.message}`);
+           return NextResponse.json({ error: `Selected model failed: ${e.message}` }, { status: 503 });
+         }
        }
     } else {
        let executingTier = 1;

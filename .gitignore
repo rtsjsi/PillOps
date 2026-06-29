@@ -47,3 +47,10 @@ next-env.d.ts
 # Cloudflare / OpenNext
 /.open-next/
 /.wrangler/
+
+# Supabase CLI cache (never commit — may contain pooler URLs)
+supabase/.temp/
+
+# Local data imports
+missing_medicines_data.txt
+medicine_data.csv

@@ -6,7 +6,7 @@ import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-re
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { GROQ_OCR_MODELS } from '@/lib/ai-server';
+import { GROQ_OCR_MODELS, DEFAULT_GROQ_VISION_MODEL } from '@/lib/ai-server';
 import { ImageCropper } from '@/components/purchases/image-cropper';
 export default function AIInvoiceScanner() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function AIInvoiceScanner() {
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [cropQueueIndex, setCropQueueIndex] = useState(0);
 
-  const fileToBase64 = (file: File): Promise<string> => {
+  const fileToBase64 = (file: File, maxDim = 2000): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -30,7 +30,6 @@ export default function AIInvoiceScanner() {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const maxDim = 2000; // Increased size for dense invoice OCR
 
           if (width > height && width > maxDim) {
             height = Math.round((height * maxDim) / width);
@@ -56,6 +55,43 @@ export default function AIInvoiceScanner() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  const downscaleDataUrl = (dataUrl: string, maxDim: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width <= maxDim && height <= maxDim) {
+          resolve(dataUrl);
+          return;
+        }
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => reject(new Error('Failed to downscale image'));
+      img.src = dataUrl;
+    });
+  };
+
+  const getModelMaxImageDim = (modelId: string) => {
+    if (modelId === 'auto') {
+      return GROQ_OCR_MODELS.find(m => m.id === DEFAULT_GROQ_VISION_MODEL)?.maxImageDim ?? 2000;
+    }
+    return GROQ_OCR_MODELS.find(m => m.id === modelId)?.maxImageDim ?? 2000;
   };
 
   const handleProcess = async () => {
@@ -109,7 +145,13 @@ export default function AIInvoiceScanner() {
       } else {
         // --- SERVER-SIDE OCR via API ---
         setProgressText('Uploading images securely...');
-        const payloadImages = images.map(img => ({ base64: img.base64, mimeType: img.mimeType }));
+        const maxDim = getModelMaxImageDim(selectedModel);
+        const payloadImages = await Promise.all(
+          images.map(async img => ({
+            base64: await downscaleDataUrl(img.base64, maxDim),
+            mimeType: img.mimeType,
+          }))
+        );
         setProgressText('Vision AI processing documents...');
 
         const response = await fetch('/api/extract-invoice', {

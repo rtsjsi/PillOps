@@ -1,0 +1,27 @@
+﻿# Build & dependencies (large, never needed for agent reasoning)
+node_modules/
+.next/
+.open-next/
+.wrangler/
+out/
+build/
+
+# Lockfiles & generated types
+package-lock.json
+next-env.d.ts
+*.tsbuildinfo
+
+# Local secrets & data dumps
+.env*
+.dev.vars
+missing_medicines_data.txt
+medicine_data.csv
+
+# Supabase CLI cache (may contain connection strings)
+supabase/.temp/
+
+# One-off migration scripts — not part of the app runtime
+scripts/archive/
+
+# Orphaned Drizzle metadata (project uses plain SQL migrations)
+supabase/migrations/meta/

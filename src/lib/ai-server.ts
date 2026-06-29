@@ -9,14 +9,19 @@ export interface OcrModelOption {
   id: string;
   label: string;
   provider: OcrModelProvider;
+  /** Max output tokens — keep prompt + images + max_tokens under Groq TPM cap */
+  maxOutputTokens?: number;
+  /** Longest image edge (px) before sending to the API */
+  maxImageDim?: number;
 }
 
 /** Default Groq vision model — free tier, supports images + JSON mode */
 export const DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 export const GROQ_OCR_MODELS: OcrModelOption[] = [
-  { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq' },
-  { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B (Groq)', provider: 'groq' },
+  { id: DEFAULT_GROQ_VISION_MODEL, label: 'Llama 4 Scout 17B (Groq)', provider: 'groq', maxOutputTokens: 8000, maxImageDim: 2000 },
+  // Groq on_demand tier caps Qwen at 8K tokens/request (prompt + images + max_tokens)
+  { id: 'qwen/qwen3.6-27b', label: 'Qwen 3.6 27B (Groq)', provider: 'groq', maxOutputTokens: 3500, maxImageDim: 1200 },
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Google)', provider: 'gemini' },
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google)', provider: 'gemini' },
   { id: 'offline', label: 'Offline OCR (No API)', provider: 'offline' },
@@ -73,6 +78,14 @@ IMPORTANT: You MUST return ONLY valid JSON. Do not include markdown formatting l
 // Note: We use dynamic imports for SDKs so they don't bloat the Cloudflare Worker 
 // initialization time (Error 1102 fix).
 
+function getGroqModelLimits(modelName: string) {
+  const option = GROQ_OCR_MODELS.find(m => m.id === modelName);
+  return {
+    maxOutputTokens: option?.maxOutputTokens ?? 8000,
+    maxImageDim: option?.maxImageDim ?? 2000,
+  };
+}
+
 export async function runGroq(images: {base64: string, mimeType: string}[], modelName: string = DEFAULT_GROQ_VISION_MODEL) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
@@ -83,6 +96,8 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
   });
+
+  const { maxOutputTokens } = getGroqModelLimits(modelName);
   
   const content: any[] = [{ type: "text", text: PROMPT }];
   images.forEach(img => {
@@ -95,7 +110,7 @@ export async function runGroq(images: {base64: string, mimeType: string}[], mode
     ],
     model: modelName,
     temperature: 0.1,
-    max_tokens: 8000,
+    max_tokens: maxOutputTokens,
     // Scout + Qwen on Groq support JSON mode — improves structured invoice output
     response_format: { type: 'json_object' },
   });

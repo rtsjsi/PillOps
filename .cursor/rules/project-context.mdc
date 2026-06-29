@@ -1,0 +1,12 @@
+---
+description: PillOps project context — read README key paths before broad exploration
+alwaysApply: true
+---
+
+# PillOps context rules
+
+1. **Start narrow:** `README.md` key paths table → open only files for the current task.
+2. **Skip:** `scripts/archive/`, `supabase/.temp/`, `package-lock.json`, all migration files unless doing schema work.
+3. **Invoice OCR flow:** scan page → `/api/extract-invoice` → review page → `save_purchase_invoice` RPC.
+4. **AI spend:** prefer code changes over re-running vision OCR; use offline Tesseract for local scan tests.
+5. **DB:** follow `AGENTS.md` Supabase SOP for migrations only.
