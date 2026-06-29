@@ -1,3 +1,16 @@
+/*
+ * Groq OCR model options – vision‑enabled models that work well for invoice extraction.
+ * Each entry contains the model identifier used by the Groq API and a friendly display name.
+ */
+export const GROQ_OCR_MODELS = [
+  { id: "llava-1.5-7b-vision", label: "LLaVA 7B Vision" },
+  { id: "llava-1.5-13b-vision", label: "LLaVA 13B Vision" },
+  { id: "phi-3-vision-mini-4k-instruct", label: "Phi‑3 Vision Mini (4k)" },
+  { id: "gemma-2-9b-vision", label: "Gemma 2 9B Vision" },
+  // Fallback text‑only model (use after local OCR)
+  { id: "llama-3-8b-8192", label: "Llama 3 8B (text‑only)" }
+];
+
 export const PROMPT = `You are an expert pharmacy data extraction AI.
 Analyze these images of a multi-page distributor pharmaceutical invoice. Extract the tabular structured data perfectly, combining all items from all pages into a single continuous list.
 Pay close attention to table headers.

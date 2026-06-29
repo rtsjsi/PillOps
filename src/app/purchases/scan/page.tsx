@@ -6,15 +6,15 @@ import { Upload, Camera, Focus, ArrowLeft, AlertTriangle, Plus } from 'lucide-re
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { GROQ_OCR_MODELS } from '@/lib/ai-server';
 import { ImageCropper } from '@/components/purchases/image-cropper';
-
 export default function AIInvoiceScanner() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState('llama-4-scout');
+  const [selectedModel, setSelectedModel] = useState('auto');
   const [images, setImages] = useState<{base64: string, mimeType: string, previewUrl: string}[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [croppingImage, setCroppingImage] = useState<string | null>(null);
@@ -181,17 +181,22 @@ export default function AIInvoiceScanner() {
       <div className="flex flex-col gap-4">
         <div className="bg-card p-4 rounded-xl border mb-2">
            <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2 block">AI Model Preference</Label>
-           <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
-              <SelectTrigger className="w-full h-10 text-sm font-bold">
-                 <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                 <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>
-                 <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                 <SelectItem value="gemini-flash-latest">Gemini Flash Latest</SelectItem>
-                 <SelectItem value="llama-4-scout">Llama 4 Scout 17B</SelectItem>
-              </SelectContent>
-           </Select>
+                           {/* Model selector – dynamically generated from GROQ_OCR_MODELS */}
+                <Select value={selectedModel} onValueChange={(val) => setSelectedModel(val || 'auto')}>
+                  <SelectTrigger className="w-full h-10 text-sm font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Auto fallback option */}
+                    <SelectItem value="auto">Auto-Fallback (Recommended)</SelectItem>
+                    {/* Dynamically list Groq vision models */}
+                    {GROQ_OCR_MODELS.map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
         </div>
 
         {images.length > 0 && (
