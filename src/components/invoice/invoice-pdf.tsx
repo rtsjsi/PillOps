@@ -3,14 +3,15 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 const COL = {
-  sr: 22,
-  desc: 145,
-  hsn: 72,
-  batch: 88,
-  exp: 48,
-  mrp: 40,
-  qty: 28,
-  amt: 48,
+  sr: 20,
+  desc: 110,
+  mfr: 68,
+  hsn: 60,
+  batch: 75,
+  exp: 42,
+  mrp: 36,
+  qty: 26,
+  amt: 44,
 } as const;
 
 const styles = StyleSheet.create({
@@ -186,6 +187,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
             <View style={styles.tableHeaderRow} wrap={false}>
               <Cell width={COL.sr} align="center">Sr.</Cell>
               <Cell width={COL.desc}>Description</Cell>
+              <Cell width={COL.mfr}>MFG Name</Cell>
               <Cell width={COL.hsn}>HSN</Cell>
               <Cell width={COL.batch}>BatchNo</Cell>
               <Cell width={COL.exp}>ExpDt</Cell>
@@ -208,6 +210,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               const gObj = item.medicine?.global_medicine_master;
               const g = Array.isArray(gObj) ? gObj[0] || {} : gObj || {};
               const medicineName = g.name || item.medicine?.name || item.medicineName || 'UNKNOWN';
+              const manufacturer = g.manufacturer || item.medicine?.manufacturer || item.manufacturer || ' ';
 
               const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
 
@@ -215,6 +218,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                 <View key={idx} style={styles.tableRow} wrap={false}>
                   <Cell width={COL.sr} align="center">{idx + 1}</Cell>
                   <Cell width={COL.desc} uppercase>{medicineName}</Cell>
+                  <Cell width={COL.mfr} uppercase>{manufacturer}</Cell>
                   <Cell width={COL.hsn}>{hsn}</Cell>
                   <Cell width={COL.batch} uppercase>{batchNo}</Cell>
                   <Cell width={COL.exp}>{expDt}</Cell>

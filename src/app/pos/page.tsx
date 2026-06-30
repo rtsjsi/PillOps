@@ -5,11 +5,17 @@ import { fetchInvoices } from '@/lib/queries';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { Printer, History, Plus } from 'lucide-react';
+import { History, Plus } from 'lucide-react';
 import GenericTableLoading from '@/components/ui/tableLoading';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const InvoicePDFWrapper = dynamic(
+  () => import('@/components/invoice/invoice-pdf-wrapper').then((mod) => mod.InvoicePDFWrapper),
+  { ssr: false }
+);
 
 export default function POSLanding() {
   const [loading, setLoading] = useState(true);
@@ -68,13 +74,26 @@ export default function POSLanding() {
                </div>
                <div className="flex justify-between items-center text-xs text-muted-foreground font-medium mt-auto pt-4 border-t border-border/50">
                   <div className="bg-muted px-2 py-1 rounded font-mono text-[10px]">#{inv.invoiceNumber}</div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1">
                     <Button render={<Link href={`/pos/${inv.id}/edit`} />} variant="ghost" size="sm" className="h-8 px-3 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                          Edit
                     </Button>
-                    <Button render={<Link href={`/invoice/${inv.id}`} />} variant="ghost" size="sm" className="h-8 px-3 text-xs font-bold">
-                         <Printer size={14} className="mr-1.5" /> Print
-                    </Button>
+                    <InvoicePDFWrapper
+                      invoiceId={inv.id}
+                      mode="download"
+                      compact
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs font-bold"
+                    />
+                    <InvoicePDFWrapper
+                      invoiceId={inv.id}
+                      mode="print"
+                      compact
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs font-bold"
+                    />
                   </div>
                </div>
              </Card>
