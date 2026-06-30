@@ -1,35 +1,45 @@
 'use client';
 
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import { formatExpiryDate } from '@/lib/utils';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+
+const COL = {
+  sr: 22,
+  desc: 145,
+  hsn: 72,
+  batch: 88,
+  exp: 48,
+  mrp: 40,
+  qty: 28,
+  amt: 48,
+} as const;
 
 const styles = StyleSheet.create({
-  page: { 
-    padding: 20, 
+  page: {
+    padding: 12,
     backgroundColor: '#ffffff',
     fontFamily: 'Helvetica',
-    fontSize: 9,
+    fontSize: 8,
   },
-  tableCellHeader: { fontWeight: 'bold' },
   borderAll: { borderWidth: 1, borderColor: '#000' },
   borderTop: { borderTopWidth: 1, borderColor: '#000' },
   borderBottom: { borderBottomWidth: 1, borderColor: '#000' },
   borderRight: { borderRightWidth: 1, borderColor: '#000' },
-  borderLeft: { borderLeftWidth: 1, borderColor: '#000' },
   flexRow: { flexDirection: 'row' },
-  flex1: { flex: 1 },
-  flex2: { flex: 2 },
-  flex3: { flex: 3 },
-  p2: { padding: 4 },
+  p2: { padding: 3 },
   textRight: { textAlign: 'right' },
   textCenter: { textAlign: 'center' },
   bold: { fontWeight: 'bold' },
   uppercase: { textTransform: 'uppercase' },
-  textXs: { fontSize: 8 },
-  textLg: { fontSize: 12, fontWeight: 'bold' },
-  textXl: { fontSize: 14, fontWeight: 'bold' },
-  
-  // Table specifically
+  textLg: { fontSize: 10, fontWeight: 'bold' },
+  textXl: { fontSize: 11, fontWeight: 'bold' },
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  tableSection: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
   tableHeaderRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
@@ -42,149 +52,204 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderBottomWidth: 1,
     borderColor: '#000',
+    alignItems: 'flex-start',
+  },
+  cell: {
+    borderRightWidth: 1,
+    borderColor: '#000',
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+  },
+  cellLast: {
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+  },
+  cellText: {
+    fontSize: 7.5,
+  },
+  totalsPanel: {
+    width: 130,
+    flexShrink: 0,
+  },
+  totalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderColor: '#000',
   },
 });
 
+function Cell({
+  width,
+  children,
+  align = 'left',
+  last = false,
+  uppercase = false,
+}: {
+  width: number;
+  children: string | number;
+  align?: 'left' | 'center' | 'right';
+  last?: boolean;
+  uppercase?: boolean;
+}) {
+  return (
+    <View style={[last ? styles.cellLast : styles.cell, { width }]}>
+      <Text
+        style={[
+          styles.cellText,
+          ...(uppercase ? [styles.uppercase] : []),
+          ...(align === 'center' ? [styles.textCenter] : align === 'right' ? [styles.textRight] : []),
+        ]}
+      >
+        {children}
+      </Text>
+    </View>
+  );
+}
+
 export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netAmount }: any) {
   const dateObj = new Date(invoice.invoiceDate || invoice.createdAt || Date.now());
-  const invoiceDate = isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  const invoiceDate = isNaN(dateObj.getTime())
+    ? 'N/A'
+    : dateObj.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
 
   return (
     <Document>
-      <Page size="A5" orientation="landscape" style={styles.page}>
-        <View style={styles.borderAll}>
-          
+      <Page size="A5" orientation="landscape" style={styles.page} wrap>
+        <View style={[styles.borderAll, styles.container]}>
           {/* Header Row 1 */}
-          <View style={[styles.flexRow, styles.borderBottom]}>
-            <View style={[styles.p2, styles.borderRight, { width: '45%' }]}>
+          <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
+            <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
               <Text style={[styles.textXl, styles.uppercase]}>{storeInfo?.name || 'MEDICAL STORE'}</Text>
-              <Text style={[styles.uppercase, { marginTop: 4 }]}>{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</Text>
-              <Text style={{ marginTop: 4, fontWeight: 'bold' }}>MO. {storeInfo?.phone || 'N/A'}</Text>
+              <Text style={[styles.uppercase, { marginTop: 2, fontSize: 7 }]}>{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</Text>
+              <Text style={{ marginTop: 2, fontWeight: 'bold', fontSize: 7.5 }}>MO. {storeInfo?.phone || 'N/A'}</Text>
             </View>
-            <View style={[styles.p2, styles.borderRight, { width: '25%', justifyContent: 'space-between' }]}>
-              <Text style={[styles.uppercase, styles.bold, { fontSize: 11 }]}>TAX INVOICE</Text>
-              <View style={[styles.flexRow, { justifyContent: 'space-between', marginTop: 10 }]}>
-                <Text style={styles.bold}>ORIGINAL</Text>
-              </View>
+            <View style={[styles.p2, styles.borderRight, { width: '23%', justifyContent: 'center' }]}>
+              <Text style={[styles.uppercase, styles.bold, { fontSize: 10 }]}>TAX INVOICE</Text>
+              <Text style={[styles.bold, { marginTop: 6, fontSize: 7.5 }]}>ORIGINAL</Text>
             </View>
-            <View style={[styles.p2, { width: '30%', justifyContent: 'center' }]}>
-              <View style={{ marginBottom: 4 }}>
-                <Text style={{ fontWeight: 'bold' }}>D.L NO.</Text>
-                <Text style={{ marginTop: 2 }}>{storeInfo?.dl_no || '20 G SUR 71645/21 G SUR 71646'}</Text>
-              </View>
+            <View style={[styles.p2, { width: '35%', justifyContent: 'center' }]}>
+              <Text style={{ fontWeight: 'bold', fontSize: 7.5 }}>D.L NO.</Text>
+              <Text style={{ marginTop: 1, fontSize: 7.5 }}>{storeInfo?.dl_no || '20 G SUR 71645/21 G SUR 71646'}</Text>
               {(storeInfo?.gstin || '24AUZPP2770P1ZK') && (
-                <View>
-                  <Text style={{ fontWeight: 'bold' }}>GSTIN:</Text>
-                  <Text style={{ marginTop: 2 }}>{storeInfo?.gstin || '24AUZPP2770P1ZK'}</Text>
+                <View style={{ marginTop: 4 }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 7.5 }}>GSTIN:</Text>
+                  <Text style={{ marginTop: 1, fontSize: 7.5 }}>{storeInfo?.gstin || '24AUZPP2770P1ZK'}</Text>
                 </View>
               )}
             </View>
           </View>
 
           {/* Header Row 2 */}
-          <View style={[styles.flexRow, styles.borderBottom]}>
-            <View style={[styles.p2, styles.borderRight, { width: '45%' }]}>
+          <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
+            <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
               <View style={styles.flexRow}>
-                <Text style={{ width: 50 }}>Customer</Text>
-                <Text style={styles.uppercase}>: {invoice.customerName || 'WALK-IN CUSTOMER'}</Text>
+                <Text style={{ width: 46, fontSize: 7.5 }}>Customer</Text>
+                <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.customerName || 'WALK-IN CUSTOMER'}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
-                <Text style={{ width: 50 }}>Doctor</Text>
-                <Text style={styles.uppercase}>: {invoice.doctorName || 'WALK-IN'}</Text>
+                <Text style={{ width: 46, fontSize: 7.5 }}>Doctor</Text>
+                <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.doctorName || 'WALK-IN'}</Text>
               </View>
             </View>
-            <View style={[styles.p2, styles.borderRight, { width: '25%' }]}>
+            <View style={[styles.p2, styles.borderRight, { width: '23%' }]}>
               <View style={styles.flexRow}>
-                <Text style={{ width: 30 }}>Area</Text>
-                <Text style={styles.uppercase}>: {invoice.area || 'LOCAL'}</Text>
+                <Text style={{ width: 26, fontSize: 7.5 }}>Area</Text>
+                <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.area || 'LOCAL'}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
-                <Text style={{ width: 30 }}>Mob</Text>
-                <Text>: {invoice.customerPhone || ' '}</Text>
+                <Text style={{ width: 26, fontSize: 7.5 }}>Mob</Text>
+                <Text style={{ flex: 1, fontSize: 7.5 }}>: {invoice.customerPhone || ' '}</Text>
               </View>
             </View>
-            <View style={[styles.p2, { width: '30%' }]}>
+            <View style={[styles.p2, { width: '35%' }]}>
               <View style={styles.flexRow}>
-                <Text style={{ width: 35 }}>Bill No</Text>
-                <Text style={styles.bold}>: {invoice.invoiceNumber}</Text>
+                <Text style={{ width: 32, fontSize: 7.5 }}>Bill No</Text>
+                <Text style={[styles.bold, { flex: 1, fontSize: 7.5 }]}>: {invoice.invoiceNumber}</Text>
               </View>
               <View style={[styles.flexRow, { marginTop: 2 }]}>
-                <Text style={{ width: 35 }}>Date</Text>
-                <Text>: {invoiceDate}</Text>
+                <Text style={{ width: 32, fontSize: 7.5 }}>Date</Text>
+                <Text style={{ flex: 1, fontSize: 7.5 }}>: {invoiceDate}</Text>
               </View>
             </View>
           </View>
 
           {/* Table */}
-          <View style={{ minHeight: 300 }}>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.textCenter, styles.borderRight, { width: '5%' }]}>Sr.</Text>
-              <Text style={[styles.borderRight, { width: '28%', paddingLeft: 2 }]}>Description</Text>
-              <Text style={[styles.borderRight, { width: '15%', paddingLeft: 2 }]}>HSN</Text>
-              <Text style={[styles.borderRight, { width: '18%', paddingLeft: 2 }]}>BatchNo</Text>
-              <Text style={[styles.borderRight, { width: '10%', paddingLeft: 2 }]}>ExpDt</Text>
-              <Text style={[styles.textRight, styles.borderRight, { width: '8%', paddingRight: 2 }]}>MRP</Text>
-              <Text style={[styles.textRight, styles.borderRight, { width: '6%', paddingRight: 2 }]}>Qty</Text>
-              <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>Amount</Text>
+          <View style={styles.tableSection}>
+            <View style={styles.tableHeaderRow} wrap={false}>
+              <Cell width={COL.sr} align="center">Sr.</Cell>
+              <Cell width={COL.desc}>Description</Cell>
+              <Cell width={COL.hsn}>HSN</Cell>
+              <Cell width={COL.batch}>BatchNo</Cell>
+              <Cell width={COL.exp}>ExpDt</Cell>
+              <Cell width={COL.mrp} align="right">MRP</Cell>
+              <Cell width={COL.qty} align="right">Qty</Cell>
+              <Cell width={COL.amt} align="right" last>Amount</Cell>
             </View>
-            
+
             {invoice.items.map((item: any, idx: number) => {
               const amount = item.quantity * item.mrp;
-              
+
               const expDateObj = item.expiryDate ? new Date(item.expiryDate) : null;
-              const expDt = expDateObj && !isNaN(expDateObj.getTime()) 
-                 ? `${String(expDateObj.getMonth() + 1).padStart(2, '0')}-${expDateObj.getFullYear()}` 
-                 : ' ';
-                 
+              const expDt =
+                expDateObj && !isNaN(expDateObj.getTime())
+                  ? `${String(expDateObj.getMonth() + 1).padStart(2, '0')}-${expDateObj.getFullYear()}`
+                  : ' ';
+
               const hsn = item.medicine?.hsnCode || item.hsnCode || '30049099';
-              
+
               const gObj = item.medicine?.global_medicine_master;
-              const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
+              const g = Array.isArray(gObj) ? gObj[0] || {} : gObj || {};
               const medicineName = g.name || item.medicine?.name || item.medicineName || 'UNKNOWN';
-              
+
               const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
-              
+
               return (
-                <View key={idx} style={styles.tableRow}>
-                  <Text style={[styles.textCenter, styles.borderRight, { width: '5%' }]}>{idx + 1}</Text>
-                  <Text style={[styles.uppercase, styles.borderRight, { width: '28%', paddingLeft: 2 }]}>{medicineName}</Text>
-                  <Text style={[styles.borderRight, { width: '15%', paddingLeft: 2 }]}>{hsn}</Text>
-                  <Text style={[styles.uppercase, styles.borderRight, { width: '18%', paddingLeft: 2 }]}>{batchNo}</Text>
-                  <Text style={[styles.borderRight, { width: '10%', paddingLeft: 2 }]}>{expDt}</Text>
-                  <Text style={[styles.textRight, styles.borderRight, { width: '8%', paddingRight: 2 }]}>{item.mrp.toFixed(2)}</Text>
-                  <Text style={[styles.textRight, styles.borderRight, { width: '6%', paddingRight: 2 }]}>{item.quantity}</Text>
-                  <Text style={[styles.textRight, { width: '10%', paddingRight: 4 }]}>{amount.toFixed(2)}</Text>
+                <View key={idx} style={styles.tableRow} wrap={false}>
+                  <Cell width={COL.sr} align="center">{idx + 1}</Cell>
+                  <Cell width={COL.desc} uppercase>{medicineName}</Cell>
+                  <Cell width={COL.hsn}>{hsn}</Cell>
+                  <Cell width={COL.batch} uppercase>{batchNo}</Cell>
+                  <Cell width={COL.exp}>{expDt}</Cell>
+                  <Cell width={COL.mrp} align="right">{item.mrp.toFixed(2)}</Cell>
+                  <Cell width={COL.qty} align="right">{item.quantity}</Cell>
+                  <Cell width={COL.amt} align="right" last>{amount.toFixed(2)}</Cell>
                 </View>
               );
             })}
           </View>
 
-          {/* Footer Area */}
-          <View style={[styles.flexRow, styles.borderTop]}>
-            <View style={[styles.flex3, styles.p2, styles.borderRight, { justifyContent: 'flex-end', paddingBottom: 4 }]}>
-              <Text style={{ marginTop: 2 }}>Rupees {words} Only</Text>
+          {/* Footer */}
+          <View style={[styles.flexRow, styles.borderTop]} wrap={false}>
+            <View style={[styles.p2, styles.borderRight, { flex: 1, justifyContent: 'flex-end' }]}>
+              <Text style={{ fontSize: 7.5 }}>Rupees {words} Only</Text>
             </View>
-            <View style={styles.flex1}>
-              <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
-                <Text style={styles.bold}>TOTAL</Text>
-                <Text style={styles.bold}>{totalQty}</Text>
-                <Text style={styles.bold}>{invoice.subtotal.toFixed(2)}</Text>
+            <View style={styles.totalsPanel}>
+              <View style={styles.totalsRow}>
+                <Text style={[styles.bold, { fontSize: 7.5 }]}>TOTAL</Text>
+                <Text style={[styles.bold, { fontSize: 7.5, width: 24, textAlign: 'right' }]}>{totalQty}</Text>
+                <Text style={[styles.bold, { fontSize: 7.5, width: 48, textAlign: 'right' }]}>{invoice.subtotal.toFixed(2)}</Text>
               </View>
-              <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
-                <Text>DISCOUNT</Text>
-                <Text>{invoice.discountAmount ? invoice.discountAmount.toFixed(2) : '0.00'}</Text>
+              <View style={styles.totalsRow}>
+                <Text style={{ fontSize: 7.5 }}>DISCOUNT</Text>
+                <Text style={{ fontSize: 7.5, width: 72, textAlign: 'right' }}>
+                  {invoice.discountAmount ? invoice.discountAmount.toFixed(2) : '0.00'}
+                </Text>
               </View>
-              <View style={[styles.flexRow, styles.borderBottom, styles.p2, { justifyContent: 'space-between' }]}>
-                <Text>ROUND OFF</Text>
-                <Text>{roundOff}</Text>
+              <View style={styles.totalsRow}>
+                <Text style={{ fontSize: 7.5 }}>ROUND OFF</Text>
+                <Text style={{ fontSize: 7.5, width: 72, textAlign: 'right' }}>{roundOff}</Text>
               </View>
-              <View style={[styles.flexRow, styles.p2, { justifyContent: 'space-between', backgroundColor: '#f8fafc' }]}>
+              <View style={[styles.totalsRow, { borderBottomWidth: 0, backgroundColor: '#f8fafc' }]}>
                 <Text style={styles.textLg}>NET</Text>
-                <Text style={styles.textLg}>{netAmount.toFixed(2)}</Text>
+                <Text style={[styles.textLg, { width: 72, textAlign: 'right' }]}>{netAmount.toFixed(2)}</Text>
               </View>
             </View>
           </View>
