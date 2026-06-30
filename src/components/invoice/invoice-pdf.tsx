@@ -187,7 +187,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
             <View style={styles.tableHeaderRow} wrap={false}>
               <Cell width={COL.sr} align="center">Sr.</Cell>
               <Cell width={COL.desc}>Description</Cell>
-              <Cell width={COL.mfr}>Mfr</Cell>
+              <Cell width={COL.mfr}>MFG Name</Cell>
               <Cell width={COL.hsn}>HSN</Cell>
               <Cell width={COL.batch}>BatchNo</Cell>
               <Cell width={COL.exp}>ExpDt</Cell>
