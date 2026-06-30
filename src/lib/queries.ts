@@ -315,10 +315,19 @@ export async function fetchUserProfile() {
 // ─── Store Staff (read only — admin ops stay server-side) ──
 
 export async function fetchStoreStaff() {
+  const profile = await fetchUserProfile();
+  if (!profile) throw new Error('Unauthorized');
+
+  const storeId = profile.store_id;
+  if (!storeId) {
+    throw new Error('No pharmacy selected. Please select a pharmacy from the top bar.');
+  }
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
+    .eq('store_id', storeId)
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);

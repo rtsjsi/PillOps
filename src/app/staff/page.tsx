@@ -9,8 +9,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { fetchStoreStaff } from '@/lib/queries';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
+
+async function parseStaffApiResponse(res: Response) {
+  const text = await res.text();
+  if (!text) {
+    throw new Error(res.ok ? 'Empty server response' : `Request failed (${res.status})`);
+  }
+  let data: { error?: string };
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(res.ok ? 'Invalid server response' : `Request failed (${res.status})`);
+  }
+  if (!res.ok || data.error) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<any[]>([]);
@@ -26,9 +44,7 @@ export default function StaffPage() {
 
   async function loadStaff() {
     try {
-      const res = await fetch('/api/staff');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await fetchStoreStaff();
       setStaff(data);
     } catch (e: any) {
       toast.error(e.message || "Failed to load staff");
@@ -45,16 +61,16 @@ export default function StaffPage() {
     }
     setAdding(true);
     try {
-      const res = await fetch('/api/staff', { method: 'POST', body: JSON.stringify(newUser) });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-      } else {
-        toast.success("Staff member added successfully");
-        setIsAddingUser(false);
-        setNewUser({ fullName: '', email: '', password: '', role: 'staff' });
-        await loadStaff();
-      }
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+      await parseStaffApiResponse(res);
+      toast.success("Staff member added successfully");
+      setIsAddingUser(false);
+      setNewUser({ fullName: '', email: '', password: '', role: 'staff' });
+      await loadStaff();
     } catch (e: any) {
       toast.error(e.message || "Failed to add staff");
     } finally {
@@ -64,9 +80,12 @@ export default function StaffPage() {
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
-      const res = await fetch('/api/staff', { method: 'PUT', body: JSON.stringify({ userId, role: newRole }) });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const res = await fetch('/api/staff', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      await parseStaffApiResponse(res);
       toast.success("Role updated");
       await loadStaff();
     } catch (e: any) {
@@ -77,9 +96,8 @@ export default function StaffPage() {
   const handleRemoveStaff = async (userId: string) => {
     if (!confirm('Are you sure you want to remove this staff member?')) return;
     try {
-      const res = await fetch('/api/staff?userId=' + userId, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const res = await fetch(`/api/staff?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+      await parseStaffApiResponse(res);
       toast.success("Staff member removed");
       await loadStaff();
     } catch (e: any) {

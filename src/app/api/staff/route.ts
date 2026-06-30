@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { createClient } from '@/utils/supabase/server';
@@ -8,12 +9,27 @@ async function verifyAuth() {
   if (!user) throw new Error('Unauthorized');
   
   const adminDb = createAdminClient();
-  const { data: profile } = await adminDb.from('user_profiles').select('store_id, role').eq('id', user.id).single();
+  const { data: profile } = await adminDb
+    .from('user_profiles')
+    .select('store_id, role')
+    .eq('id', user.id)
+    .maybeSingle();
   
-  if (!profile?.store_id) throw new Error('No store assigned');
+  if (!profile) throw new Error('Profile not found');
   if (profile.role !== 'owner' && profile.role !== 'super_admin') throw new Error('Forbidden');
+
+  let storeId = profile.store_id;
+  if (profile.role === 'super_admin') {
+    const cookieStore = await cookies();
+    storeId = cookieStore.get('pillops_selected_store_id')?.value ?? null;
+    if (!storeId) {
+      throw new Error('Super Admin must select a pharmacy from the top bar before managing staff.');
+    }
+  }
+
+  if (!storeId) throw new Error('No store assigned');
   
-  return profile;
+  return { ...profile, store_id: storeId };
 }
 
 export async function GET() {
