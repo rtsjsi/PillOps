@@ -89,20 +89,19 @@ function Cell({
   last = false,
   uppercase = false,
 }: {
-  width?: number;
+  width: number;
   children: string | number;
   align?: 'left' | 'center' | 'right';
   last?: boolean;
   uppercase?: boolean;
 }) {
   return (
-    <View style={[last ? styles.cellLast : styles.cell, width != null ? { width } : undefined]}>
+    <View style={[last ? styles.cellLast : styles.cell, { width }]}>
       <Text
         style={[
           styles.cellText,
-          uppercase ? styles.uppercase : undefined,
-          align === 'center' ? styles.textCenter : undefined,
-          align === 'right' ? styles.textRight : undefined,
+          ...(uppercase ? [styles.uppercase] : []),
+          ...(align === 'center' ? [styles.textCenter] : align === 'right' ? [styles.textRight] : []),
         ]}
       >
         {children}
