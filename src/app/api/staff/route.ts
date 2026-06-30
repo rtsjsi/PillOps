@@ -36,8 +36,22 @@ export async function GET() {
   try {
     const profile = await verifyAuth();
     const adminClient = createAdminClient();
-    const { data } = await adminClient.from('user_profiles').select('*').eq('store_id', profile.store_id);
-    return NextResponse.json(data || []);
+    const { data: profiles, error } = await adminClient
+      .from('user_profiles')
+      .select('*')
+      .eq('store_id', profile.store_id)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const { data: authData, error: authError } = await adminClient.auth.admin.listUsers();
+    if (authError) throw new Error(authError.message);
+
+    const staff = (profiles ?? []).map((p) => {
+      const authUser = authData.users.find((u) => u.id === p.id);
+      return { ...p, email: authUser?.email ?? '' };
+    });
+
+    return NextResponse.json(staff);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
   }
