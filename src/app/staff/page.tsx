@@ -85,7 +85,7 @@ export default function StaffPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, role: newRole }),
       });
-      const data = await parseStaffApiResponse(res);
+      await parseStaffApiResponse(res);
       toast.success("Role updated");
       await loadStaff();
     } catch (e: any) {
