@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchInvoices } from '@/lib/queries';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Receipt, Printer } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
@@ -92,11 +92,12 @@ export default function SalesRegister() {
                            </div>
                            <div>{formatDate(inv.created_at)}</div>
                          </div>
-                         <InvoicePDFWrapper 
-                             invoiceId={inv.id} 
-                             variant="outline" 
-                             size="sm" 
-                             className="h-8 font-bold text-xs bg-muted/50 border-border/50" 
+                         <InvoicePDFWrapper
+                             invoiceId={inv.id}
+                             mode="both"
+                             variant="outline"
+                             size="sm"
+                             className="h-8 font-bold text-xs bg-muted/50 border-border/50"
                          />
                       </div>
 
