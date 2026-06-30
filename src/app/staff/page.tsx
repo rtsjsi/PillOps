@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fetchStoreStaff } from '@/lib/queries';
 import { toast } from "sonner";
 import GlobalLoading from '../loading';
 
@@ -44,8 +43,9 @@ export default function StaffPage() {
 
   async function loadStaff() {
     try {
-      const data = await fetchStoreStaff();
-      setStaff(data);
+      const res = await fetch('/api/staff');
+      const data = await parseStaffApiResponse(res);
+      setStaff(Array.isArray(data) ? data : []);
     } catch (e: any) {
       toast.error(e.message || "Failed to load staff");
     } finally {
