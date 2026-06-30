@@ -92,79 +92,6 @@ export async function searchGlobalMedicines(query: string = '') {
   }
 }
 
-export async function autoEnrichMedicines() {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
-
-    // 1. Fetch up to 10 medicines that need enrichment
-    const { data: incompleteMedicines, error: fetchError } = await supabase
-      .from('global_medicine_master')
-      .select('id, name, manufacturer, category')
-      .or('ingredients.is.null,ingredients.eq."[]"')
-      .limit(10);
-
-    if (fetchError) throw new Error(fetchError.message);
-    if (!incompleteMedicines || incompleteMedicines.length === 0) {
-      return { count: 0, message: 'All medicines are already enriched!', error: null };
-    }
-
-    // 2. Call our AI Server function
-    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
-    const aiResponseString = await enrichMedicineBatchWithGroq(incompleteMedicines);
-    
-    let enrichedData;
-    try {
-      enrichedData = JSON.parse(aiResponseString);
-    } catch (e) {
-      throw new Error('Failed to parse AI response: ' + aiResponseString);
-    }
-
-    if (!enrichedData?.medicines || !Array.isArray(enrichedData.medicines)) {
-      throw new Error('Unexpected AI response format');
-    }
-
-    // 3. Update the database in a loop
-    let updatedCount = 0;
-    const { createAdminClient } = await import('@/utils/supabase/admin');
-    const adminDb = createAdminClient();
-
-    for (const med of enrichedData.medicines) {
-      const { id, correctedName, category, manufacturer, packSize, hsnCode, gstPercent, ingredients, substitutes, storageConditions, isNarcotic, prescriptionRequired } = med;
-      
-      const updatePayload: any = {
-          category: category || undefined,
-          manufacturer: manufacturer || undefined,
-          pack_size: packSize || undefined,
-          hsn_code: hsnCode || undefined,
-          gst_percent: gstPercent || undefined,
-          ingredients: ingredients || [],
-          substitutes: substitutes || [],
-          storage_conditions: storageConditions || null,
-          is_narcotic: isNarcotic || false,
-          prescription_required: prescriptionRequired || false
-      };
-
-      if (correctedName) {
-         updatePayload.name = correctedName.toUpperCase();
-      }
-
-      const { error: updateError } = await adminDb
-        .from('global_medicine_master')
-        .update(updatePayload)
-        .eq('id', id);
-        
-      if (!updateError) updatedCount++;
-      else console.error('Error updating medicine:', updateError);
-    }
-
-    return { count: updatedCount, error: null };
-  } catch (err: any) {
-    return { count: 0, error: err.message || 'Failed to auto-enrich medicines' };
-  }
-}
-
 export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
   try {
     if (!medicineNames || medicineNames.length === 0) return { data: {}, error: null };
@@ -240,7 +167,7 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
 
     // 3. Enrich missing/incomplete ones
     if (toEnrich.length > 0) {
-      const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+      const { enrichMedicineBatch } = await import('@/lib/ai-server');
       
       // Batch in chunks of 15 to respect AI limits/timeouts
       const CHUNK_SIZE = 15;
@@ -254,7 +181,7 @@ export async function checkAndEnrichInvoiceMedicines(medicineNames: string[]) {
         }));
 
         try {
-          const aiResponseString = await enrichMedicineBatchWithGroq(chunkWithIds);
+          const aiResponseString = await enrichMedicineBatch(chunkWithIds);
           const enrichedData = JSON.parse(aiResponseString);
           
           if (enrichedData?.medicines && Array.isArray(enrichedData.medicines)) {
@@ -360,12 +287,12 @@ export async function addGlobalMedicine(data: { name: string, category: string, 
     const medName = data.name.toUpperCase();
 
     // Basic AI enrichment
-    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+    const { enrichMedicineBatch } = await import('@/lib/ai-server');
     const chunk = [{ id: crypto.randomUUID(), name: medName, category: data.category, manufacturer: data.manufacturer }];
     let aiMed = chunk[0] as any;
     
     try {
-      const aiResponseString = await enrichMedicineBatchWithGroq(chunk);
+      const aiResponseString = await enrichMedicineBatch(chunk);
       const enrichedData = JSON.parse(aiResponseString);
       if (enrichedData?.medicines?.length > 0) {
         aiMed = enrichedData.medicines[0];
@@ -411,10 +338,10 @@ export async function addGlobalMedicine(data: { name: string, category: string, 
 
 export async function fetchMedicineDetailsFromAI(name: string) {
   try {
-    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
+    const { enrichMedicineBatch } = await import('@/lib/ai-server');
     const chunk = [{ id: crypto.randomUUID(), name: name.toUpperCase() }];
     
-    const aiResponseString = await enrichMedicineBatchWithGroq(chunk);
+    const aiResponseString = await enrichMedicineBatch(chunk);
     const enrichedData = JSON.parse(aiResponseString);
     
     if (enrichedData?.medicines && enrichedData.medicines.length > 0) {
@@ -440,8 +367,8 @@ export async function enrichSingleMedicine(medicine: { id: string, name: string,
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Unauthorized');
 
-    const { enrichMedicineBatchWithGroq } = await import('@/lib/ai-server');
-    const aiResponseString = await enrichMedicineBatchWithGroq([medicine]);
+    const { enrichMedicineBatch } = await import('@/lib/ai-server');
+    const aiResponseString = await enrichMedicineBatch([medicine]);
     
     let enrichedData;
     try {

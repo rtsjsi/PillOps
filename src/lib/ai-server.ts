@@ -514,7 +514,67 @@ export async function runOfflineOcr(images: { base64: string, mimeType: string }
   return JSON.stringify(placeholder);
 }
 
-export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: string, manufacturer?: string, category?: string}[]) {
+/** Medicine enrichment only — not used by invoice OCR. */
+export type MedicineEnrichmentInput = {
+  id: string;
+  name: string;
+  manufacturer?: string;
+  category?: string;
+};
+
+const MEDICINE_ENRICHMENT_SYSTEM_PROMPT = `You are a strict Indian pharmaceutical data AI. 
+You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
+For each medicine, return detailed clinical information including:
+- category: String. The dosage form (e.g., "Tablet", "Capsule", "Syrup", "Injection", "Ointment", "Cream", "Drops", "Powder"). Infer this from the name if possible.
+- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "DOLO 650 TABLET" or "CROCIN ADVANCE"). This MUST BE ENTIRELY IN UPPERCASE. Fix any abbreviations or typos.
+- manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
+- packSize: String or null. The standard packaging size (e.g. "10 Tablets", "100 ml", "15 gm"). Infer if possible, otherwise null.
+- hsnCode: String or null. The applicable Indian HSN Code for this medicine (typically 3004xxxx).
+- gstPercent: Number or null. The applicable GST percentage for this medicine (e.g. 5, 12, 18).
+- ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
+- substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
+- storageConditions: String describing how to store it (e.g. "Store below 30°C, protect from light").
+- isNarcotic: boolean (true if it contains Codeine, Tramadol, etc under NDPS Act).
+- prescriptionRequired: boolean (true for Rx only).
+
+Return ONLY a valid JSON object with the following schema:
+{
+  "medicines": [
+    {
+      "id": "original-id",
+      "correctedName": "string",
+      "category": "string",
+      "manufacturer": "string",
+      "packSize": "string",
+      "hsnCode": "string",
+      "gstPercent": 12,
+      "ingredients": [{"salt": "string", "strength": "string"}],
+      "substitutes": ["string"],
+      "storageConditions": "string",
+      "isNarcotic": boolean,
+      "prescriptionRequired": boolean
+    }
+  ]
+}`;
+
+/** Primary entry for medicine enrichment: Gemini first, Groq fallback. Does not affect OCR routing. */
+export async function enrichMedicineBatch(medicines: MedicineEnrichmentInput[]) {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await enrichMedicineBatchWithGemini(medicines);
+    } catch (err: any) {
+      console.warn('[medicine-enrichment] Gemini failed, falling back to Groq:', err?.message || err);
+    }
+  }
+
+  if (process.env.GROQ_API_KEY) {
+    return await enrichMedicineBatchWithGroq(medicines);
+  }
+
+  throw new Error('Missing GEMINI_API_KEY and GROQ_API_KEY for medicine enrichment');
+}
+
+export async function enrichMedicineBatchWithGroq(medicines: MedicineEnrichmentInput[]) {
   if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
   const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ 
@@ -525,119 +585,34 @@ export async function enrichMedicineBatchWithGroq(medicines: {id: string, name: 
     }
   });
   
-  const systemPrompt = `You are a strict Indian pharmaceutical data AI. 
-You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
-For each medicine, return detailed clinical information including:
-- category: String. The dosage form (e.g., "Tablet", "Capsule", "Syrup", "Injection", "Ointment", "Cream", "Drops", "Powder"). Infer this from the name if possible.
-- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "DOLO 650 TABLET" or "CROCIN ADVANCE"). This MUST BE ENTIRELY IN UPPERCASE. Fix any abbreviations or typos.
-- manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
-- packSize: String or null. The standard packaging size (e.g. "10 Tablets", "100 ml", "15 gm"). Infer if possible, otherwise null.
-- hsnCode: String or null. The applicable Indian HSN Code for this medicine (typically 3004xxxx).
-- gstPercent: Number or null. The applicable GST percentage for this medicine (e.g. 5, 12, 18).
-- ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
-- substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
-- storageConditions: String describing how to store it (e.g. "Store below 30°C, protect from light").
-- isNarcotic: boolean (true if it contains Codeine, Tramadol, etc under NDPS Act).
-- prescriptionRequired: boolean (true for Rx only).
-
-Return ONLY a valid JSON object with the following schema:
-{
-  "medicines": [
-    {
-      "id": "original-id",
-      "correctedName": "string",
-      "category": "string",
-      "manufacturer": "string",
-      "packSize": "string",
-      "hsnCode": "string",
-      "gstPercent": 12,
-      "ingredients": [{"salt": "string", "strength": "string"}],
-      "substitutes": ["string"],
-      "storageConditions": "string",
-      "isNarcotic": boolean,
-      "prescriptionRequired": boolean
-    }
-  ]
-}`;
-
-  try {
-    const chatCompletion = await client.chat.completions.create({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(medicines) }
-      ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.1,
-      response_format: { type: "json_object" },
-    });
-    return chatCompletion.choices[0]?.message?.content || '{"medicines":[]}';
-  } catch (err: any) {
-    if (err.message?.includes('403') || err.status === 403) {
-      console.warn('Groq returned 403 (likely blocked Cloudflare Worker IP). Falling back to Gemini...');
-      return await enrichMedicineBatchWithGemini(medicines);
-    }
-    throw err;
-  }
+  const chatCompletion = await client.chat.completions.create({
+    messages: [
+      { role: "system", content: MEDICINE_ENRICHMENT_SYSTEM_PROMPT },
+      { role: "user", content: JSON.stringify(medicines) }
+    ],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0.1,
+    response_format: { type: "json_object" },
+  });
+  return chatCompletion.choices[0]?.message?.content || '{"medicines":[]}';
 }
 
-export async function enrichMedicineBatchWithGemini(medicines: {id: string, name: string, manufacturer?: string, category?: string}[]) {
+export async function enrichMedicineBatchWithGemini(medicines: MedicineEnrichmentInput[]) {
   if (!process.env.GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
   
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   
-  const systemPrompt = `You are a strict Indian pharmaceutical data AI. 
-You will be given a JSON array of medicines containing 'id', 'name', and sometimes an abbreviated 'manufacturer' or empty 'category'.
-For each medicine, return detailed clinical information including:
-- category: String. The dosage form (e.g., "Tablet", "Capsule", "Syrup", "Injection", "Ointment", "Cream", "Drops", "Powder"). Infer this from the name if possible.
-- correctedName: String. The proper, standardized pharmaceutical name of the medicine (e.g., correcting "Dlo 650 Mg Tab" to "DOLO 650 TABLET" or "CROCIN ADVANCE"). This MUST BE ENTIRELY IN UPPERCASE. Fix any abbreviations or typos.
-- manufacturer: String. The full, correct, standard name of the pharmaceutical company (e.g., "Sun Pharma", "Mankind Pharma", "Abbott"). Correct any abbreviations or misspellings.
-- packSize: String or null. The standard packaging size (e.g. "10 Tablets", "100 ml", "15 gm"). Infer if possible, otherwise null.
-- hsnCode: String or null. The applicable Indian HSN Code for this medicine (typically 3004xxxx).
-- gstPercent: Number or null. The applicable GST percentage for this medicine (e.g. 5, 12, 18).
-- ingredients: Array of objects with 'salt' and 'strength' (e.g. [{"salt": "Paracetamol", "strength": "650mg"}]).
-- substitutes: Array of strings containing 2-3 popular Indian generic equivalents/substitutes (e.g. ["Calpol 650", "Crocin 650"]).
-- storageConditions: String describing how to store it (e.g. "Store below 30°C, protect from light").
-- isNarcotic: boolean (true if it contains Codeine, Tramadol, etc under NDPS Act).
-- prescriptionRequired: boolean (true for Rx only).
-
-Return ONLY a valid JSON object with the following schema:
-{
-  "medicines": [
-    {
-      "id": "original-id",
-      "correctedName": "string",
-      "category": "string",
-      "manufacturer": "string",
-      "packSize": "string",
-      "hsnCode": "string",
-      "gstPercent": 12,
-      "ingredients": [{"salt": "string", "strength": "string"}],
-      "substitutes": ["string"],
-      "storageConditions": "string",
-      "isNarcotic": boolean,
-      "prescriptionRequired": boolean
-    }
-  ]
-}`;
-
   const model = genAI.getGenerativeModel({ 
     model: "gemini-flash-latest", 
     generationConfig: { responseMimeType: "application/json", temperature: 0.1 } 
   });
-  
-  try {
-    const result = await model.generateContent([
-      systemPrompt,
-      JSON.stringify(medicines)
-    ]);
-    
-    const response = await result.response;
-    return response.text();
-  } catch (err: any) {
-    if (err.message?.includes('User location is not supported')) {
-      throw new Error("Google Gemini API is currently unavailable in the Cloudflare datacenter region processing your request. The Groq API also failed. Please try again later or check your API keys.");
-    }
-    throw err;
-  }
+
+  const result = await model.generateContent([
+    MEDICINE_ENRICHMENT_SYSTEM_PROMPT,
+    JSON.stringify(medicines)
+  ]);
+
+  const response = await result.response;
+  return response.text();
 }

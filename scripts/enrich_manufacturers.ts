@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
-import { enrichMedicineBatchWithGroq } from '../src/lib/ai-server';
+import { enrichMedicineBatch } from '../src/lib/ai-server';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
@@ -21,7 +21,7 @@ async function main() {
   console.log('Records to enrich:', res.rows.map(r => r.name));
   
   console.log('Calling AI to enrich...');
-  const aiResponseString = await enrichMedicineBatchWithGroq(res.rows);
+  const aiResponseString = await enrichMedicineBatch(res.rows);
   const enrichedData = JSON.parse(aiResponseString);
 
   if (!enrichedData?.medicines || !Array.isArray(enrichedData.medicines)) {

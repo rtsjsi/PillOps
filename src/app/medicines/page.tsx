@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { searchGlobalMedicines, autoEnrichMedicines, enrichSingleMedicine } from './actions';
+import { searchGlobalMedicines, enrichSingleMedicine } from './actions';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -26,7 +26,6 @@ export default function MedicinesDirectoryPage() {
   const [medicines, setMedicines] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEnriching, setIsEnriching] = useState(false);
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
 
   const fetchMedicines = useCallback(async (q: string) => {
@@ -46,21 +45,6 @@ export default function MedicinesDirectoryPage() {
   useEffect(() => {
     fetchMedicines(debouncedQuery);
   }, [debouncedQuery, fetchMedicines]);
-
-  const handleAutoEnrich = async () => {
-    setIsEnriching(true);
-    setError(null);
-    try {
-      const res = await autoEnrichMedicines();
-      if (res.error) throw new Error(res.error);
-      alert((res as any).message || `Successfully enriched ${res.count} medicines!`);
-      fetchMedicines(debouncedQuery);
-    } catch (err: any) {
-      setError(err.message || 'Failed to auto-enrich');
-    } finally {
-      setIsEnriching(false);
-    }
-  };
 
   const handleEnrichSingle = async (med: any) => {
     setEnrichingId(med.id);
@@ -91,25 +75,13 @@ export default function MedicinesDirectoryPage() {
           <h1 className="text-lg font-bold tracking-tight">Global Medicine Master</h1>
           <p className="text-muted-foreground">Search and view details of all available medicines in the directory.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-          <Button 
-            variant="secondary" 
-            onClick={handleAutoEnrich} 
-            disabled={isEnriching}
-            className="w-full sm:w-auto"
-          >
-            {isEnriching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
-            Auto-Enrich Data
-          </Button>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
       </div>
 
