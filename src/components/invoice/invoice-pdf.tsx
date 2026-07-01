@@ -217,7 +217,6 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               const manufacturer = g.manufacturer || item.medicine?.manufacturer || item.manufacturer || ' ';
 
               const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
-              const gstPercent = item.gstPercent ?? item.gst_percent ?? DEFAULT_GST_PERCENT;
 
               return (
                 <View key={idx} style={styles.tableRow} wrap={false}>
@@ -229,7 +228,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                   <Cell width={COL.exp}>{expDt}</Cell>
                   <Cell width={COL.mrp} align="right">{item.mrp.toFixed(2)}</Cell>
                   <Cell width={COL.qty} align="right">{item.quantity}</Cell>
-                  <Cell width={COL.gst} align="right">{gstPercent}%</Cell>
+                  <Cell width={COL.gst} align="right">{DEFAULT_GST_PERCENT}%</Cell>
                   <Cell width={COL.amt} align="right" last>{amount.toFixed(2)}</Cell>
                 </View>
               );
