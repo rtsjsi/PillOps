@@ -228,7 +228,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                   <Cell width={COL.exp}>{expDt}</Cell>
                   <Cell width={COL.mrp} align="right">{item.mrp.toFixed(2)}</Cell>
                   <Cell width={COL.qty} align="right">{item.quantity}</Cell>
-                  <Cell width={COL.gst} align="right">{DEFAULT_GST_PERCENT}%</Cell>
+                  <Cell width={COL.gst} align="right">{`${DEFAULT_GST_PERCENT}%`}</Cell>
                   <Cell width={COL.amt} align="right" last>{amount.toFixed(2)}</Cell>
                 </View>
               );
