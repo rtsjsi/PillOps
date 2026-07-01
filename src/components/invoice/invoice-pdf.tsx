@@ -2,15 +2,18 @@
 
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
+const DEFAULT_GST_PERCENT = 5;
+
 const COL = {
   sr: 20,
-  desc: 110,
-  mfr: 68,
-  hsn: 60,
-  batch: 75,
-  exp: 42,
-  mrp: 36,
-  qty: 26,
+  desc: 106,
+  mfr: 64,
+  hsn: 58,
+  batch: 72,
+  exp: 40,
+  mrp: 34,
+  qty: 24,
+  gst: 28,
   amt: 44,
 } as const;
 
@@ -193,6 +196,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               <Cell width={COL.exp}>ExpDt</Cell>
               <Cell width={COL.mrp} align="right">MRP</Cell>
               <Cell width={COL.qty} align="right">Qty</Cell>
+              <Cell width={COL.gst} align="right">GST%</Cell>
               <Cell width={COL.amt} align="right" last>Amount</Cell>
             </View>
 
@@ -224,6 +228,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                   <Cell width={COL.exp}>{expDt}</Cell>
                   <Cell width={COL.mrp} align="right">{item.mrp.toFixed(2)}</Cell>
                   <Cell width={COL.qty} align="right">{item.quantity}</Cell>
+                  <Cell width={COL.gst} align="right">{`${DEFAULT_GST_PERCENT}%`}</Cell>
                   <Cell width={COL.amt} align="right" last>{amount.toFixed(2)}</Cell>
                 </View>
               );
