@@ -10,8 +10,8 @@ const HEADER_PT = 88;
 const TABLE_HEADER_PT = 18;
 const ROW_PT = 17;
 const FOOTER_PT = 50;
-/** Most A4/A5 printers clip ~4–6 mm at top and bottom — shrink content slightly. */
-const PRINTER_SAFE_SCALE = 0.92;
+/** Use full width by default; shrink only when rows would overflow the A5 slot. */
+const PRINTER_SAFE_SCALE = 1;
 const MIN_SCALE = 0.72;
 
 function computeInvoicePrintScale(itemCount: number): number {
