@@ -36,9 +36,15 @@ const styles = StyleSheet.create({
   uppercase: { textTransform: 'uppercase' },
   textLg: { fontSize: 10, fontWeight: 'bold' },
   textXl: { fontSize: 11, fontWeight: 'bold' },
+  // A5 landscape is 210×148 mm — same width as A4 portrait, half its height.
+  a5Slot: {
+    height: '50%',
+    width: '100%',
+  },
   container: {
     flex: 1,
     flexDirection: 'column',
+    height: '100%',
   },
   tableSection: {
     flexGrow: 1,
@@ -126,8 +132,9 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
 
   return (
     <Document>
-      <Page size="A5" orientation="landscape" style={styles.page} wrap>
-        <View style={[styles.borderAll, styles.container]}>
+      <Page size="A4" orientation="portrait" style={styles.page} wrap>
+        <View style={styles.a5Slot}>
+          <View style={[styles.borderAll, styles.container]}>
           {/* Header Row 1 */}
           <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
             <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
@@ -262,6 +269,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               </View>
             </View>
           </View>
+        </View>
         </View>
       </Page>
     </Document>
