@@ -4,6 +4,11 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 const DEFAULT_GST_PERCENT = 5;
 const MAX_ITEMS_PER_PAGE = 12;
+const HEADER_COL = {
+  left: '52%',
+  middle: '16%',
+  right: '32%',
+} as const;
 
 const COL = {
   sr: 23,
@@ -151,16 +156,16 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
               <View style={[styles.borderAll, styles.container]}>
                 {/* Header Row 1 */}
                 <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
-                  <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
+                  <View style={[styles.p2, styles.borderRight, { width: HEADER_COL.left }]}>
                     <Text style={[styles.textXl, styles.uppercase]}>{storeInfo?.name || 'MEDICAL STORE'}</Text>
                     <Text style={[styles.uppercase, { marginTop: 2, fontSize: 7 }]}>{storeInfo?.address || 'ADDRESS NOT PROVIDED'}</Text>
                     <Text style={{ marginTop: 2, fontWeight: 'bold', fontSize: 7.5 }}>MO. {storeInfo?.phone || 'N/A'}</Text>
                   </View>
-                  <View style={[styles.p2, styles.borderRight, { width: '23%', justifyContent: 'center' }]}>
+                  <View style={[styles.p2, styles.borderRight, { width: HEADER_COL.middle, justifyContent: 'center' }]}>
                     <Text style={[styles.uppercase, styles.bold, { fontSize: 10 }]}>TAX INVOICE</Text>
                     <Text style={[styles.bold, { marginTop: 6, fontSize: 7.5 }]}>ORIGINAL</Text>
                   </View>
-                  <View style={[styles.p2, { width: '35%', justifyContent: 'center' }]}>
+                  <View style={[styles.p2, { width: HEADER_COL.right, justifyContent: 'center' }]}>
                     <Text style={{ fontWeight: 'bold', fontSize: 7.5 }}>D.L NO.</Text>
                     <Text style={{ marginTop: 1, fontSize: 7.5 }}>{storeInfo?.dl_no || '20 G SUR 71645/21 G SUR 71646'}</Text>
                     {(storeInfo?.gstin || '24AUZPP2770P1ZK') && (
@@ -174,7 +179,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
 
                 {/* Header Row 2 */}
                 <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
-                  <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
+                  <View style={[styles.p2, styles.borderRight, { width: HEADER_COL.left }]}>
                     <View style={styles.flexRow}>
                       <Text style={{ width: 46, fontSize: 7.5 }}>Customer</Text>
                       <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.customerName || 'WALK-IN CUSTOMER'}</Text>
@@ -184,7 +189,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                       <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.doctorName || 'WALK-IN'}</Text>
                     </View>
                   </View>
-                  <View style={[styles.p2, styles.borderRight, { width: '23%' }]}>
+                  <View style={[styles.p2, styles.borderRight, { width: HEADER_COL.middle }]}>
                     <View style={styles.flexRow}>
                       <Text style={{ width: 26, fontSize: 7.5 }}>Area</Text>
                       <Text style={[styles.uppercase, { flex: 1, fontSize: 7.5 }]}>: {invoice.area || 'LOCAL'}</Text>
@@ -194,7 +199,7 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                       <Text style={{ flex: 1, fontSize: 7.5 }}>: {invoice.customerPhone || ' '}</Text>
                     </View>
                   </View>
-                  <View style={[styles.p2, { width: '35%' }]}>
+                  <View style={[styles.p2, { width: HEADER_COL.right }]}>
                     <View style={styles.flexRow}>
                       <Text style={{ width: 42, fontSize: 7.5 }}>Bill No</Text>
                       <Text style={[styles.bold, { flex: 1, fontSize: 7.5 }]}>: {invoice.invoiceNumber}</Text>
