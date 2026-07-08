@@ -4,6 +4,22 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 const DEFAULT_GST_PERCENT = 5;
 
+/** A4 portrait upper half ≈ A5 landscape (148 mm), minus page padding. */
+const SLOT_HEIGHT_PT = 385;
+const HEADER_PT = 88;
+const TABLE_HEADER_PT = 18;
+const ROW_PT = 17;
+const FOOTER_PT = 50;
+/** Most A4/A5 printers clip ~4–6 mm at top and bottom — shrink content slightly. */
+const PRINTER_SAFE_SCALE = 0.92;
+const MIN_SCALE = 0.72;
+
+function computeInvoicePrintScale(itemCount: number): number {
+  const estimated = HEADER_PT + TABLE_HEADER_PT + itemCount * ROW_PT + FOOTER_PT;
+  const fitScale = estimated > SLOT_HEIGHT_PT ? SLOT_HEIGHT_PT / estimated : 1;
+  return Math.max(MIN_SCALE, Math.min(PRINTER_SAFE_SCALE, fitScale));
+}
+
 const COL = {
   sr: 20,
   desc: 106,
@@ -19,7 +35,9 @@ const COL = {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 12,
+    paddingTop: 22,
+    paddingBottom: 22,
+    paddingHorizontal: 14,
     backgroundColor: '#ffffff',
     fontFamily: 'Helvetica',
     fontSize: 8,
@@ -38,17 +56,15 @@ const styles = StyleSheet.create({
   textXl: { fontSize: 11, fontWeight: 'bold' },
   // A5 landscape is 210×148 mm — same width as A4 portrait, half its height.
   a5Slot: {
-    height: '50%',
+    height: '46%',
     width: '100%',
+    justifyContent: 'flex-start',
   },
   container: {
-    flex: 1,
     flexDirection: 'column',
-    height: '100%',
   },
   tableSection: {
-    flexGrow: 1,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   tableHeaderRow: {
     flexDirection: 'row',
@@ -129,12 +145,19 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
         month: '2-digit',
         year: 'numeric',
       });
+  const printScale = computeInvoicePrintScale(invoice.items.length);
 
   return (
     <Document>
       <Page size="A4" orientation="portrait" style={styles.page} wrap>
         <View style={styles.a5Slot}>
-          <View style={[styles.borderAll, styles.container]}>
+          <View
+            style={[
+              styles.borderAll,
+              styles.container,
+              { transform: `scale(${printScale})`, transformOrigin: 'top left' },
+            ]}
+          >
           {/* Header Row 1 */}
           <View style={[styles.flexRow, styles.borderBottom]} wrap={false}>
             <View style={[styles.p2, styles.borderRight, { width: '42%' }]}>
