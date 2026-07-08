@@ -6,16 +6,16 @@ const DEFAULT_GST_PERCENT = 5;
 const MAX_ITEMS_PER_PAGE = 12;
 
 const COL = {
-  sr: 20,
-  desc: 106,
-  mfr: 64,
-  hsn: 58,
-  batch: 72,
-  exp: 40,
-  mrp: 34,
-  qty: 24,
-  gst: 28,
-  amt: 44,
+  sr: 23,
+  desc: 123,
+  mfr: 74,
+  hsn: 67,
+  batch: 83,
+  exp: 46,
+  mrp: 39,
+  qty: 28,
+  gst: 32,
+  amt: 52,
 } as const;
 
 const styles = StyleSheet.create({
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
   },
   totalsPanel: {
-    width: 130,
+    width: COL.qty + COL.gst + COL.amt,
     flexShrink: 0,
   },
   totalsRow: {
@@ -269,22 +269,22 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                     <View style={styles.totalsPanel}>
                       <View style={styles.totalsRow}>
                         <Text style={[styles.bold, { fontSize: 7.5 }]}>TOTAL</Text>
-                        <Text style={[styles.bold, { fontSize: 7.5, width: 24, textAlign: 'right' }]}>{totalQty}</Text>
-                        <Text style={[styles.bold, { fontSize: 7.5, width: 48, textAlign: 'right' }]}>{invoice.subtotal.toFixed(2)}</Text>
+                        <Text style={[styles.bold, { fontSize: 7.5, width: COL.qty, textAlign: 'right' }]}>{totalQty}</Text>
+                        <Text style={[styles.bold, { fontSize: 7.5, width: COL.amt, textAlign: 'right' }]}>{invoice.subtotal.toFixed(2)}</Text>
                       </View>
                       <View style={styles.totalsRow}>
                         <Text style={{ fontSize: 7.5 }}>DISCOUNT</Text>
-                        <Text style={{ fontSize: 7.5, width: 72, textAlign: 'right' }}>
+                        <Text style={{ fontSize: 7.5, width: COL.amt, textAlign: 'right' }}>
                           {invoice.discountAmount ? invoice.discountAmount.toFixed(2) : '0.00'}
                         </Text>
                       </View>
                       <View style={styles.totalsRow}>
                         <Text style={{ fontSize: 7.5 }}>ROUND OFF</Text>
-                        <Text style={{ fontSize: 7.5, width: 72, textAlign: 'right' }}>{roundOff}</Text>
+                        <Text style={{ fontSize: 7.5, width: COL.amt, textAlign: 'right' }}>{roundOff}</Text>
                       </View>
                       <View style={[styles.totalsRow, { borderBottomWidth: 0, backgroundColor: '#f8fafc' }]}>
                         <Text style={styles.textLg}>NET</Text>
-                        <Text style={[styles.textLg, { width: 72, textAlign: 'right' }]}>{netAmount.toFixed(2)}</Text>
+                        <Text style={[styles.textLg, { width: COL.amt, textAlign: 'right' }]}>{netAmount.toFixed(2)}</Text>
                       </View>
                     </View>
                   </View>
