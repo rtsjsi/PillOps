@@ -28,74 +28,28 @@ export function clearQueryCaches() {
   storeSettingsCaches.clear();
 }
 
-// ─── Medicines ─────────────────────────────────────────────
+// ─── Medicines (full catalog — POS / purchases only) ───────
 
-export async function fetchMedicines(options?: { force?: boolean }) {
-  return medicinesCache.fetch(async () => {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('store_inventory')
-    .select('*, global_medicine_master(*), store_inventory_batches(*)');
+const MEDICINE_FULL_SELECT = `
+  id, reorder_level, total_stock, rack, store_id, global_medicine_master_id,
+  global_medicine_master(name, generic_name, category, manufacturer, hsn_code, schedule, gst_percent, pack_size, units_per_pack),
+  store_inventory_batches(id, batch_number, expiry_date, quantity, purchase_price, mrp, received_date)
+`;
 
-  if (error) throw new Error(error.message);
-  
-  const mappedData = (data ?? []).map((med: any) => {
-    const gObj = med.global_medicine_master;
-    const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
-    
-    const batches = (med.store_inventory_batches || []).map((b: any) => ({
-      ...b,
-      batchNumber: b.batch_number || b.batchNumber,
-      expiryDate: b.expiry_date || b.expiryDate,
-      purchasePrice: b.purchase_price || b.purchasePrice,
-      receivedDate: b.received_date || b.receivedDate
-    }));
-
-    return {
-      ...med,
-      name: g.name,
-      genericName: g.generic_name || g.genericName,
-      category: g.category,
-      manufacturer: g.manufacturer,
-      hsnCode: g.hsn_code || g.hsnCode,
-      schedule: g.schedule,
-      gstPercent: g.gst_percent || g.gstPercent,
-      packSize: g.pack_size || g.packSize || '',
-      unitsPerPack: g.units_per_pack || g.unitsPerPack || 1,
-      reorderLevel: med.reorder_level || med.reorderLevel,
-      totalStock: med.total_stock !== undefined ? med.total_stock : (med.totalStock || 0),
-      rack: med.rack,
-      batches
-    };
-  });
-
-  return mappedData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, options);
-}
-
-export async function fetchMedicineById(id: string) {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('store_inventory')
-    .select('*, global_medicine_master(*), store_inventory_batches(*)')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) return null;
-  
-  const gObj = data.global_medicine_master;
+function mapMedicineRow(med: any) {
+  const gObj = med.global_medicine_master;
   const g = Array.isArray(gObj) ? (gObj[0] || {}) : (gObj || {});
-  
-  const batches = (data.store_inventory_batches || []).map((b: any) => ({
+
+  const batches = (med.store_inventory_batches || []).map((b: any) => ({
     ...b,
     batchNumber: b.batch_number || b.batchNumber,
     expiryDate: b.expiry_date || b.expiryDate,
     purchasePrice: b.purchase_price || b.purchasePrice,
-    receivedDate: b.received_date || b.receivedDate
+    receivedDate: b.received_date || b.receivedDate,
   }));
 
   return {
-    ...data,
+    ...med,
     name: g.name,
     genericName: g.generic_name || g.genericName,
     category: g.category,
@@ -105,11 +59,101 @@ export async function fetchMedicineById(id: string) {
     gstPercent: g.gst_percent || g.gstPercent,
     packSize: g.pack_size || g.packSize || '',
     unitsPerPack: g.units_per_pack || g.unitsPerPack || 1,
-    reorderLevel: data.reorder_level || data.reorderLevel,
-    totalStock: data.total_stock !== undefined ? data.total_stock : (data.totalStock || 0),
-    rack: data.rack,
-    batches
+    reorderLevel: med.reorder_level || med.reorderLevel,
+    totalStock: med.total_stock !== undefined ? med.total_stock : (med.totalStock || 0),
+    rack: med.rack,
+    batches,
   };
+}
+
+export async function fetchMedicines(options?: { force?: boolean }) {
+  return medicinesCache.fetch(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('store_inventory')
+      .select(MEDICINE_FULL_SELECT);
+
+    if (error) throw new Error(error.message);
+
+    return (data ?? [])
+      .map(mapMedicineRow)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, options);
+}
+
+// ─── Inventory browse (paginated RPCs — list pages) ──────────
+
+export type InventoryListParams = {
+  search?: string;
+  category?: string;
+  expiryFilter?: string | null;
+  offset?: number;
+  limit?: number;
+};
+
+export async function fetchInventorySummary(storeId: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_inventory_summary', { p_store_id: storeId });
+  if (error) throw new Error(error.message);
+  return data as {
+    totalMedicines: number;
+    expired: number;
+    critical: number;
+    warning: number;
+    lowStock: number;
+    categories: string[];
+  };
+}
+
+export async function fetchInventoryList(storeId: string, params: InventoryListParams = {}) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_inventory_list', {
+    p_store_id: storeId,
+    p_search: params.search?.trim() || null,
+    p_category: params.category && params.category !== 'All' ? params.category : null,
+    p_expiry_filter: params.expiryFilter || null,
+    p_offset: params.offset ?? 0,
+    p_limit: params.limit ?? 50,
+  });
+  if (error) throw new Error(error.message);
+  return data as { items: any[]; total: number };
+}
+
+export async function fetchExpiringBatches(storeId: string, maxDays = 180) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_expiring_batches', {
+    p_store_id: storeId,
+    p_max_days: maxDays,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as any[];
+}
+
+export async function fetchInventoryReport(
+  storeId: string,
+  params: { search?: string; offset?: number; limit?: number } = {}
+) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_inventory_report', {
+    p_store_id: storeId,
+    p_search: params.search?.trim() || null,
+    p_offset: params.offset ?? 0,
+    p_limit: params.limit ?? 100,
+  });
+  if (error) throw new Error(error.message);
+  return data as { items: any[]; total: number; totalValue: number };
+}
+
+export async function fetchMedicineById(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('store_inventory')
+    .select(MEDICINE_FULL_SELECT)
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+  return mapMedicineRow(data);
 }
 
 export async function fetchGlobalMedicines(searchQuery: string) {

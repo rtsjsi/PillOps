@@ -1,307 +1,410 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { fetchMedicines } from '@/lib/queries';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchInventoryList, fetchInventorySummary } from '@/lib/queries';
 import { useUserProfile } from '@/contexts/user-profile-context';
+import { useDebounce } from '@/hooks/use-debounce';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { fuzzyMatch, getTotalStock, getStockStatus, cn, getDaysUntilExpiry, getExpiryStatus } from '@/lib/utils';
-import { Package, Plus, AlertTriangle, Filter, Search, FileSpreadsheet, Download, Clock, XCircle, ShieldCheck, PackageSearch, FileScan, FilePieChart } from 'lucide-react';
+import { getStockStatus, cn, getDaysUntilExpiry, getExpiryStatus } from '@/lib/utils';
+import { Plus, AlertTriangle, Download, Clock, XCircle, ShieldCheck, PackageSearch, FileScan, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import TableLoading from '@/components/ui/tableLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { FAB } from '@/components/ui/fab';
 import { csvExport } from '@/lib/export';
 import dynamic from 'next/dynamic';
-
-const InventoryPDFButton = dynamic(
-  () => import('@/components/inventory/pdf-button').then((mod) => mod.InventoryPDFButton),
-  { ssr: false }
-);
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+
+const InventoryPDFButton = dynamic(
+  () => import('@/components/inventory/pdf-button').then((mod) => mod.InventoryPDFButton),
+  { ssr: false }
+);
+
+const PAGE_SIZE = 50;
+
+function enrichBatches(batches: any[]) {
+  return (batches || []).map((batch) => {
+    const days = getDaysUntilExpiry(batch.expiryDate);
+    return { ...batch, daysUntilExpiry: days, expiryStatus: getExpiryStatus(days) };
+  });
+}
 
 export default function Inventory() {
-  const { profile } = useUserProfile();
-  const [medicines, setMedicines] = useState<any[]>([]);
+  const { profile, loading: profileLoading } = useUserProfile();
+  const storeId = profile?.store_id;
   const storeName = profile?.store?.name || 'My Pharmacy';
-  const [loading, setLoading] = useState(true);
+
+  const [summary, setSummary] = useState<any>(null);
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+  const [loadingList, setLoadingList] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [expiryFilter, setExpiryFilter] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const data = await fetchMedicines();
-        setMedicines(data);
-      } catch (error: any) {
-        console.error('Failed to fetch data:', error);
-        setErrorMsg(error.message || String(error));
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const medicinesWithStatus = useMemo(() => {
-    return medicines.map(med => {
-      const batchesWithStatus = med.batches.map((batch: any) => {
-        const days = getDaysUntilExpiry(batch.expiryDate);
-        return { ...batch, daysUntilExpiry: days, expiryStatus: getExpiryStatus(days) };
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, selectedCategory, expiryFilter]);
+
+  useEffect(() => {
+    if (profileLoading || !storeId) {
+      if (!profileLoading && !storeId) setLoadingSummary(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingSummary(true);
+
+    fetchInventorySummary(storeId)
+      .then((data) => { if (!cancelled) setSummary(data); })
+      .catch((err: any) => { if (!cancelled) setErrorMsg(err.message); })
+      .finally(() => { if (!cancelled) setLoadingSummary(false); });
+
+    return () => { cancelled = true; };
+  }, [storeId, profileLoading]);
+
+  useEffect(() => {
+    if (profileLoading || !storeId) {
+      if (!profileLoading && !storeId) setLoadingList(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingList(true);
+    setErrorMsg(null);
+
+    fetchInventoryList(storeId, {
+      search: debouncedSearch,
+      category: selectedCategory,
+      expiryFilter,
+      offset: page * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    })
+      .then(({ items, total: count }) => {
+        if (cancelled) return;
+        setMedicines(items.map((med) => ({
+          ...med,
+          batches: enrichBatches(med.batches),
+        })));
+        setTotal(count);
+      })
+      .catch((err: any) => {
+        if (!cancelled) setErrorMsg(err.message || String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingList(false);
       });
 
-      const overallExpiryStatus = batchesWithStatus.reduce((worst: string, b: any) => {
-        const priority = { expired: 3, critical: 2, warning: 1, ok: 0 };
-        if (priority[b.expiryStatus as keyof typeof priority] > priority[worst as keyof typeof priority]) {
-          return b.expiryStatus;
-        }
-        return worst;
-      }, 'ok');
+    return () => { cancelled = true; };
+  }, [storeId, profileLoading, debouncedSearch, selectedCategory, expiryFilter, page]);
 
-      return { ...med, batches: batchesWithStatus, overallExpiryStatus };
+  const categories = useMemo(() => {
+    const fromSummary = summary?.categories ?? [];
+    return ['All', ...fromSummary];
+  }, [summary]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const stats = {
+    expired: summary?.expired ?? 0,
+    critical: summary?.critical ?? 0,
+    warning: summary?.warning ?? 0,
+  };
+
+  const handleExport = useCallback(async () => {
+    if (!storeId) return;
+    setExporting(true);
+    try {
+      const { items } = await fetchInventoryList(storeId, {
+        search: debouncedSearch,
+        category: selectedCategory,
+        expiryFilter,
+        offset: 0,
+        limit: 200,
+      });
+      csvExport(items.map((m) => ({
+        name: m.name,
+        generic: m.genericName,
+        category: m.category,
+        stock: m.totalStock,
+        status: m.overallExpiryStatus,
+      })), 'inventory_report');
+    } finally {
+      setExporting(false);
+    }
+  }, [storeId, debouncedSearch, selectedCategory, expiryFilter]);
+
+  const [exportPdfData, setExportPdfData] = useState<any[]>([]);
+  const preparePdfExport = useCallback(async () => {
+    if (!storeId || exportPdfData.length > 0) return;
+    const { items } = await fetchInventoryList(storeId, {
+      search: debouncedSearch,
+      category: selectedCategory,
+      expiryFilter,
+      offset: 0,
+      limit: 200,
     });
-  }, [medicines]);
+    setExportPdfData(items.map((m) => ({ ...m, totalQty: m.totalStock })));
+  }, [storeId, debouncedSearch, selectedCategory, expiryFilter, exportPdfData.length]);
 
-  const stats = useMemo(() => {
-    let expired = 0, critical = 0, warning = 0;
-    medicinesWithStatus.forEach(med => {
-      if (med.overallExpiryStatus === 'expired') expired++;
-      else if (med.overallExpiryStatus === 'critical') critical++;
-      else if (med.overallExpiryStatus === 'warning') warning++;
-    });
-    return { expired, critical, warning };
-  }, [medicinesWithStatus]);
-
-  const filteredMedicines = useMemo(() => {
-    return medicinesWithStatus.filter(med => {
-      const matchesSearch = fuzzyMatch(searchQuery, med.name) || fuzzyMatch(searchQuery, med.genericName);
-      const matchesCategory = selectedCategory === 'All' || med.category === selectedCategory;
-      const matchesExpiry = !expiryFilter || med.overallExpiryStatus === expiryFilter;
-      return matchesSearch && matchesCategory && matchesExpiry;
-    });
-  }, [medicinesWithStatus, searchQuery, selectedCategory, expiryFilter]);
-
-  if (loading) {
+  if (!profileLoading && !storeId) {
     return (
-      <div className="container py-4 flex flex-col gap-4 pb-24">
-        <header className="flex justify-between items-center">
-          <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex" disabled>
-            <Plus size={18} className="mr-2" /> Add Misc Stock
-          </Button>
-        </header>
-        <TableLoading />
+      <div className="container py-8 text-center text-muted-foreground">
+        Please select a pharmacy to view inventory.
       </div>
     );
   }
-
-  const categories = ['All', ...Array.from(new Set(medicines.map(m => m.category)))];
 
   return (
     <div className="container py-4 flex flex-col gap-4 pb-24">
       <header className="flex justify-between items-center">
         <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex">
-            <Plus size={18} className="mr-2" /> Add Misc Stock
+          <Plus size={18} className="mr-2" /> Add Misc Stock
         </Button>
       </header>
 
-      {/* Expiry Alerts Banner */}
       <div className="-mx-4 px-4 py-2 border-b border-border mb-2 bg-background">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2">
-          <button 
-            onClick={() => setExpiryFilter(expiryFilter === 'expired' ? null : 'expired')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
-              expiryFilter === 'expired' ? "bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20" : "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20"
-            )}
-          >
-            <XCircle size={16} />
-            {stats.expired} Expired
-          </button>
-          <button 
-            onClick={() => setExpiryFilter(expiryFilter === 'critical' ? null : 'critical')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
-              expiryFilter === 'critical' ? "bg-orange-500 text-white border-orange-600 shadow-lg shadow-orange-500/20" : "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20"
-            )}
-          >
-            <AlertTriangle size={16} />
-            {stats.critical} Critical (7d)
-          </button>
-          <button 
-            onClick={() => setExpiryFilter(expiryFilter === 'warning' ? null : 'warning')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
-              expiryFilter === 'warning' ? "bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
-            )}
-          >
-            <Clock size={16} />
-            {stats.warning} Warning (30d)
-          </button>
-          <button 
-            onClick={() => setExpiryFilter(null)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs",
-              !expiryFilter ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20"
-            )}
-          >
-            <ShieldCheck size={16} />
-            All Safe
-          </button>
+          {loadingSummary ? (
+            <>
+              <Skeleton className="h-8 w-24 rounded-lg" />
+              <Skeleton className="h-8 w-32 rounded-lg" />
+              <Skeleton className="h-8 w-28 rounded-lg" />
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setExpiryFilter(expiryFilter === 'expired' ? null : 'expired')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
+                  expiryFilter === 'expired' ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
+                )}
+              >
+                <XCircle size={16} />
+                {stats.expired} Expired
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpiryFilter(expiryFilter === 'critical' ? null : 'critical')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
+                  expiryFilter === 'critical' ? 'bg-orange-500 text-white border-orange-600 shadow-lg shadow-orange-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20'
+                )}
+              >
+                <AlertTriangle size={16} />
+                {stats.critical} Critical (7d)
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpiryFilter(expiryFilter === 'warning' ? null : 'warning')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
+                  expiryFilter === 'warning' ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
+                )}
+              >
+                <Clock size={16} />
+                {stats.warning} Warning (30d)
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpiryFilter(null)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
+                  !expiryFilter ? 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
+                )}
+              >
+                <ShieldCheck size={16} />
+                All Safe
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <SearchBar 
+          <SearchBar
             autoFocus
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onClear={() => setSearchQuery('')}
-           
           />
         </div>
-        
+
         <DropdownMenu>
-          <DropdownMenuTrigger render={
-            <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
-               <Download size={18} />
-            </Button>
-          } />
-          <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl">
-             <DropdownMenuItem 
-               onClick={() => csvExport(filteredMedicines.map(m => ({
-                 name: m.name,
-                 generic: m.genericName,
-                 category: m.category,
-                 stock: m.totalStock,
-                 status: m.overallExpiryStatus
-               })), 'inventory_report')}
-               className="flex items-center gap-2 font-bold p-3 rounded-xl cursor-pointer"
-             >
-                <FileSpreadsheet size={16} />
-                Export CSV
-             </DropdownMenuItem>
-             
-             <InventoryPDFButton 
-                data={filteredMedicines.map(m => ({ ...m, totalQty: m.totalStock }))} 
-                storeName={storeName} 
-             />
+          <DropdownMenuTrigger
+            render={
+              <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" disabled={exporting}>
+                <Download size={18} />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl" onClick={preparePdfExport}>
+            <DropdownMenuItem
+              onClick={handleExport}
+              className="flex items-center gap-2 font-bold p-3 rounded-xl cursor-pointer"
+            >
+              <FileSpreadsheet size={16} />
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </DropdownMenuItem>
+            <InventoryPDFButton data={exportPdfData} storeName={storeName} />
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
-           <Filter size={18} />
-        </Button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-         {categories.map(cat => (
-            <Button 
-               key={cat}
-               variant={selectedCategory === cat ? 'default' : 'outline'}
-               size="sm"
-               className="rounded-full whitespace-nowrap px-6"
-               onClick={() => setSelectedCategory(cat)}
-            >
-               {cat}
-            </Button>
-         ))}
+        {categories.map((cat) => (
+          <Button
+            key={cat}
+            variant={selectedCategory === cat ? 'default' : 'outline'}
+            size="sm"
+            className="rounded-full whitespace-nowrap px-6"
+            onClick={() => setSelectedCategory(cat)}
+          >
+            {cat}
+          </Button>
+        ))}
       </div>
 
       <div className="flex flex-col gap-4">
-         {errorMsg && (
-            <Card className="p-4 bg-red-500/10 border-red-500 text-red-600 font-medium">
-               Error: {errorMsg}
-            </Card>
-         )}
-         
+        {errorMsg && (
+          <Card className="p-4 bg-red-500/10 border-red-500 text-red-600 font-medium">
+            Error: {errorMsg}
+          </Card>
+        )}
 
+        {loadingList ? (
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : medicines.length === 0 ? (
+          <Card className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/20 border-dashed">
+            <PackageSearch size={48} className="opacity-20" />
+            <p>No medicines found matching your criteria.</p>
+          </Card>
+        ) : (
+          medicines.map((med) => {
+            const stockStatus = getStockStatus(med.totalStock, med.reorderLevel);
+            const expiryStatus = med.overallExpiryStatus;
 
-         {filteredMedicines.length === 0 ? (
-            <Card className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground bg-muted/20 border-dashed">
-               <PackageSearch size={48} className="opacity-20" />
-               <p>No medicines found matching your criteria.</p>
-            </Card>
-         ) : (
-            filteredMedicines.map(med => {
-               const totalQty = med.totalStock;
-               const stockStatus = getStockStatus(totalQty, med.reorderLevel);
-               const expiryStatus = med.overallExpiryStatus;
-               
-               return (
-                 <Card key={med.id} className={cn(
-                   "hover:shadow-md transition-shadow relative overflow-hidden",
-                   expiryStatus === 'expired' && "border-red-500/50 bg-red-500/5"
-                 )}>
-                    {expiryStatus === 'expired' && (
-                      <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-lg">
-                        Expired
-                      </div>
+            return (
+              <Card
+                key={med.id}
+                className={cn(
+                  'hover:shadow-md transition-shadow relative overflow-hidden',
+                  expiryStatus === 'expired' && 'border-red-500/50 bg-red-500/5'
+                )}
+              >
+                {expiryStatus === 'expired' && (
+                  <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-lg">
+                    Expired
+                  </div>
+                )}
+
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 p-3">
+                  <div className="grid gap-0.5">
+                    <CardTitle className="text-base font-bold">{med.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{med.genericName}</p>
+                  </div>
+                  <Badge
+                    variant={stockStatus === 'ok' ? 'default' : stockStatus === 'low' ? 'outline' : 'destructive'}
+                    className={cn(
+                      stockStatus === 'ok' && 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20',
+                      stockStatus === 'low' && 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
                     )}
+                  >
+                    {med.totalStock} in stock
+                  </Badge>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      {med.batches.map((batch: any, i: number) => (
+                        <div
+                          key={batch.id || i}
+                          className={cn(
+                            'text-[10px] px-2 py-1 rounded-md font-bold border',
+                            batch.expiryStatus === 'expired' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                            batch.expiryStatus === 'critical' ? 'bg-orange-500/10 text-orange-600 border-orange-600/20' :
+                            batch.expiryStatus === 'warning' ? 'bg-amber-500/10 text-amber-600 border-amber-600/20' :
+                            'bg-muted text-muted-foreground border-border'
+                          )}
+                        >
+                          {batch.batchNumber} ({batch.expiryDate})
+                        </div>
+                      ))}
+                    </div>
 
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0 p-3">
-                       <div className="grid gap-0.5">
-                         <CardTitle className="text-base font-bold">{med.name}</CardTitle>
-                         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{med.genericName}</p>
-                       </div>
-                       <Badge variant={stockStatus === 'ok' ? 'default' : stockStatus === 'low' ? 'outline' : 'destructive'} className={cn(
-                         stockStatus === 'ok' && "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20",
-                         stockStatus === 'low' && "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20"
-                       )}>
-                          {totalQty} in stock
-                       </Badge>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                     <div className="flex flex-col gap-3">
-                       <div className="flex flex-wrap gap-2">
-                         {med.batches.map((batch: any, i: number) => (
-                           <div key={i} className={cn(
-                             "text-[10px] px-2 py-1 rounded-md font-bold border",
-                             batch.expiryStatus === 'expired' ? "bg-red-500/10 text-red-600 border-red-500/20" :
-                             batch.expiryStatus === 'critical' ? "bg-orange-500/10 text-orange-600 border-orange-600/20" :
-                             batch.expiryStatus === 'warning' ? "bg-amber-500/10 text-amber-600 border-amber-600/20" :
-                             "bg-muted text-muted-foreground border-border"
-                           )}>
-                             {batch.batchNumber} ({batch.expiryDate})
-                           </div>
-                         ))}
-                       </div>
-
-                       <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground pt-4 border-t border-border/50">
-                          <div className="flex items-center gap-2">
-                            <span className="bg-muted px-2 py-0.5 rounded">Rack: {med.rack}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                             {expiryStatus === 'expired' ? <XCircle size={14} className="text-red-500" /> :
-                              expiryStatus === 'critical' ? <AlertTriangle size={14} className="text-orange-500" /> :
-                              expiryStatus === 'warning' ? <Clock size={14} className="text-amber-500" /> :
-                              <ShieldCheck size={14} className="text-emerald-500" />}
-                             <span className={cn(
-                               "uppercase tracking-widest text-[10px]",
-                               expiryStatus === 'expired' && "text-red-500",
-                               expiryStatus === 'critical' && "text-orange-500",
-                               expiryStatus === 'warning' && "text-amber-500",
-                               expiryStatus === 'ok' && "text-emerald-500"
-                             )}>
-                               {expiryStatus === 'ok' ? 'Safe' : expiryStatus}
-                             </span>
-                          </div>
-                       </div>
-                     </div>
-                    </CardContent>
-                 </Card>
-               );
-            })
-         )}
+                    <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground pt-4 border-t border-border/50">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-muted px-2 py-0.5 rounded">Rack: {med.rack || '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {expiryStatus === 'expired' ? <XCircle size={14} className="text-red-500" /> :
+                         expiryStatus === 'critical' ? <AlertTriangle size={14} className="text-orange-500" /> :
+                         expiryStatus === 'warning' ? <Clock size={14} className="text-amber-500" /> :
+                         <ShieldCheck size={14} className="text-emerald-500" />}
+                        <span className={cn(
+                          'uppercase tracking-widest text-[10px]',
+                          expiryStatus === 'expired' && 'text-red-500',
+                          expiryStatus === 'critical' && 'text-orange-500',
+                          expiryStatus === 'warning' && 'text-amber-500',
+                          expiryStatus === 'ok' && 'text-emerald-500'
+                        )}>
+                          {expiryStatus === 'ok' ? 'Safe' : expiryStatus}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0 || loadingList}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft size={16} className="mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages - 1 || loadingList}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next <ChevronRight size={16} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <FAB href="/purchases/scan" icon={<FileScan size={32} />} label="Add Stock" />
     </div>
   );
