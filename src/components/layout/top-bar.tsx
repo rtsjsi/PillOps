@@ -2,42 +2,36 @@
 
 import { Bell, Search, LogOut, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { fetchUserProfile } from '@/lib/queries';
+import { clearUserProfileCache } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { logoutUser } from '@/app/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MobileSidebar } from '@/components/layout/mobile-sidebar';
 
 export function TopBar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
+  const { profile } = useUserProfile();
   const [signingOut, setSigningOut] = useState(false);
   const [stores, setStores] = useState<any[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
 
   useEffect(() => {
     if (pathname === '/' || pathname === '/login') return;
-    fetchUserProfile().then(p => {
-      setProfile(p);
-      if (p?.role === 'super_admin') {
-        const supabase = createClient();
-        const fetchStores = async () => {
-          const { data } = await supabase.from('stores').select('id, name').order('name');
-          setStores(data || []);
-        };
-        fetchStores();
-        
-        // Read cookie to set initial select value
-        const match = document.cookie.match(new RegExp('(^| )pillops_selected_store_id=([^;]+)'));
-        if (match) setSelectedStore(match[2]);
-      }
-    }).catch(() => {});
-  }, [pathname]);
+    if (profile?.role === 'super_admin') {
+      const supabase = createClient();
+      supabase.from('stores').select('id, name').order('name').then(({ data }) => {
+        setStores(data || []);
+      });
+
+      const match = document.cookie.match(new RegExp('(^| )pillops_selected_store_id=([^;]+)'));
+      if (match) setSelectedStore(match[2]);
+    }
+  }, [pathname, profile?.role]);
 
   if (pathname === '/' || pathname === '/login') return null;
 
@@ -56,6 +50,7 @@ export function TopBar() {
     if (signingOut) return;
     setSigningOut(true);
     try {
+      clearUserProfileCache();
       await logoutUser();
       window.location.replace('/login');
     } catch {
@@ -67,6 +62,7 @@ export function TopBar() {
   const handleStoreChange = (storeId: string | null) => {
     if (!storeId) return;
     setSelectedStore(storeId);
+    clearUserProfileCache();
     document.cookie = `pillops_selected_store_id=${storeId}; path=/; max-age=31536000`;
     window.location.reload();
   };

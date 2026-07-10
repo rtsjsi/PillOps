@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { fetchInvoiceById, fetchStoreSettings } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { numberToWords } from '@/lib/utils';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ const InvoiceViewer = dynamic(
 
 export default function InvoicePage() {
   const { id } = useParams<{ id: string }>();
+  const { profile } = useUserProfile();
   const [invoice, setInvoice] = useState<any>(null);
   const [storeInfo, setStoreInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,10 +26,8 @@ export default function InvoicePage() {
     if (!id) return;
     async function load() {
       try {
-        const [inv, store] = await Promise.all([
-          fetchInvoiceById(id),
-          fetchStoreSettings(),
-        ]);
+        const inv = await fetchInvoiceById(id);
+        const store = profile?.store ?? await fetchStoreSettings(profile?.store_id ?? undefined);
         setInvoice(inv);
         setStoreInfo(store);
       } catch (err) {
@@ -37,7 +37,7 @@ export default function InvoicePage() {
       }
     }
     load();
-  }, [id]);
+  }, [id, profile]);
 
   if (loading) {
     return (

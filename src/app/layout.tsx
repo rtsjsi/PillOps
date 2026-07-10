@@ -3,9 +3,8 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Geist_Mono, Space_Grotesk } from 'next/font/google';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
-import { ThemeProvider } from '@/components/ui/themeProvider';
+import { Providers } from '@/components/providers';
 import { cn } from "@/lib/utils";
-import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -31,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={cn(inter.variable, geistMono.variable, spaceGrotesk.variable, "font-sans")} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/10 overflow-x-hidden">
-        <ThemeProvider>
+        <Providers>
           <div className="flex h-screen overflow-hidden">
             {/* Desktop Sidebar */}
             <Sidebar />
@@ -47,10 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </main>
             </div>
           </div>
-          
-          
-          <Toaster position="top-center" richColors />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

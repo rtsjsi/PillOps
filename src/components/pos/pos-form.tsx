@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchMedicines, fetchStoreSettings, fetchUserProfile } from '@/lib/queries';
+import { fetchMedicines, clearQueryCaches } from '@/lib/queries';
 import { createClient } from '@/utils/supabase/client';
 import { generateInvoiceNumber } from '@/lib/utils';
 import { ArrowLeft, Plus, Save, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import GenericTableLoading from '@/components/ui/tableLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { coerceNumber } from '@/lib/numeric-field';
 import { toast } from 'sonner';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -29,6 +30,7 @@ interface POSFormProps {
 
 export function POSForm({ initialData }: POSFormProps) {
   const router = useRouter();
+  const { profile, loading: profileLoading } = useUserProfile();
 
   const customerNames = useDistinctValues('customers', 'name', false);
   const customerPhones = useDistinctValues('sales_invoices', 'customer_phone');
@@ -84,19 +86,28 @@ export function POSForm({ initialData }: POSFormProps) {
   const [items, setItems] = useState<SalesItem[]>(getInitialItems());
 
   useEffect(() => {
+    if (profileLoading) return;
+
+    let cancelled = false;
+
     async function fetchData() {
       try {
-        const [medData, settings] = await Promise.all([fetchMedicines(), fetchStoreSettings()]);
+        const medData = await fetchMedicines();
+        if (cancelled) return;
         setMedicines(medData);
-        setStoreSettings(settings);
+        if (profile?.store) {
+          setStoreSettings(profile.store);
+        }
       } catch (error) {
         console.error('Failed to fetch POS data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     fetchData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [profile, profileLoading]);
 
   const handleItemChange = (idx: number, field: keyof SalesItem, value: any, fullItem?: any) => {
     const newItems = [...items];
@@ -193,7 +204,6 @@ export function POSForm({ initialData }: POSFormProps) {
     setIsSaving(true);
 
     try {
-        const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
         const invoiceData = {
@@ -232,6 +242,7 @@ export function POSForm({ initialData }: POSFormProps) {
         
         setLastInvoiceId(result?.id || result);
         setIsSuccess(true);
+        clearQueryCaches();
         toast.success(initialData ? 'Sale updated successfully' : 'Sale completed successfully');
         
     } catch (error: any) {
@@ -265,7 +276,15 @@ export function POSForm({ initialData }: POSFormProps) {
 
 
 
-  if (loading) return <GenericTableLoading />;
+  if (loading || profileLoading) {
+    return (
+      <div className="container py-4 flex flex-col gap-4 animate-pulse">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   if (isSuccess) {
       return (

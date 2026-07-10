@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import GlobalLoading from '../loading';
+import { Skeleton } from "@/components/ui/skeleton";
 
 async function parseStaffApiResponse(res: Response) {
   const text = await res.text();
@@ -105,7 +105,19 @@ export default function StaffPage() {
     }
   };
 
-  if (loading) return <GlobalLoading />;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8 animate-page-in pb-24">
+        <header>
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-80 mt-2" />
+        </header>
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 animate-page-in pb-24">

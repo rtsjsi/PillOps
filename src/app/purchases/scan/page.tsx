@@ -19,10 +19,11 @@ import { GROQ_OCR_MODELS, getOcrMaxImageDim } from '@/lib/ai-server';
 import { GROQ_VISION_LIMITS } from '@/lib/groq-vision';
 import { fileToDataUrl, mimeFromDataUrl, prepareImageForVisionApi } from '@/lib/groq-image-compress';
 import { ImageCropper } from '@/components/purchases/image-cropper';
-import { fetchUserProfile } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import type { StoreContext } from '@/lib/invoice-distributor';
 export default function AIInvoiceScanner() {
   const router = useRouter();
+  const { profile } = useUserProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -38,13 +39,11 @@ export default function AIInvoiceScanner() {
   const [storeContext, setStoreContext] = useState<StoreContext>({});
 
   useEffect(() => {
-    fetchUserProfile().then(profile => {
-      const store = profile?.store as { name?: string; gstin?: string } | undefined;
-      if (store?.name || store?.gstin) {
-        setStoreContext({ storeName: store?.name, storeGstin: store?.gstin });
-      }
-    }).catch(() => {});
-  }, []);
+    const store = profile?.store as { name?: string; gstin?: string } | null | undefined;
+    if (store?.name || store?.gstin) {
+      setStoreContext({ storeName: store?.name, storeGstin: store?.gstin });
+    }
+  }, [profile]);
 
   const prepareImagesForApi = async () => {
     const maxDim = getOcrMaxImageDim(selectedModel);
