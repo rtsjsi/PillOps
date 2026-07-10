@@ -190,15 +190,20 @@ function mapInvoiceSummary(inv: any) {
 }
 
 /** Lightweight list query — no line items. Prefer for tables and landing pages. */
-export async function fetchInvoicesList(limit?: number) {
+export async function fetchInvoicesList(options?: { limit?: number; search?: string }) {
   const supabase = createClient();
   let query = supabase
     .from('sales_invoices')
     .select('id, invoice_number, customer_name, customer_phone, doctor_name, area, subtotal, gst_amount, discount_percent, discount_amount, total, created_at')
     .order('created_at', { ascending: false });
 
-  if (limit) {
-    query = query.limit(limit);
+  const search = options?.search?.trim();
+  if (search) {
+    query = query.or(`customer_name.ilike.%${search}%,invoice_number.ilike.%${search}%,customer_phone.ilike.%${search}%`);
+  }
+
+  if (options?.limit) {
+    query = query.limit(options.limit);
   }
 
   const { data, error } = await query;
@@ -323,9 +328,13 @@ function mapPurchaseSummary(purch: any) {
 }
 
 /** Lightweight list query — minimal item fields for draft routing only. */
-export async function fetchPurchasesList() {
+export async function fetchPurchasesList(options?: {
+  limit?: number;
+  search?: string;
+  status?: 'completed' | 'draft';
+}) {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('purchase_invoices')
     .select(`
       id, status, distributor_name, invoice_number, invoice_date, total, subtotal, gst_amount, discount_amount, created_at,
@@ -333,8 +342,32 @@ export async function fetchPurchasesList() {
     `)
     .order('created_at', { ascending: false });
 
+  if (options?.status) {
+    query = query.eq('status', options.status);
+  }
+
+  const search = options?.search?.trim();
+  if (search) {
+    query = query.or(`distributor_name.ilike.%${search}%,invoice_number.ilike.%${search}%`);
+  }
+
+  if (options?.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []).map(mapPurchaseSummary);
+}
+
+export async function fetchPurchaseDraftCount() {
+  const supabase = createClient();
+  const { count, error } = await supabase
+    .from('purchase_invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'draft');
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export async function fetchPurchases() {
