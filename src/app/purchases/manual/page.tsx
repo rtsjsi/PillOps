@@ -16,22 +16,14 @@ import {
   PURCHASE_LINE_TOTAL_FIELDS,
 } from '@/lib/purchase-calculations';
 import { coerceNumber, isNumericFieldEmpty } from '@/lib/numeric-field';
+import {
+  formatExpiryForForm,
+  isValidExpiryFormValue,
+  normalizeExpiryForDb,
+} from '@/lib/expiry-date';
 
 import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
 import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purchase-item-card';
-
-function formatExpiryForForm(date: string): string {
-  if (!date) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    const [yyyy, mm] = date.split('-');
-    return `${mm}-${yyyy}`;
-  }
-  if (/^\d{4}-\d{2}$/.test(date)) {
-    const [yyyy, mm] = date.split('-');
-    return `${mm}-${yyyy}`;
-  }
-  return date;
-}
 
 function mapDbInvoiceToForm(draft: any): { invoiceData: InvoiceHeaderData & { id?: string }; items: PurchaseItem[] } {
   return {
@@ -138,7 +130,12 @@ function ManualPurchaseEntryContent() {
       try {
         const data = JSON.parse(draft);
         if (data.invoiceData) setInvoiceData(data.invoiceData);
-        if (data.items?.length) setItems(data.items);
+        if (data.items?.length) {
+          setItems(data.items.map((item: PurchaseItem) => ({
+            ...item,
+            expiryDate: formatExpiryForForm(item.expiryDate || ''),
+          })));
+        }
       } catch {
         /* ignore corrupt session draft */
       }
@@ -231,7 +228,7 @@ function ManualPurchaseEntryContent() {
         ) {
           isInvalid = true;
         }
-        if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
+        if (!isValidExpiryFormValue(item.expiryDate)) {
           isInvalid = true;
         }
         if (isInvalid) itemErrors.push(idx);
@@ -253,11 +250,7 @@ function ManualPurchaseEntryContent() {
 
     try {
       const formattedItems = items.map((item) => {
-        let expiry = item.expiryDate;
-        if (/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
-          const [mm, yyyy] = item.expiryDate.split('-');
-          expiry = `${yyyy}-${mm}`;
-        }
+        const expiry = normalizeExpiryForDb(item.expiryDate);
 
         const line = calculatePurchaseLineAmount(item);
         const discountPercent = coerceNumber(item.discountPercent);

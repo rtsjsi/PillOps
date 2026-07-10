@@ -14,6 +14,7 @@ import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
 import { coerceNumber, isNumericFieldEmpty } from '@/lib/numeric-field';
+import { normalizeExpiryForDb } from '@/lib/expiry-date';
 
 export default function AddMiscStock() {
   const router = useRouter();
@@ -90,16 +91,13 @@ export default function AddMiscStock() {
     setError(null);
 
     try {
-      const formattedItems = items.map(item => {
-         const [mm, yyyy] = item.expiryDate.split('-');
-         return {
+      const formattedItems = items.map(item => ({
            ...item,
            quantity: coerceNumber(item.quantity),
            purchasePrice: coerceNumber(item.purchasePrice),
            mrp: coerceNumber(item.mrp),
-           expiryDate: `${yyyy}-${mm}`,
-         };
-      });
+           expiryDate: normalizeExpiryForDb(item.expiryDate),
+         }));
 
       await saveInventoryAdjustment(adjustmentData, formattedItems);
 

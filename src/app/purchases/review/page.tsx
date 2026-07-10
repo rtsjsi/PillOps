@@ -21,6 +21,11 @@ import {
   PURCHASE_LINE_TOTAL_FIELDS,
 } from '@/lib/purchase-calculations';
 import { coerceNumber, isNumericFieldEmpty } from '@/lib/numeric-field';
+import {
+  formatExpiryForForm,
+  isValidExpiryFormValue,
+  normalizeExpiryForDb,
+} from '@/lib/expiry-date';
 
 interface InvoiceData extends InvoiceHeaderData {
   id?: string;
@@ -29,19 +34,6 @@ interface InvoiceData extends InvoiceHeaderData {
   duplicateWarning?: string;
   rawTranscription?: string;
   offlineOcrNote?: string;
-}
-
-function formatExpiryForForm(date: string): string {
-  if (!date) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    const [yyyy, mm] = date.split('-');
-    return `${mm}-${yyyy}`;
-  }
-  if (/^\d{4}-\d{2}$/.test(date)) {
-    const [yyyy, mm] = date.split('-');
-    return `${mm}-${yyyy}`;
-  }
-  return date;
 }
 
 function mapDbInvoiceToForm(draft: any): InvoiceData {
@@ -200,31 +192,7 @@ export default function ReviewExtraction() {
                quantity: item.quantity === undefined || item.quantity === null || isNaN(Number(item.quantity)) ? 1 : Number(item.quantity),
                purchasePrice: item.purchasePrice === undefined || item.purchasePrice === null || isNaN(Number(item.purchasePrice)) ? 0 : Number(item.purchasePrice),
                mrp: item.mrp === undefined || item.mrp === null || isNaN(Number(item.mrp)) ? 0 : Number(item.mrp),
-               expiryDate: (() => {
-                 const expiry = item.expiryDate || '';
-                 const clean = expiry.trim();
-                 
-                 // YYYY-MM-DD
-                 if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-                   const [yyyy, mm] = clean.split('-');
-                   return `${mm}-${yyyy}`;
-                 }
-                 // YYYY-MM
-                 if (/^\d{4}-\d{2}$/.test(clean)) {
-                   const [yyyy, mm] = clean.split('-');
-                   return `${mm}-${yyyy}`;
-                 }
-                 // MM/YYYY or MM-YYYY
-                 if (/^(0[1-9]|1[0-2])[-/]\d{4}$/.test(clean)) {
-                   return clean.replace('/', '-');
-                 }
-                 // MM/YY or MM-YY
-                 if (/^(0[1-9]|1[0-2])[-/]\d{2}$/.test(clean)) {
-                   const parts = clean.split(/[-/]/);
-                   return `${parts[0]}-20${parts[1]}`;
-                 }
-                 return clean;
-               })()
+               expiryDate: formatExpiryForForm(item.expiryDate || ''),
              }; // Save original OCR name
              
              if (extracted) {
@@ -328,7 +296,7 @@ export default function ReviewExtraction() {
           isInvalid = true;
         }
         
-        if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
+        if (!isValidExpiryFormValue(item.expiryDate)) {
           isInvalid = true;
         }
 
@@ -357,11 +325,7 @@ export default function ReviewExtraction() {
 
         // Format MM-YYYY to YYYY-MM for the database
         const formattedItems = data.items.map(item => {
-           let expiry = item.expiryDate;
-           if (/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate)) {
-             const [mm, yyyy] = item.expiryDate.split('-');
-             expiry = `${yyyy}-${mm}`;
-           }
+           const expiry = normalizeExpiryForDb(item.expiryDate);
            
            // Normalize/default numeric fields to ensure database integrity
            const discountPercent = coerceNumber(item.discountPercent);

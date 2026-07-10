@@ -10,6 +10,7 @@ import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomple
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { calculatePurchaseLineAmount } from '@/lib/purchase-calculations';
+import { isValidExpiryFormValue } from '@/lib/expiry-date';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { type NumericFieldValue, isNumericFieldEmpty } from '@/lib/numeric-field';
 
@@ -84,7 +85,7 @@ export function PurchaseItemCard({
   };
 
   const isBatchNumberInvalid = hasError && !item.batchNumber;
-  const isExpiryDateInvalid = hasError && (!item.expiryDate || !/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate));
+  const isExpiryDateInvalid = hasError && !isValidExpiryFormValue(item.expiryDate);
   const isQuantityInvalid = hasError && isNumericFieldEmpty(item.quantity);
   const isPurchasePriceInvalid = hasError && isNumericFieldEmpty(item.purchasePrice);
   const isMrpInvalid = hasError && isNumericFieldEmpty(item.mrp);
