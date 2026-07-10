@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Globe } from 'lucide-react';
 import { useMedicineSearch } from '@/hooks/use-medicine-search';
+import { useClickOutside } from '@/hooks/use-anchored-portal';
+import { AnchoredListbox } from '@/components/ui/anchored-listbox';
 import { cn } from '@/lib/utils';
 
 interface MedicineAutocompleteProps {
@@ -68,16 +70,9 @@ export function MedicineAutocomplete({
     }
   }, [selectedIndex]);
 
-  // Close on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setIsOpen]);
+  // Close on outside click (include portaled list)
+  const close = useCallback(() => setIsOpen(false), [setIsOpen]);
+  useClickOutside([wrapperRef, listRef], close, isOpen);
 
   const handleSelect = (item: any) => {
     onChange(item.name, item);
@@ -114,12 +109,13 @@ export function MedicineAutocomplete({
         autoComplete="off"
       />
 
-      {/* Dropdown */}
-      {(isOpen && (results.length > 0 || isLoading)) && (
-        <div 
-          ref={listRef}
-          className="absolute z-50 top-full left-0 w-full bg-popover text-popover-foreground border border-border shadow-2xl rounded-xl mt-1.5 max-h-72 overflow-y-auto overscroll-contain"
-        >
+      {/* Dropdown — portaled so Card overflow-hidden cannot clip it */}
+      <AnchoredListbox
+        anchorRef={wrapperRef}
+        isOpen={isOpen && (results.length > 0 || isLoading)}
+        listRef={listRef}
+        className="max-h-72"
+      >
           {results.map((r, i) => {
             const isLocal = r._source === 'local';
             const hasStock = r.totalStock !== undefined && r.totalStock > 0;
@@ -133,6 +129,7 @@ export function MedicineAutocomplete({
                   "hover:bg-accent hover:text-accent-foreground",
                   selectedIndex === i ? "bg-accent text-accent-foreground" : "text-popover-foreground"
                 )}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(r)}
               >
                 {/* Row 1: Name + badges */}
@@ -192,8 +189,7 @@ export function MedicineAutocomplete({
               <span>Searching global master...</span>
             </div>
           )}
-        </div>
-      )}
+      </AnchoredListbox>
     </div>
   );
 }

@@ -135,7 +135,19 @@ export default function Purchases() {
                           >
                             Delete Draft
                           </Button>
-                          <Button render={<Link href={`/purchases/review?invoiceId=${inv.id}`} />} size="sm" className="rounded-full">
+                          <Button
+                            render={
+                              <Link
+                                href={
+                                  inv.items?.some((item: any) => item.extractedName || item.extracted_name)
+                                    ? `/purchases/review?invoiceId=${inv.id}`
+                                    : `/purchases/manual?invoiceId=${inv.id}`
+                                }
+                              />
+                            }
+                            size="sm"
+                            className="rounded-full"
+                          >
                             Complete Draft
                           </Button>
                         </div>

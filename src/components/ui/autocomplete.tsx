@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
+import { AnchoredListbox } from '@/components/ui/anchored-listbox';
+import { useClickOutside } from '@/hooks/use-anchored-portal';
 import { cn } from '@/lib/utils';
 
 interface GenericAutocompleteProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -14,21 +16,15 @@ export function GenericAutocomplete({ options, value, onValueChange, className, 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = options
     .filter(o => o.toLowerCase().includes((value || '').toLowerCase()))
-    .filter(o => o !== value) // Don't show exact match to avoid clutter
+    .filter(o => o !== value)
     .slice(0, 5);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const close = useCallback(() => setIsOpen(false), []);
+  useClickOutside([wrapperRef, listRef], close, isOpen);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || filteredOptions.length === 0) {
@@ -65,13 +61,14 @@ export function GenericAutocomplete({ options, value, onValueChange, className, 
   };
 
   return (
-    <div className={cn("relative w-full", className)} ref={wrapperRef}>
+    <div className="relative w-full" ref={wrapperRef}>
       <Input
         {...props}
         value={value}
         onChange={e => {
           onValueChange(e.target.value);
           setIsOpen(true);
+          setSelectedIndex(-1);
           if (props.onChange) props.onChange(e);
         }}
         onFocus={(e) => {
@@ -79,25 +76,32 @@ export function GenericAutocomplete({ options, value, onValueChange, className, 
           if (props.onFocus) props.onFocus(e);
         }}
         onKeyDown={handleKeyDown}
-        className="w-full"
+        className={cn('w-full', className)}
         autoComplete="off"
       />
-      {isOpen && filteredOptions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 w-full bg-white border shadow-xl rounded-xl mt-1 max-h-48 overflow-y-auto">
-          {filteredOptions.map((opt, i) => (
-            <div
-              key={opt}
-              className={cn("px-3 py-2 cursor-pointer hover:bg-slate-50 text-sm border-b last:border-0", selectedIndex === i && "bg-slate-100")}
-              onClick={() => {
-                onValueChange(opt);
-                setIsOpen(false);
-              }}
-            >
-              {opt}
-            </div>
-          ))}
-        </div>
-      )}
+      <AnchoredListbox
+        anchorRef={wrapperRef}
+        isOpen={isOpen && filteredOptions.length > 0}
+        listRef={listRef}
+        className="bg-white dark:bg-popover"
+      >
+        {filteredOptions.map((opt, i) => (
+          <div
+            key={opt}
+            className={cn(
+              'px-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-accent text-sm border-b border-border/50 last:border-0',
+              selectedIndex === i && 'bg-slate-100 dark:bg-accent',
+            )}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              onValueChange(opt);
+              setIsOpen(false);
+            }}
+          >
+            {opt}
+          </div>
+        ))}
+      </AnchoredListbox>
     </div>
   );
 }

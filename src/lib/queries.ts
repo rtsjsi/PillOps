@@ -236,6 +236,26 @@ export async function fetchPurchases() {
   }));
 }
 
+export async function fetchRecentPurchases(limit = 5) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('purchase_invoices')
+    .select('id, distributor_name, invoice_number, invoice_date, total, status, created_at')
+    .eq('status', 'completed')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((purch: any) => ({
+    id: purch.id,
+    distributorName: purch.distributor_name || '',
+    invoiceNumber: purch.invoice_number || '',
+    invoiceDate: purch.invoice_date || '',
+    total: purch.total || 0,
+    createdAt: purch.created_at,
+  }));
+}
+
 // ─── Aliases ───────────────────────────────────────────────
 
 export async function fetchAliasesForDistributor(distributorName: string) {

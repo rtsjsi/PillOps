@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { Trash2, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
+import { calculatePurchaseLineAmount } from '@/lib/purchase-calculations';
 
 const CATEGORIES = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'];
 
@@ -85,6 +86,17 @@ export function PurchaseItemCard({
   const isQuantityInvalid = hasError && (item.quantity === undefined || item.quantity === null || isNaN(item.quantity));
   const isPurchasePriceInvalid = hasError && (item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice));
   const isMrpInvalid = hasError && (item.mrp === undefined || item.mrp === null || isNaN(item.mrp));
+  const lineTotal = calculatePurchaseLineAmount(item).totalAmount;
+
+  const parseDecimal = (raw: string) => {
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const parseWhole = (raw: string) => {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) ? n : 0;
+  };
 
   return (
     <Card className={cn(
@@ -162,7 +174,7 @@ export function PurchaseItemCard({
               type="number" 
               step="0.01" 
               value={item.purchasePrice || ''} 
-              onChange={e => onChange(index, 'purchasePrice', parseFloat(e.target.value))} 
+              onChange={e => onChange(index, 'purchasePrice', parseDecimal(e.target.value))} 
               className={cn("h-9 text-sm font-medium", isPurchasePriceInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
             />
           </FieldCell>
@@ -171,18 +183,18 @@ export function PurchaseItemCard({
               type="number" 
               step="0.01" 
               value={item.mrp || ''} 
-              onChange={e => onChange(index, 'mrp', parseFloat(e.target.value))} 
+              onChange={e => onChange(index, 'mrp', parseDecimal(e.target.value))} 
               className={cn("h-9 text-sm font-medium", isMrpInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
             />
           </FieldCell>
           <FieldCell label="Disc %">
-            <Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e => onChange(index, 'discountPercent', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
+            <Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e => onChange(index, 'discountPercent', parseDecimal(e.target.value))} className="h-9 text-sm font-medium" />
           </FieldCell>
           <FieldCell label="Qty" error={isQuantityInvalid}>
             <Input 
               type="number" 
               value={item.quantity || ''} 
-              onChange={e => onChange(index, 'quantity', parseInt(e.target.value))} 
+              onChange={e => onChange(index, 'quantity', parseWhole(e.target.value))} 
               className={cn("h-9 text-sm font-medium", isQuantityInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
             />
           </FieldCell>
@@ -190,12 +202,17 @@ export function PurchaseItemCard({
             <Input 
               type="number" 
               value={item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ? '' : item.freeQuantity} 
-              onChange={e => onChange(index, 'freeQuantity', parseInt(e.target.value))} 
+              onChange={e => onChange(index, 'freeQuantity', parseWhole(e.target.value))} 
               className="h-9 text-sm font-medium" 
             />
           </FieldCell>
           <FieldCell label="GST %">
-            <Input type="number" step="0.1" value={item.gstPercent ?? ''} onChange={e => onChange(index, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
+            <Input type="number" step="0.1" value={item.gstPercent ?? ''} onChange={e => onChange(index, 'gstPercent', parseDecimal(e.target.value))} className="h-9 text-sm font-medium" />
+          </FieldCell>
+          <FieldCell label="Amount">
+            <div className="h-9 flex items-center text-sm font-bold text-emerald-600 tabular-nums">
+              {formatCurrency(lineTotal)}
+            </div>
           </FieldCell>
         </div>
       </CardContent>

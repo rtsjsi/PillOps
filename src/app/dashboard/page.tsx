@@ -1,35 +1,20 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { fetchMedicines, fetchSalesStats, fetchUserProfile, fetchStoreSettings, fetchDashboardStats } from '@/lib/queries';
+import { useEffect, useState } from 'react';
+import { fetchUserProfile, fetchDashboardStats, fetchRecentPurchases } from '@/lib/queries';
 import { StatCard } from '@/components/ui/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Package, 
-  AlertTriangle, 
-  Clock, 
-  ShieldAlert,
+import {
+  Package,
+  AlertTriangle,
+  Clock,
   ShoppingCart,
-  PlusCircle,
   FileScan,
   TrendingUp,
-  Receipt
+  Receipt,
+  Truck,
 } from 'lucide-react';
-import { formatCurrency, cn, getDaysUntilExpiry, getExpiryStatus } from '@/lib/utils';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -38,15 +23,13 @@ import GlobalLoading from '@/app/loading';
 export default function Dashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
-  const [medicines, setMedicines] = useState<any[]>([]);
-  const [salesTrends, setSalesTrends] = useState<any[]>([]);
+  const [recentPurchases, setRecentPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        // 1. Get user profile to obtain store_id
         const profile = await fetchUserProfile();
         if (!profile?.store_id) {
           if (profile?.role === 'super_admin') {
@@ -58,16 +41,13 @@ export default function Dashboard() {
           return;
         }
 
-        // 2. Fetch everything in parallel using client-side queries
-        const [dashStats, medsData, salesData] = await Promise.all([
+        const [dashStats, purchasesData] = await Promise.all([
           fetchDashboardStats(profile.store_id),
-          fetchMedicines(),
-          fetchSalesStats(),
+          fetchRecentPurchases(5),
         ]);
 
         setStats(dashStats);
-        setMedicines(medsData || []);
-        setSalesTrends(salesData || []);
+        setRecentPurchases(purchasesData);
       } catch (err: any) {
         console.error('Dashboard load failed:', err);
         setErrorMsg(err.message || 'Unknown error occurred');
@@ -77,49 +57,6 @@ export default function Dashboard() {
     }
     fetchData();
   }, []);
-
-  const categoryData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    medicines.forEach(m => {
-      counts[m.category] = (counts[m.category] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Top 5 categories
-  }, [medicines]);
-
-  // HSL colors mapping for PieChart
-  const COLORS = [
-    'hsl(var(--primary))',
-    'hsl(199 89% 48%)', // blue
-    'hsl(38 96% 54%)',  // warning/amber
-    'hsl(283 39% 53%)', // purple
-    'hsl(350 89% 60%)'  // danger/red
-  ];
-
-  const alerts = useMemo(() => {
-    const list: any[] = [];
-    medicines.forEach(med => {
-      const totalQty = (med.batches ?? []).reduce((sum: number, b: any) => sum + b.quantity, 0);
-      if (totalQty <= (med.reorder_level ?? med.reorderLevel ?? 0)) {
-        list.push({ type: 'Low Stock', name: med.name, severity: 'warning', value: `${totalQty} left` });
-      }
-      (med.batches ?? []).forEach((b: any) => {
-        const days = getDaysUntilExpiry(b.expiry_date ?? b.expiryDate);
-        const status = getExpiryStatus(days);
-        if (status === 'expired') {
-          list.push({ type: 'Expired', name: `${med.name} (${b.batch_number ?? b.batchNumber})`, severity: 'error', value: 'Expired' });
-        } else if (status === 'critical') {
-          list.push({ type: 'Critical Expiry', name: `${med.name} (${b.batch_number ?? b.batchNumber})`, severity: 'error', value: `${days}d left` });
-        }
-      });
-    });
-    return list;
-  }, [medicines]);
-
-  const lowStockCount = alerts.filter(a => a.type === 'Low Stock').length;
-  const expiryCount = alerts.filter(a => a.type !== 'Low Stock').length;
 
   if (loading) return <GlobalLoading />;
 
@@ -141,8 +78,7 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm font-medium mt-1">Overview of your pharmacy operations today.</p>
         </div>
-        
-        {/* Quick Actions */}
+
         <div className="flex items-center gap-3">
           <Button onClick={() => router.push('/pos')} className="font-bold shadow-sm shadow-primary/20 rounded-lg h-8">
             <ShoppingCart size={14} className="mr-1.5" />
@@ -155,169 +91,107 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard 
-          label="Today's Sales" 
-          value={formatCurrency(stats?.todaySales || 0)} 
+        <StatCard
+          label="Today's Sales"
+          value={formatCurrency(stats?.todaySales || 0)}
           trend={{ value: 8.5, isUp: true }}
           icon={TrendingUp}
         />
-        <StatCard 
-          label="Total Medicines" 
-          value={stats?.totalMedicines || 0} 
+        <StatCard
+          label="Total Medicines"
+          value={stats?.totalMedicines || 0}
           icon={Package}
           iconClassName="bg-blue-500/10 text-blue-500 dark:text-blue-400"
         />
-        <StatCard 
-          label="Low Stock Items" 
-          value={lowStockCount} 
+        <StatCard
+          label="Low Stock Items"
+          value={stats?.lowStockCount || 0}
           icon={AlertTriangle}
           iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-500"
         />
-        <StatCard 
-          label="Expiring Soon" 
-          value={expiryCount} 
+        <StatCard
+          label="Expiring Soon"
+          value={stats?.expiringCount || 0}
           icon={Clock}
           iconClassName="bg-destructive/10 text-destructive"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Revenue Trends */}
-        <Card className="lg:col-span-2 border-border shadow-sm bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Revenue Trends</CardTitle>
-            <Badge variant="secondary" className="text-[10px] font-bold">Past 30 Days</Badge>
-          </CardHeader>
-          <CardContent className="h-[220px] w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={salesTrends} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
-                <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))'}} dy={10} />
-                <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))'}} tickFormatter={(val) => `₹${val/1000}k`} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                />
-                <Line type="monotone" dataKey="sales" name="Revenue" stroke="hsl(var(--primary))" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: 'hsl(var(--primary))' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Category Mix */}
-        <Card className="border-border shadow-sm bg-card">
-          <CardHeader>
-            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Stock Mix (Top 5)</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[220px] flex flex-col items-center justify-center pt-0">
-             <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36} 
-                    iconType="circle" 
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: '11px', fontWeight: '600', color: 'hsl(var(--muted-foreground))' }}
-                  />
-                </PieChart>
-             </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lists Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
-          {/* Action Required / Alerts */}
-          <Card className="border-border shadow-sm bg-card flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
-               <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                 <ShieldAlert size={18} className="text-destructive" />
-                 Action Required
-               </CardTitle>
-               <Link href="/inventory" className="text-xs font-bold text-primary hover:underline">View All</Link>
-            </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
-               {alerts.slice(0, 5).map((alert, i) => (
-                  <div key={i} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                     <div className="flex items-center gap-2">
-                       <div className="shrink-0">
-                         {alert.type === 'Low Stock' ? <Package size={16} className={alert.severity === 'error' ? "text-destructive" : "text-amber-600"} /> : <Clock size={16} className={alert.severity === 'error' ? "text-destructive" : "text-amber-600"} />}
-                       </div>
-                       <div className="min-w-0">
-                         <p className="text-sm font-bold text-foreground truncate">{alert.name}</p>
-                         <p className="text-xs text-muted-foreground">{alert.type}</p>
-                       </div>
-                     </div>
-                     <div className="text-right shrink-0 ml-3">
-                        <p className={cn(
-                           "text-sm font-bold",
-                           alert.severity === 'error' ? "text-destructive" : "text-amber-600"
-                        )}>{alert.value}</p>
-                     </div>
+        <Card className="border-border shadow-sm bg-card flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Truck size={18} className="text-muted-foreground" />
+              Recent Purchases
+            </CardTitle>
+            <Link href="/purchases" className="text-xs font-bold text-primary hover:underline">View All</Link>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
+            {recentPurchases.map((inv) => (
+              <Link
+                key={inv.id}
+                href={`/purchases/review?invoiceId=${inv.id}`}
+                className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
+                    {(inv.distributorName?.charAt(0) || 'P').toUpperCase()}
                   </div>
-               ))}
-               {alerts.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
-                     <ShieldAlert size={28} className="opacity-20" />
-                     <p className="text-sm font-medium">All clear! No pending alerts.</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{inv.distributorName || 'Unknown Distributor'}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                      {inv.invoiceNumber ? `# ${inv.invoiceNumber}` : 'No Invoice #'}{inv.invoiceDate ? ` · ${formatDate(inv.invoiceDate)}` : ''}
+                    </p>
                   </div>
-               )}
-            </CardContent>
-          </Card>
+                </div>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
+                </div>
+              </Link>
+            ))}
+            {recentPurchases.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                <Truck size={28} className="opacity-20" />
+                <p className="text-sm font-medium">No purchases recorded yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Recent Sales */}
-          <Card className="border-border shadow-sm bg-card flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
-               <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                 <Receipt size={18} className="text-muted-foreground" />
-                 Recent Sales
-               </CardTitle>
-               {/* No specific invoice index page exists yet, but could add link */}
-            </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
-               {stats?.recentInvoices?.slice(0, 5).map((inv: any) => (
-                  <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-                     <div className="flex items-center gap-2">
-                       <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
-                          {inv.customerName?.charAt(0)?.toUpperCase() || 'W'}
-                       </div>
-                       <div className="min-w-0">
-                         <p className="text-sm font-bold text-foreground truncate">{inv.customerName || 'Walk-in Customer'}</p>
-                         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{inv.invoiceNumber}</p>
-                       </div>
-                     </div>
-                     <div className="text-right shrink-0 ml-3">
-                       <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
-                       <p className="text-[10px] text-emerald-500 font-bold tracking-wide uppercase mt-0.5">Success</p>
-                     </div>
-                  </Link>
-               ))}
-               {(!stats?.recentInvoices || stats.recentInvoices.length === 0) && (
-                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
-                     <Receipt size={28} className="opacity-20" />
-                     <p className="text-sm font-medium">No sales recorded yet today.</p>
+        <Card className="border-border shadow-sm bg-card flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Receipt size={18} className="text-muted-foreground" />
+              Recent Sales
+            </CardTitle>
+            <Link href="/pos" className="text-xs font-bold text-primary hover:underline">New Sale</Link>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
+            {stats?.recentInvoices?.slice(0, 5).map((inv: any) => (
+              <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
+                    {inv.customerName?.charAt(0)?.toUpperCase() || 'W'}
                   </div>
-               )}
-            </CardContent>
-          </Card>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{inv.customerName || 'Walk-in Customer'}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{inv.invoiceNumber}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
+                </div>
+              </Link>
+            ))}
+            {(!stats?.recentInvoices || stats.recentInvoices.length === 0) && (
+              <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                <Receipt size={28} className="opacity-20" />
+                <p className="text-sm font-medium">No sales recorded yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

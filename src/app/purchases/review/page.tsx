@@ -15,6 +15,11 @@ import { useDistinctValues } from '@/hooks/use-distinct-values';
 // ─── Shared Components ────────────────────────────────────────
 import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
 import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purchase-item-card';
+import {
+  calculatePurchaseLineAmount,
+  calculatePurchaseTotals,
+  PURCHASE_LINE_TOTAL_FIELDS,
+} from '@/lib/purchase-calculations';
 
 interface InvoiceData extends InvoiceHeaderData {
   id?: string;
@@ -58,18 +63,6 @@ function mapDbInvoiceToForm(draft: any): InvoiceData {
       totalAmount: item.total_amount || 0,
     })),
   };
-}
-
-function calculateLineTotals(items: PurchaseItem[]) {
-  let subtotal = 0;
-  let gstAmount = 0;
-  items.forEach(item => {
-    const base = (item.quantity || 0) * (item.purchasePrice || 0);
-    const gst = base * ((item.gstPercent || 0) / 100);
-    subtotal += base;
-    gstAmount += gst;
-  });
-  return { subtotal, gstAmount, discountAmount: 0 };
 }
 
 export default function ReviewExtraction() {
@@ -134,13 +127,8 @@ export default function ReviewExtraction() {
        }
     }
     
-    // Auto-calc total
-    if (['quantity', 'purchasePrice', 'gstPercent'].includes(field)) {
-       const qty = field === 'quantity' ? value : newItems[idx].quantity || 0;
-       const price = field === 'purchasePrice' ? value : newItems[idx].purchasePrice || 0;
-       const gst = field === 'gstPercent' ? value : newItems[idx].gstPercent || 0;
-       const base = qty * price;
-       newItems[idx].totalAmount = base + (base * (gst / 100));
+    if ((PURCHASE_LINE_TOTAL_FIELDS as readonly string[]).includes(field)) {
+       newItems[idx].totalAmount = calculatePurchaseLineAmount(newItems[idx]).totalAmount;
     }
     
     setData({ ...data, items: newItems });
@@ -384,15 +372,21 @@ export default function ReviewExtraction() {
              expiryDate: expiry,
              discountPercent,
              freeQuantity,
-             gstPercent
+             gstPercent,
+             totalAmount: calculatePurchaseLineAmount({
+               quantity: item.quantity,
+               purchasePrice: item.purchasePrice,
+               discountPercent,
+               gstPercent,
+             }).totalAmount,
            };
         });
 
-        const lineTotals = calculateLineTotals(formattedItems);
+        const lineTotals = calculatePurchaseTotals(formattedItems);
         const purchasePayload = {
           ...data,
           ...lineTotals,
-          total: data.total,
+          total: status === 'completed' ? data.total : lineTotals.total,
           storeId: profile.store_id,
           status,
         };
