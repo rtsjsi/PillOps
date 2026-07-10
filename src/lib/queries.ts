@@ -10,10 +10,28 @@
  */
 
 import { createClient } from '@/utils/supabase/client';
+import { createQueryCache } from '@/lib/query-cache';
+
+const medicinesCache = createQueryCache<any[]>(30_000);
+const storeSettingsCaches = new Map<string, ReturnType<typeof createQueryCache<any>>>();
+
+function getStoreSettingsCache(storeId?: string) {
+  const key = storeId || 'default';
+  if (!storeSettingsCaches.has(key)) {
+    storeSettingsCaches.set(key, createQueryCache<any>(60_000));
+  }
+  return storeSettingsCaches.get(key)!;
+}
+
+export function clearQueryCaches() {
+  medicinesCache.clear();
+  storeSettingsCaches.clear();
+}
 
 // ─── Medicines ─────────────────────────────────────────────
 
-export async function fetchMedicines() {
+export async function fetchMedicines(options?: { force?: boolean }) {
+  return medicinesCache.fetch(async () => {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('store_inventory')
@@ -52,6 +70,7 @@ export async function fetchMedicines() {
   });
 
   return mappedData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, options);
 }
 
 export async function fetchMedicineById(id: string) {
@@ -111,6 +130,38 @@ export async function fetchGlobalMedicines(searchQuery: string) {
 
 // ─── Invoices ──────────────────────────────────────────────
 
+function mapInvoiceSummary(inv: any) {
+  return {
+    ...inv,
+    invoiceNumber: inv.invoice_number || inv.invoiceNumber,
+    customerName: inv.customer_name || inv.customerName,
+    customerPhone: inv.customer_phone || inv.customerPhone,
+    doctorName: inv.doctor_name || inv.doctorName,
+    area: inv.area,
+    gstAmount: inv.gst_amount || inv.gstAmount,
+    discountPercent: inv.discount_percent || inv.discountPercent,
+    discountAmount: inv.discount_amount || inv.discountAmount,
+    createdAt: inv.created_at || inv.createdAt,
+  };
+}
+
+/** Lightweight list query — no line items. Prefer for tables and landing pages. */
+export async function fetchInvoicesList(limit?: number) {
+  const supabase = createClient();
+  let query = supabase
+    .from('sales_invoices')
+    .select('id, invoice_number, customer_name, customer_phone, doctor_name, area, subtotal, gst_amount, discount_percent, discount_amount, total, created_at')
+    .order('created_at', { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapInvoiceSummary);
+}
+
 export async function fetchInvoices(limit?: number) {
   const supabase = createClient();
   let query = supabase
@@ -126,15 +177,7 @@ export async function fetchInvoices(limit?: number) {
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((inv: any) => ({
-    ...inv,
-    invoiceNumber: inv.invoice_number || inv.invoiceNumber,
-    customerName: inv.customer_name || inv.customerName,
-    customerPhone: inv.customer_phone || inv.customerPhone,
-    doctorName: inv.doctor_name || inv.doctorName,
-    area: inv.area,
-    gstAmount: inv.gst_amount || inv.gstAmount,
-    discountPercent: inv.discount_percent || inv.discountPercent,
-    discountAmount: inv.discount_amount || inv.discountAmount,
+    ...mapInvoiceSummary(inv),
     items: (inv.items || []).map((item: any) => ({
       ...item,
       expiryDate: item.expiry_date || item.expiryDate,
@@ -210,6 +253,46 @@ export async function fetchSalesStats() {
 
 // ─── Purchases ─────────────────────────────────────────────
 
+function mapPurchaseSummary(purch: any) {
+  return {
+    ...purch,
+    status: purch.status || 'completed',
+    distributorName: purch.distributor_name || purch.distributorName,
+    invoiceNumber: purch.invoice_number || purch.invoiceNumber,
+    invoiceDate: purch.invoice_date || purch.invoiceDate,
+    gstAmount: purch.gst_amount || purch.gstAmount,
+    discountAmount: purch.discount_amount || purch.discountAmount,
+    createdAt: purch.created_at || purch.createdAt,
+    items: (purch.items || []).map((item: any) => ({
+      ...item,
+      medicineName: item.medicine_name || item.medicineName,
+      extractedName: item.extracted_name || item.extractedName,
+      batchNumber: item.batch_number || item.batchNumber,
+      freeQuantity: item.free_quantity || item.freeQuantity,
+      purchasePrice: item.purchase_price || item.purchasePrice,
+      discountPercent: item.discount_percent || item.discountPercent,
+      gstPercent: item.gst_percent || item.gstPercent,
+      expiryDate: item.expiry_date || item.expiryDate,
+      totalAmount: item.total_amount || item.totalAmount,
+    })),
+  };
+}
+
+/** Lightweight list query — minimal item fields for draft routing only. */
+export async function fetchPurchasesList() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('purchase_invoices')
+    .select(`
+      id, status, distributor_name, invoice_number, invoice_date, total, subtotal, gst_amount, discount_amount, created_at,
+      items:purchase_invoice_items(id, medicine_name, batch_number, quantity, total_amount, extracted_name)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapPurchaseSummary);
+}
+
 export async function fetchPurchases() {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -218,26 +301,7 @@ export async function fetchPurchases() {
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map((purch: any) => ({
-    ...purch,
-    status: purch.status || 'completed',
-    distributorName: purch.distributor_name || purch.distributorName,
-    invoiceNumber: purch.invoice_number || purch.invoiceNumber,
-    invoiceDate: purch.invoice_date || purch.invoiceDate,
-    gstAmount: purch.gst_amount || purch.gstAmount,
-    discountAmount: purch.discount_amount || purch.discountAmount,
-    items: (purch.items || []).map((item: any) => ({
-      ...item,
-      medicineName: item.medicine_name || item.medicineName,
-      batchNumber: item.batch_number || item.batchNumber,
-      freeQuantity: item.free_quantity || item.freeQuantity,
-      purchasePrice: item.purchase_price || item.purchasePrice,
-      discountPercent: item.discount_percent || item.discountPercent,
-      gstPercent: item.gst_percent || item.gstPercent,
-      expiryDate: item.expiry_date || item.expiryDate,
-      totalAmount: item.total_amount || item.totalAmount
-    }))
-  }));
+  return (data ?? []).map(mapPurchaseSummary);
 }
 
 export async function fetchRecentPurchases(limit = 5) {
@@ -286,16 +350,21 @@ export async function fetchAliasesForDistributor(distributorName: string) {
 
 // ─── Store Settings ────────────────────────────────────────
 
-export async function fetchStoreSettings() {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('stores')
-    .select('*')
-    .limit(1)
-    .single();
+export async function fetchStoreSettings(storeId?: string, options?: { force?: boolean }) {
+  return getStoreSettingsCache(storeId).fetch(async () => {
+    const supabase = createClient();
+    let query = supabase
+      .from('stores')
+      .select('id, name, address, phone, gstin, dl_no');
 
-  if (error) throw new Error(error.message);
-  return data;
+    if (storeId) {
+      query = query.eq('id', storeId);
+    }
+
+    const { data, error } = await query.limit(1).single();
+    if (error) throw new Error(error.message);
+    return data;
+  }, options);
 }
 
 // ─── User Profile ──────────────────────────────────────────
@@ -307,6 +376,7 @@ let inflightProfile: Promise<Awaited<ReturnType<typeof fetchUserProfileImpl>>> |
 export function clearUserProfileCache() {
   cachedProfile = null;
   inflightProfile = null;
+  clearQueryCaches();
 }
 
 async function fetchUserProfileImpl() {

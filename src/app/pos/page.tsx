@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchInvoices } from '@/lib/queries';
+import { fetchInvoicesList } from '@/lib/queries';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -25,7 +25,7 @@ export default function POSLanding() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const sales = await fetchInvoices(20);
+        const sales = await fetchInvoicesList(20);
         setRecentSales(sales);
       } catch (error) {
         console.error('Failed to fetch sales data:', error);
@@ -44,7 +44,19 @@ export default function POSLanding() {
     }
   ]);
 
-  if (loading) return <GenericTableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-4 flex flex-col gap-4">
+        <header className="flex justify-between items-center">
+          <Button size="lg" className="font-bold" disabled>
+            <Plus size={18} className="mr-2" />
+            New Sale
+          </Button>
+        </header>
+        <GenericTableLoading />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-4 flex flex-col gap-4">

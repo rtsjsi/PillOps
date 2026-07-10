@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { fetchMedicines, fetchStoreSettings } from '@/lib/queries';
+import { fetchMedicines } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { SearchBar } from '@/components/ui/searchBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,8 +27,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Inventory() {
+  const { profile } = useUserProfile();
   const [medicines, setMedicines] = useState<any[]>([]);
-  const [storeName, setStoreName] = useState('My Pharmacy');
+  const storeName = profile?.store?.name || 'My Pharmacy';
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,12 +39,8 @@ export default function Inventory() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [data, settings] = await Promise.all([
-          fetchMedicines(),
-          fetchStoreSettings()
-        ]);
+        const data = await fetchMedicines();
         setMedicines(data);
-        if (settings?.name) setStoreName(settings.name);
       } catch (error: any) {
         console.error('Failed to fetch data:', error);
         setErrorMsg(error.message || String(error));
@@ -91,7 +89,18 @@ export default function Inventory() {
     });
   }, [medicinesWithStatus, searchQuery, selectedCategory, expiryFilter]);
 
-  if (loading) return <TableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-4 flex flex-col gap-4 pb-24">
+        <header className="flex justify-between items-center">
+          <Button render={<Link href="/inventory/add-misc" />} className="font-bold shadow-xl shadow-primary/20 hidden sm:flex" disabled>
+            <Plus size={18} className="mr-2" /> Add Misc Stock
+          </Button>
+        </header>
+        <TableLoading />
+      </div>
+    );
+  }
 
   const categories = ['All', ...Array.from(new Set(medicines.map(m => m.category)))];
 

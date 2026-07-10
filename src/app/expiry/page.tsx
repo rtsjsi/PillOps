@@ -74,7 +74,13 @@ export default function ExpiryTracker() {
     }
   };
 
-  if (loading) return <TableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-4 flex flex-col gap-4 pb-24">
+        <TableLoading />
+      </div>
+    );
+  }
 
   interface ExpiryDisplayItem {
      medicine: any;

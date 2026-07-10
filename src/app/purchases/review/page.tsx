@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { fetchUserProfile } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { CheckCircle2, ArrowLeft, Sparkles, AlertTriangle, Loader2, Save, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { fetchMedicines, fetchGlobalMedicines, fetchAliasesForDistributor } from '@/lib/queries';
+import { fetchMedicines, fetchGlobalMedicines, fetchAliasesForDistributor, clearQueryCaches } from '@/lib/queries';
 import { getMatchScore, expandMedicineAbbreviations } from '@/hooks/use-medicine-search';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 
@@ -60,6 +60,7 @@ function mapDbInvoiceToForm(draft: any): InvoiceData {
 
 export default function ReviewExtraction() {
   const router = useRouter();
+  const { profile } = useUserProfile();
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get('invoiceId') || searchParams.get('draftId');
 
@@ -320,7 +321,6 @@ export default function ReviewExtraction() {
     else setIsDrafting(true);
 
     try {
-        const profile = await fetchUserProfile();
         if (!profile?.store_id) throw new Error("Store ID not found");
 
         // Format MM-YYYY to YYYY-MM for the database
@@ -374,6 +374,7 @@ export default function ReviewExtraction() {
 
         sessionStorage.removeItem('pillops_extracted_invoice');
         setSavedAsEdit(editStatus === 'completed' || !!data.id);
+        clearQueryCaches();
         setIsSuccess(true);
         setTimeout(() => {
             router.push('/purchases');

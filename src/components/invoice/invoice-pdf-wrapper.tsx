@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Printer, Loader2, Download, AlertCircle } from 'lucide-react';
 import { fetchInvoiceById, fetchStoreSettings } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { numberToWords } from '@/lib/utils';
 import { PDFDownloadLink, pdf, type DocumentProps } from '@react-pdf/renderer';
 import { InvoicePDF } from './invoice-pdf';
@@ -65,6 +66,7 @@ export function InvoicePDFWrapper({
   mode = 'download',
   compact = false,
 }: InvoicePDFWrapperProps) {
+  const { profile } = useUserProfile();
   const [mounted, setMounted] = React.useState(false);
   const [data, setData] = React.useState<{ invoice: any; storeInfo: any } | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -82,10 +84,8 @@ export function InvoicePDFWrapper({
 
     async function load() {
       try {
-        const [inv, store] = await Promise.all([
-          fetchInvoiceById(id),
-          fetchStoreSettings(),
-        ]);
+        const inv = await fetchInvoiceById(id);
+        const store = profile?.store ?? await fetchStoreSettings(profile?.store_id ?? undefined);
         if (!inv || !store) throw new Error('Failed to load data');
         setData({ invoice: inv, storeInfo: store });
       } catch (err) {
@@ -96,7 +96,7 @@ export function InvoicePDFWrapper({
       }
     }
     load();
-  }, [invoiceId]);
+  }, [invoiceId, profile]);
 
   const loadingLabel = compact ? '...' : 'Preparing PDF...';
 

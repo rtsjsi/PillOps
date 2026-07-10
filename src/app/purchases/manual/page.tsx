@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { fetchUserProfile, fetchMedicines } from '@/lib/queries';
+import { fetchMedicines, clearQueryCaches } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Save, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -53,6 +54,7 @@ function mapDbInvoiceToForm(draft: any): { invoiceData: InvoiceHeaderData & { id
 
 function ManualPurchaseEntryContent() {
   const router = useRouter();
+  const { profile } = useUserProfile();
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get('invoiceId') || searchParams.get('draftId');
 
@@ -267,7 +269,6 @@ function ManualPurchaseEntryContent() {
         };
       });
 
-      const profile = await fetchUserProfile();
       if (!profile?.store_id) throw new Error('Store ID not found');
 
       const purchasePayload = {
@@ -304,6 +305,7 @@ function ManualPurchaseEntryContent() {
         return;
       }
 
+      clearQueryCaches();
       setIsSuccess(true);
       setTimeout(() => router.push('/purchases'), 2000);
     } catch (err: any) {

@@ -1,44 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, Shield, Key, Loader2, Edit2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Mail, Shield, Key, Loader2, Edit2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from '@/utils/supabase/client';
-import { fetchUserProfile } from '@/lib/queries';
+import { clearUserProfileCache } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { toast } from "sonner";
-import GlobalLoading from '../loading';
+
+function ProfileSkeleton() {
+  return (
+    <div className="container py-8 max-w-2xl flex flex-col gap-8 pb-24">
+      <Card className="border border-slate-200 shadow-sm">
+        <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-6">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <div className="flex-1 space-y-4 w-full">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  
+  const { profile, loading, refresh } = useUserProfile();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [savingName, setSavingName] = useState(false);
-
   const [isEditingPass, setIsEditingPass] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [savingPass, setSavingPass] = useState(false);
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  async function loadProfile() {
-    try {
-      const data = await fetchUserProfile();
-      setProfile(data);
-      setNewName(data?.full_name || '');
-    } catch (e: any) {
-      toast.error(e.message || "Failed to load profile");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const handleUpdateName = async () => {
     setSavingName(true);
@@ -52,7 +51,8 @@ export default function ProfilePage() {
       
       toast.success("Profile updated");
       setIsEditingName(false);
-      await loadProfile();
+      clearUserProfileCache();
+      await refresh();
     } catch (e: any) {
       toast.error(e.message || "Failed to update profile");
     } finally {
@@ -81,7 +81,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) return <GlobalLoading />;
+  if (loading) return <ProfileSkeleton />;
   if (!profile) return <div>Failed to load profile.</div>;
 
   const initials = (profile.full_name || profile.user.email || 'U').substring(0, 2).toUpperCase();
@@ -103,7 +103,7 @@ export default function ProfilePage() {
                   <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Full Name</p>
                   <h2 className="text-xl font-bold">{profile.full_name || 'No Name Set'}</h2>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setIsEditingName(true)}>
+                <Button variant="ghost" size="sm" onClick={() => { setNewName(profile.full_name || ''); setIsEditingName(true); }}>
                   <Edit2 size={16} className="mr-2" /> Edit
                 </Button>
               </div>
@@ -151,7 +151,6 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3 max-w-sm">
               <Input 
                 type="password" 
-                
                 value={newPassword} 
                 onChange={e => setNewPassword(e.target.value)} 
               />

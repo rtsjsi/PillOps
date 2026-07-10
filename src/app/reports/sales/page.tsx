@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchInvoices } from '@/lib/queries';
+import { fetchInvoicesList } from '@/lib/queries';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import TableLoading from '@/components/ui/tableLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ExportButtons } from '@/components/ui/export-buttons';
 import dynamic from 'next/dynamic';
 
@@ -23,7 +24,7 @@ export default function SalesRegister() {
   useEffect(() => {
     async function loadInvoices() {
       try {
-        const data = await fetchInvoices();
+        const data = await fetchInvoicesList();
         setInvoices(data);
       } catch (error) {
         console.error('Failed to fetch sales history:', error);
@@ -34,7 +35,16 @@ export default function SalesRegister() {
     loadInvoices();
   }, []);
 
-  if (loading) return <TableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-8 flex flex-col gap-8 pb-24">
+        <header>
+          <Skeleton className="h-10 w-40" />
+        </header>
+        <TableLoading />
+      </div>
+    );
+  }
 
   const exportData = invoices.map(inv => ({
     date: inv.createdAt,

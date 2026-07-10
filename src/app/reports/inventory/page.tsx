@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Package, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import TableLoading from '@/components/ui/tableLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ExportButtons } from '@/components/ui/export-buttons';
 
 export default function InventoryReport() {
@@ -55,7 +56,17 @@ export default function InventoryReport() {
     { header: 'Est. Value', key: 'value', format: 'currency' as const }
   ];
 
-  if (loading) return <TableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-8 flex flex-col gap-8 pb-24">
+        <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+          <Skeleton className="h-16 w-48" />
+        </header>
+        <Skeleton className="h-10 w-full max-w-md" />
+        <TableLoading />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 flex flex-col gap-8 pb-24">

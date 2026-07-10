@@ -2,22 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { fetchUserProfile } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 
 const cache: Record<string, string[]> = {};
 
 export function useDistinctValues(table: string, column: string, isGlobal: boolean = false) {
+  const { profile, loading: profileLoading } = useUserProfile();
   const [values, setValues] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!isGlobal && profileLoading) return;
+
     let isMounted = true;
-    
+
     async function load() {
       try {
-        let storeId = null;
-        if (!isGlobal) {
-          const profile = await fetchUserProfile();
-          if (profile) storeId = profile.store_id;
+        const storeId = isGlobal ? null : profile?.store_id ?? null;
+        if (!isGlobal && !storeId) {
+          if (isMounted) setValues([]);
+          return;
         }
 
         const cacheKey = `${table}:${column}:${storeId || 'global'}`;
@@ -30,7 +33,7 @@ export function useDistinctValues(table: string, column: string, isGlobal: boole
         const { data, error } = await supabase.rpc('get_distinct_values', {
           p_table: table,
           p_column: column,
-          p_store_id: storeId
+          p_store_id: storeId,
         });
 
         if (!error && data) {
@@ -46,7 +49,7 @@ export function useDistinctValues(table: string, column: string, isGlobal: boole
     load();
 
     return () => { isMounted = false; };
-  }, [table, column, isGlobal]);
+  }, [table, column, isGlobal, profile?.store_id, profileLoading]);
 
   return values;
 }

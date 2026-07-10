@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchPurchases } from '@/lib/queries';
+import { fetchPurchasesList } from '@/lib/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { FileScan, Box, History, Pencil } from 'lucide-react';
@@ -36,7 +36,7 @@ export default function Purchases() {
   useEffect(() => {
     async function loadPurchases() {
       try {
-        const data = await fetchPurchases();
+        const data = await fetchPurchasesList();
         setPurchases(data);
       } catch (error) {
         console.error('Failed to fetch purchases:', error);
@@ -47,7 +47,17 @@ export default function Purchases() {
     loadPurchases();
   }, []);
 
-  if (loading) return <TableLoading />;
+  if (loading) {
+    return (
+      <div className="container py-4 flex flex-col gap-5 pb-24">
+        <div className="flex gap-3">
+          <Button size="lg" className="flex-1 h-11" disabled>Scan Invoice</Button>
+          <Button variant="outline" size="lg" className="flex-1 h-11" disabled>Manual Entry</Button>
+        </div>
+        <TableLoading />
+      </div>
+    );
+  }
 
   const completedPurchases = purchases.filter(p => p.status === 'completed');
   const draftPurchases = purchases.filter(p => p.status === 'draft');
