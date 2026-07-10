@@ -1,13 +1,14 @@
 import type { PurchaseItem } from '@/components/purchases/purchase-item-card';
+import { coerceNumber } from '@/lib/numeric-field';
 
 /** Per-line: discount on gross, GST on net taxable amount. */
 export function calculatePurchaseLineAmount(
   item: Pick<PurchaseItem, 'quantity' | 'purchasePrice' | 'discountPercent' | 'gstPercent'>,
 ) {
-  const qty = Number(item.quantity) || 0;
-  const price = Number(item.purchasePrice) || 0;
-  const disc = Number(item.discountPercent) || 0;
-  const gst = Number(item.gstPercent) || 0;
+  const qty = coerceNumber(item.quantity);
+  const price = coerceNumber(item.purchasePrice);
+  const disc = coerceNumber(item.discountPercent);
+  const gst = coerceNumber(item.gstPercent, 5);
 
   const gross = qty * price;
   const taxable = gross * (1 - disc / 100);

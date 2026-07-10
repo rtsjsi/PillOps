@@ -9,6 +9,8 @@ import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomple
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { StoreInventoryBatch } from '@/lib/types';
+import { NumericInput } from '@/components/ui/numeric-input';
+import { coerceNumber, type NumericFieldValue } from '@/lib/numeric-field';
 
 export interface SalesItem {
   medicineId: string;
@@ -17,8 +19,8 @@ export interface SalesItem {
   batchNumber: string;
   expiryDate: string;
   mrp: number;
-  quantity: number;
-  gstPercent: number;
+  quantity: NumericFieldValue;
+  gstPercent: NumericFieldValue;
   totalAmount: number;
 }
 
@@ -60,18 +62,18 @@ export function SalesItemCard({
       onChange(index, 'mrp', batch.mrp);
       
       // Auto adjust quantity if current quantity exceeds batch available
-      if (item.quantity > batch.quantity) {
+      if (coerceNumber(item.quantity) > batch.quantity) {
         onChange(index, 'quantity', batch.quantity);
       }
     }
   };
 
-  const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const qty = parseInt(e.target.value) || 0;
+  const handleQtyChange = (value: number | '') => {
+    const qty = coerceNumber(value);
     if (currentBatch && qty > currentBatch.quantity) {
       toast.warning(`Max stock is ${currentBatch.quantity} for this batch.`);
     }
-    onChange(index, 'quantity', qty);
+    onChange(index, 'quantity', value);
   };
 
   return (
@@ -149,19 +151,24 @@ export function SalesItemCard({
           </FieldCell>
 
           <FieldCell label="GST %">
-            <Input type="number" step="0.1" value={item.gstPercent ?? ''} onChange={e => onChange(index, 'gstPercent', parseFloat(e.target.value))} className="h-9 text-sm font-medium" />
+            <NumericInput
+              step="0.1"
+              value={item.gstPercent}
+              onValueChange={(v) => onChange(index, 'gstPercent', v)}
+              className="h-9 text-sm font-medium"
+            />
           </FieldCell>
 
           <FieldCell label="Qty">
             <div className="relative">
-              <Input 
-                type="number" 
-                value={item.quantity || ''} 
-                onChange={handleQtyChange} 
-                className={cn("h-9 text-sm font-medium", currentBatch && item.quantity > currentBatch.quantity && "border-rose-500")}
+              <NumericInput
+                mode="whole"
+                value={item.quantity}
+                onValueChange={handleQtyChange}
+                className={cn("h-9 text-sm font-medium", currentBatch && coerceNumber(item.quantity) > currentBatch.quantity && "border-rose-500")}
                 min={1}
               />
-              {currentBatch && item.quantity > currentBatch.quantity && (
+              {currentBatch && coerceNumber(item.quantity) > currentBatch.quantity && (
                 <span className="absolute -top-5 right-0 text-[9px] font-bold text-rose-500">
                   Exceeds stock!
                 </span>

@@ -11,7 +11,9 @@ import Link from 'next/link';
 import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomplete';
 import { fetchMedicines, saveInventoryAdjustment } from '@/lib/queries';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { GenericAutocomplete } from '@/components/ui/autocomplete';
+import { coerceNumber, isNumericFieldEmpty } from '@/lib/numeric-field';
 
 export default function AddMiscStock() {
   const router = useRouter();
@@ -79,7 +81,7 @@ export default function AddMiscStock() {
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (items.some(i => !i.medicineName || !i.batchNumber || !i.quantity || !i.expiryDate)) {
+    if (items.some(i => !i.medicineName || !i.batchNumber || isNumericFieldEmpty(i.quantity) || !i.expiryDate)) {
       setError("Please fill out all required fields for each item.");
       return;
     }
@@ -90,7 +92,13 @@ export default function AddMiscStock() {
     try {
       const formattedItems = items.map(item => {
          const [mm, yyyy] = item.expiryDate.split('-');
-         return { ...item, expiryDate: `${yyyy}-${mm}` };
+         return {
+           ...item,
+           quantity: coerceNumber(item.quantity),
+           purchasePrice: coerceNumber(item.purchasePrice),
+           mrp: coerceNumber(item.mrp),
+           expiryDate: `${yyyy}-${mm}`,
+         };
       });
 
       await saveInventoryAdjustment(adjustmentData, formattedItems);
@@ -197,9 +205,9 @@ export default function AddMiscStock() {
                        if (v.length >= 3) v = `${v.substring(0, 2)}-${v.substring(2, 6)}`;
                        handleItemChange(idx, 'expiryDate', v);
                     }} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Qty</Label><Input required type="number" value={item.quantity || ''} onChange={e=>handleItemChange(idx, 'quantity', parseInt(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><Input type="number" step="0.01" value={item.purchasePrice || ''} onChange={e=>handleItemChange(idx, 'purchasePrice', parseFloat(e.target.value))} className="h-9"/></div>
-                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">MRP (₹)</Label><Input type="number" step="0.01" value={item.mrp || ''} onChange={e=>handleItemChange(idx, 'mrp', parseFloat(e.target.value))} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Qty</Label><NumericInput required mode="whole" value={item.quantity ?? ''} onValueChange={v => handleItemChange(idx, 'quantity', v)} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">Rate (₹)</Label><NumericInput step="0.01" value={item.purchasePrice ?? ''} onValueChange={v => handleItemChange(idx, 'purchasePrice', v)} className="h-9"/></div>
+                    <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">MRP (₹)</Label><NumericInput step="0.01" value={item.mrp ?? ''} onValueChange={v => handleItemChange(idx, 'mrp', v)} className="h-9"/></div>
                   </div>
                 </CardContent>
              </Card>

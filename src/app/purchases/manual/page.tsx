@@ -15,6 +15,7 @@ import {
   calculatePurchaseTotals,
   PURCHASE_LINE_TOTAL_FIELDS,
 } from '@/lib/purchase-calculations';
+import { coerceNumber, isNumericFieldEmpty } from '@/lib/numeric-field';
 
 import { InvoiceHeaderCard, type InvoiceHeaderData } from '@/components/purchases/invoice-header-card';
 import { PurchaseItemCard, type PurchaseItem } from '@/components/purchases/purchase-item-card';
@@ -88,7 +89,7 @@ function ManualPurchaseEntryContent() {
   const [items, setItems] = useState<PurchaseItem[]>([
     {
       medicineName: '', category: '', manufacturer: '',
-      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: '',
       purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0,
     },
   ]);
@@ -119,7 +120,7 @@ function ManualPurchaseEntryContent() {
           setInvoiceData(mapped.invoiceData);
           setItems(mapped.items.length > 0 ? mapped.items : [{
             medicineName: '', category: '', manufacturer: '',
-            batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+            batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: '',
             purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0,
           }]);
         } catch (err: any) {
@@ -173,7 +174,7 @@ function ManualPurchaseEntryContent() {
   const addItem = () => {
     setItems([...items, {
       medicineName: '', category: '', manufacturer: '',
-      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: 0,
+      batchNumber: '', expiryDate: '', quantity: 1, freeQuantity: '',
       purchasePrice: 0, mrp: 0, discountPercent: 0, gstPercent: 5, totalAmount: 0,
     }]);
   };
@@ -224,9 +225,9 @@ function ManualPurchaseEntryContent() {
         if (
           !item.medicineName || item.medicineName.trim().length < 3 ||
           !item.batchNumber || !item.expiryDate ||
-          item.quantity === undefined || item.quantity === null || isNaN(item.quantity) ||
-          item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice) ||
-          item.mrp === undefined || item.mrp === null || isNaN(item.mrp)
+          isNumericFieldEmpty(item.quantity) ||
+          isNumericFieldEmpty(item.purchasePrice) ||
+          isNumericFieldEmpty(item.mrp)
         ) {
           isInvalid = true;
         }
@@ -259,9 +260,9 @@ function ManualPurchaseEntryContent() {
         }
 
         const line = calculatePurchaseLineAmount(item);
-        const discountPercent = item.discountPercent === undefined || item.discountPercent === null || isNaN(item.discountPercent) ? 0 : item.discountPercent;
-        const freeQuantity = item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ? 0 : item.freeQuantity;
-        const gstPercent = item.gstPercent === undefined || item.gstPercent === null || isNaN(item.gstPercent) ? 5 : item.gstPercent;
+        const discountPercent = coerceNumber(item.discountPercent);
+        const freeQuantity = coerceNumber(item.freeQuantity);
+        const gstPercent = isNumericFieldEmpty(item.gstPercent) ? 5 : coerceNumber(item.gstPercent, 5);
 
         return {
           ...item,

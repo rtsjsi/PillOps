@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Save, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GenericTableLoading from '@/components/ui/tableLoading';
+import { coerceNumber } from '@/lib/numeric-field';
 import { toast } from 'sonner';
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import Link from 'next/link';
@@ -118,7 +119,7 @@ export function POSForm({ initialData }: POSFormProps) {
     
     // Auto-calculate total amount
     if (['quantity', 'mrp', 'storeInventoryBatchId'].includes(field) || field === 'medicineName') {
-       const qty = newItems[idx].quantity || 0;
+       const qty = coerceNumber(newItems[idx].quantity);
        const mrp = newItems[idx].mrp || 0;
        newItems[idx].totalAmount = Number((qty * mrp).toFixed(2));
     }
@@ -142,12 +143,12 @@ export function POSForm({ initialData }: POSFormProps) {
     let subtotal = 0, gstAmount = 0;
     items.forEach(item => {
        if (!item.storeInventoryBatchId) return; // Skip invalid items
-       const itemTotal = (item.quantity || 0) * (item.mrp || 0);
+       const itemTotal = coerceNumber(item.quantity) * (item.mrp || 0);
        subtotal += itemTotal;
        
        // Reverse calculate base price from MRP (MRP is inclusive of GST usually)
        // This matches original POS math:
-       const basePrice = itemTotal / (1 + ((item.gstPercent || 0) / 100));
+       const basePrice = itemTotal / (1 + (coerceNumber(item.gstPercent, 12) / 100));
        gstAmount += (itemTotal - basePrice);
     });
     
@@ -165,7 +166,7 @@ export function POSForm({ initialData }: POSFormProps) {
     if (isSaving) return;
 
     // Validate
-    const validItems = items.filter(i => i.storeInventoryBatchId && i.quantity > 0);
+    const validItems = items.filter(i => i.storeInventoryBatchId && coerceNumber(i.quantity) > 0);
     if (validItems.length === 0) {
       toast.error('Please add at least one valid item');
       return;

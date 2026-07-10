@@ -10,6 +10,8 @@ import { MedicineAutocomplete } from '@/components/purchases/medicine-autocomple
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { calculatePurchaseLineAmount } from '@/lib/purchase-calculations';
+import { NumericInput } from '@/components/ui/numeric-input';
+import { type NumericFieldValue, isNumericFieldEmpty } from '@/lib/numeric-field';
 
 const CATEGORIES = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Drops', 'Inhaler', 'Sachet', 'OTC'];
 
@@ -18,15 +20,15 @@ export interface PurchaseItem {
   extractedName?: string;
   batchNumber: string;
   expiryDate: string;
-  purchasePrice: number;
-  mrp: number;
-  discountPercent: number;
-  quantity: number;
-  freeQuantity: number;
+  purchasePrice: NumericFieldValue;
+  mrp: NumericFieldValue;
+  discountPercent: NumericFieldValue;
+  quantity: NumericFieldValue;
+  freeQuantity: NumericFieldValue;
   manufacturer?: string;
   category?: string;
   hsnCode?: string;
-  gstPercent?: number;
+  gstPercent?: NumericFieldValue;
   totalAmount?: number;
 }
 
@@ -83,20 +85,10 @@ export function PurchaseItemCard({
 
   const isBatchNumberInvalid = hasError && !item.batchNumber;
   const isExpiryDateInvalid = hasError && (!item.expiryDate || !/^(0[1-9]|1[0-2])-\d{4}$/.test(item.expiryDate));
-  const isQuantityInvalid = hasError && (item.quantity === undefined || item.quantity === null || isNaN(item.quantity));
-  const isPurchasePriceInvalid = hasError && (item.purchasePrice === undefined || item.purchasePrice === null || isNaN(item.purchasePrice));
-  const isMrpInvalid = hasError && (item.mrp === undefined || item.mrp === null || isNaN(item.mrp));
+  const isQuantityInvalid = hasError && isNumericFieldEmpty(item.quantity);
+  const isPurchasePriceInvalid = hasError && isNumericFieldEmpty(item.purchasePrice);
+  const isMrpInvalid = hasError && isNumericFieldEmpty(item.mrp);
   const lineTotal = calculatePurchaseLineAmount(item).totalAmount;
-
-  const parseDecimal = (raw: string) => {
-    const n = parseFloat(raw);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const parseWhole = (raw: string) => {
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) ? n : 0;
-  };
 
   return (
     <Card className={cn(
@@ -170,44 +162,52 @@ export function PurchaseItemCard({
             />
           </FieldCell>
           <FieldCell label="Rate (₹)" error={isPurchasePriceInvalid}>
-            <Input 
-              type="number" 
-              step="0.01" 
-              value={item.purchasePrice || ''} 
-              onChange={e => onChange(index, 'purchasePrice', parseDecimal(e.target.value))} 
-              className={cn("h-9 text-sm font-medium", isPurchasePriceInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            <NumericInput
+              step="0.01"
+              value={item.purchasePrice}
+              onValueChange={(v) => onChange(index, 'purchasePrice', v)}
+              className={cn("h-9 text-sm font-medium", isPurchasePriceInvalid && "border-rose-500 focus-visible:ring-rose-500")}
             />
           </FieldCell>
           <FieldCell label="MRP (₹)" error={isMrpInvalid}>
-            <Input 
-              type="number" 
-              step="0.01" 
-              value={item.mrp || ''} 
-              onChange={e => onChange(index, 'mrp', parseDecimal(e.target.value))} 
-              className={cn("h-9 text-sm font-medium", isMrpInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            <NumericInput
+              step="0.01"
+              value={item.mrp}
+              onValueChange={(v) => onChange(index, 'mrp', v)}
+              className={cn("h-9 text-sm font-medium", isMrpInvalid && "border-rose-500 focus-visible:ring-rose-500")}
             />
           </FieldCell>
           <FieldCell label="Disc %">
-            <Input type="number" step="0.1" value={item.discountPercent || ''} onChange={e => onChange(index, 'discountPercent', parseDecimal(e.target.value))} className="h-9 text-sm font-medium" />
+            <NumericInput
+              step="0.1"
+              value={item.discountPercent}
+              onValueChange={(v) => onChange(index, 'discountPercent', v)}
+              className="h-9 text-sm font-medium"
+            />
           </FieldCell>
           <FieldCell label="Qty" error={isQuantityInvalid}>
-            <Input 
-              type="number" 
-              value={item.quantity || ''} 
-              onChange={e => onChange(index, 'quantity', parseWhole(e.target.value))} 
-              className={cn("h-9 text-sm font-medium", isQuantityInvalid && "border-rose-500 focus-visible:ring-rose-500")} 
+            <NumericInput
+              mode="whole"
+              value={item.quantity}
+              onValueChange={(v) => onChange(index, 'quantity', v)}
+              className={cn("h-9 text-sm font-medium", isQuantityInvalid && "border-rose-500 focus-visible:ring-rose-500")}
             />
           </FieldCell>
           <FieldCell label="Free">
-            <Input 
-              type="number" 
-              value={item.freeQuantity === undefined || item.freeQuantity === null || isNaN(item.freeQuantity) ? '' : item.freeQuantity} 
-              onChange={e => onChange(index, 'freeQuantity', parseWhole(e.target.value))} 
-              className="h-9 text-sm font-medium" 
+            <NumericInput
+              mode="whole"
+              value={item.freeQuantity}
+              onValueChange={(v) => onChange(index, 'freeQuantity', v)}
+              className="h-9 text-sm font-medium"
             />
           </FieldCell>
           <FieldCell label="GST %">
-            <Input type="number" step="0.1" value={item.gstPercent ?? ''} onChange={e => onChange(index, 'gstPercent', parseDecimal(e.target.value))} className="h-9 text-sm font-medium" />
+            <NumericInput
+              step="0.1"
+              value={item.gstPercent ?? ''}
+              onValueChange={(v) => onChange(index, 'gstPercent', v)}
+              className="h-9 text-sm font-medium"
+            />
           </FieldCell>
           <FieldCell label="Amount">
             <div className="h-9 flex items-center text-sm font-bold text-emerald-600 tabular-nums">
