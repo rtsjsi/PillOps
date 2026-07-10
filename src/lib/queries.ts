@@ -42,6 +42,8 @@ export async function fetchMedicines() {
       hsnCode: g.hsn_code || g.hsnCode,
       schedule: g.schedule,
       gstPercent: g.gst_percent || g.gstPercent,
+      packSize: g.pack_size || g.packSize || '',
+      unitsPerPack: g.units_per_pack || g.unitsPerPack || 1,
       reorderLevel: med.reorder_level || med.reorderLevel,
       totalStock: med.total_stock !== undefined ? med.total_stock : (med.totalStock || 0),
       rack: med.rack,
@@ -82,6 +84,8 @@ export async function fetchMedicineById(id: string) {
     hsnCode: g.hsn_code || g.hsnCode,
     schedule: g.schedule,
     gstPercent: g.gst_percent || g.gstPercent,
+    packSize: g.pack_size || g.packSize || '',
+    unitsPerPack: g.units_per_pack || g.unitsPerPack || 1,
     reorderLevel: data.reorder_level || data.reorderLevel,
     totalStock: data.total_stock !== undefined ? data.total_stock : (data.totalStock || 0),
     rack: data.rack,
@@ -111,7 +115,7 @@ export async function fetchInvoices(limit?: number) {
   const supabase = createClient();
   let query = supabase
     .from('sales_invoices')
-    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name, manufacturer)), batch:store_inventory_batches(batch_number))')
+    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name, manufacturer, pack_size, units_per_pack)), batch:store_inventory_batches(batch_number))')
     .order('created_at', { ascending: false });
 
   if (limit) {
@@ -143,7 +147,7 @@ export async function fetchInvoiceById(id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('sales_invoices')
-    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name, manufacturer)), batch:store_inventory_batches(batch_number))')
+    .select('*, items:sales_invoice_items(*, medicine:store_inventory(global_medicine_master(name, manufacturer, pack_size, units_per_pack)), batch:store_inventory_batches(batch_number))')
     .eq('id', id)
     .single();
 

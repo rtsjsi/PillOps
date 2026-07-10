@@ -57,17 +57,23 @@ export function POSForm({ initialData }: POSFormProps) {
 
   const getInitialItems = (): SalesItem[] => {
     if (initialData && initialData.items && initialData.items.length > 0) {
-      return initialData.items.map((i: any) => ({
+      return initialData.items.map((i: any) => {
+        const g = i.medicine?.global_medicine_master;
+        const gmm = Array.isArray(g) ? g[0] : g;
+        return {
         medicineId: i.store_inventory_id,
-        medicineName: i.medicine?.global_medicine_master?.name || '',
+        medicineName: gmm?.name || '',
         storeInventoryBatchId: i.store_inventory_batch_id,
         batchNumber: i.batch?.batch_number || '',
         expiryDate: i.expiryDate || '',
         mrp: i.mrp || 0,
         quantity: i.quantity || 1,
         gstPercent: i.gstPercent || 12,
+        packSize: gmm?.pack_size || '',
+        unitsPerPack: gmm?.units_per_pack || 1,
         totalAmount: (i.quantity || 0) * (i.mrp || 0)
-      }));
+      };
+      });
     }
     return [{
       medicineId: '', medicineName: '', storeInventoryBatchId: '',
@@ -99,6 +105,8 @@ export function POSForm({ initialData }: POSFormProps) {
     // Auto-fill from global master when selecting medicine
     if (field === 'medicineName' && fullItem) {
       newItems[idx].medicineId = fullItem.id;
+      newItems[idx].packSize = fullItem.packSize || '';
+      newItems[idx].unitsPerPack = fullItem.unitsPerPack || 1;
       if (fullItem.gstPercent !== undefined) newItems[idx].gstPercent = fullItem.gstPercent;
       
       // Auto-select oldest available batch if any
@@ -170,6 +178,16 @@ export function POSForm({ initialData }: POSFormProps) {
     if (validItems.length === 0) {
       toast.error('Please add at least one valid item');
       return;
+    }
+
+    for (const item of validItems) {
+      const med = medicines.find((m) => m.id === item.medicineId);
+      const batch = med?.batches?.find((b: any) => b.id === item.storeInventoryBatchId);
+      const qty = coerceNumber(item.quantity);
+      if (batch && qty > batch.quantity) {
+        toast.error(`Only ${batch.quantity} units available for ${item.medicineName}`);
+        return;
+      }
     }
 
     setIsSaving(true);

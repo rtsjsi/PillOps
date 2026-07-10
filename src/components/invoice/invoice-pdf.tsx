@@ -1,6 +1,7 @@
 'use client';
 
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { formatSaleQty } from '@/lib/pack-size';
 
 const DEFAULT_GST_PERCENT = 5;
 const MAX_ITEMS_PER_PAGE = 12;
@@ -245,19 +246,24 @@ export function InvoicePDF({ invoice, storeInfo, words, totalQty, roundOff, netA
                     const g = Array.isArray(gObj) ? gObj[0] || {} : gObj || {};
                     const medicineName = g.name || item.medicine?.name || item.medicineName || 'UNKNOWN';
                     const manufacturer = g.manufacturer || item.medicine?.manufacturer || item.manufacturer || ' ';
+                    const unitsPerPack = g.units_per_pack || g.unitsPerPack || 1;
+                    const packSize = g.pack_size || g.packSize || '';
+                    const description = unitsPerPack > 1
+                      ? `${medicineName} [Pk ${packSize || unitsPerPack}]`
+                      : medicineName;
 
                     const batchNo = item.batchNumber || item.batch?.batch_number || ' ';
 
                     return (
                       <View key={`${pageIndex}-${idx}`} style={styles.tableRow} wrap={false}>
                         <Cell width={COL.sr} align="center">{serialOffset + idx + 1}</Cell>
-                        <Cell width={COL.desc} uppercase>{medicineName}</Cell>
+                        <Cell width={COL.desc} uppercase>{description}</Cell>
                         <Cell width={COL.mfr} uppercase>{manufacturer}</Cell>
                         <Cell width={COL.hsn}>{hsn}</Cell>
                         <Cell width={COL.batch} uppercase>{batchNo}</Cell>
                         <Cell width={COL.exp}>{expDt}</Cell>
                         <Cell width={COL.mrp} align="right">{item.mrp.toFixed(2)}</Cell>
-                        <Cell width={COL.qty} align="right">{item.quantity}</Cell>
+                        <Cell width={COL.qty} align="right">{formatSaleQty(item.quantity, unitsPerPack)}</Cell>
                         <Cell width={COL.gst} align="right">{`${DEFAULT_GST_PERCENT}%`}</Cell>
                         <Cell width={COL.amt} align="right" last>{amount.toFixed(2)}</Cell>
                       </View>

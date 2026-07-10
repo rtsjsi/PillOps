@@ -11,6 +11,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { StoreInventoryBatch } from '@/lib/types';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { coerceNumber, type NumericFieldValue } from '@/lib/numeric-field';
+import { formatPackLabel } from '@/lib/pack-size';
 
 export interface SalesItem {
   medicineId: string;
@@ -22,6 +23,8 @@ export interface SalesItem {
   quantity: NumericFieldValue;
   gstPercent: NumericFieldValue;
   totalAmount: number;
+  packSize?: string;
+  unitsPerPack?: number;
 }
 
 interface SalesItemCardProps {
@@ -51,6 +54,9 @@ export function SalesItemCard({
   
   // Find current batch to show max quantity
   const currentBatch = availableBatches.find(b => b.id === item.storeInventoryBatchId);
+  const unitsPerPack = item.unitsPerPack ?? selectedMedicine?.unitsPerPack ?? 1;
+  const packLabel = formatPackLabel(unitsPerPack, item.packSize ?? selectedMedicine?.packSize);
+  const maxUnits = currentBatch?.quantity ?? 0;
 
   const handleBatchSelect = (batchId: string | null) => {
     if (!batchId) return;
@@ -70,8 +76,8 @@ export function SalesItemCard({
 
   const handleQtyChange = (value: number | '') => {
     const qty = coerceNumber(value);
-    if (currentBatch && qty > currentBatch.quantity) {
-      toast.warning(`Max stock is ${currentBatch.quantity} for this batch.`);
+    if (currentBatch && qty > maxUnits) {
+      toast.warning(`Max stock is ${maxUnits} unit${maxUnits === 1 ? '' : 's'} for this batch.`);
     }
     onChange(index, 'quantity', value);
   };
@@ -130,7 +136,7 @@ export function SalesItemCard({
                 {availableBatches.length > 0 ? (
                   availableBatches.map(b => (
                     <SelectItem key={b.id} value={b.id}>
-                      {b.batchNumber || 'N/A'}
+                      {b.batchNumber || 'N/A'} ({b.quantity} units)
                     </SelectItem>
                   ))
                 ) : (
@@ -146,7 +152,7 @@ export function SalesItemCard({
             <Input readOnly value={item.expiryDate || ''} className="h-9 text-sm font-medium bg-muted/50" />
           </FieldCell>
 
-          <FieldCell label="MRP (₹)">
+          <FieldCell label={unitsPerPack > 1 ? 'MRP/Unit (₹)' : 'MRP (₹)'}>
             <Input readOnly value={item.mrp || ''} className="h-9 text-sm font-medium bg-muted/50" />
           </FieldCell>
 
@@ -159,16 +165,21 @@ export function SalesItemCard({
             />
           </FieldCell>
 
-          <FieldCell label="Qty">
+          <FieldCell label={unitsPerPack > 1 ? `Qty (Pk ${unitsPerPack})` : 'Qty'}>
             <div className="relative">
               <NumericInput
                 mode="whole"
                 value={item.quantity}
                 onValueChange={handleQtyChange}
-                className={cn("h-9 text-sm font-medium", currentBatch && coerceNumber(item.quantity) > currentBatch.quantity && "border-rose-500")}
+                className={cn("h-9 text-sm font-medium", currentBatch && coerceNumber(item.quantity) > maxUnits && "border-rose-500")}
                 min={1}
               />
-              {currentBatch && coerceNumber(item.quantity) > currentBatch.quantity && (
+              {packLabel && (
+                <span className="absolute -top-5 left-0 text-[9px] font-medium text-muted-foreground truncate max-w-full">
+                  {packLabel} · {maxUnits} in stock
+                </span>
+              )}
+              {currentBatch && coerceNumber(item.quantity) > maxUnits && (
                 <span className="absolute -top-5 right-0 text-[9px] font-bold text-rose-500">
                   Exceeds stock!
                 </span>
