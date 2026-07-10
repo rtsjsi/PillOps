@@ -1,21 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fetchUserProfile } from '@/lib/queries';
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { getVisibleNavItems } from '@/lib/nav-config';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [profile, setProfile] = useState<any>(null);
-
-  useEffect(() => {
-    if (pathname === '/' || pathname === '/login') return;
-    fetchUserProfile().then(setProfile).catch(() => {});
-  }, [pathname]);
+  const { profile } = useUserProfile();
 
   if (pathname === '/' || pathname === '/login') return null;
 

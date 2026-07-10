@@ -300,40 +300,71 @@ export async function fetchStoreSettings() {
 
 // ─── User Profile ──────────────────────────────────────────
 
-export async function fetchUserProfile() {
+const PROFILE_CACHE_TTL_MS = 60_000;
+let cachedProfile: { value: Awaited<ReturnType<typeof fetchUserProfileImpl>>; at: number } | null = null;
+let inflightProfile: Promise<Awaited<ReturnType<typeof fetchUserProfileImpl>>> | null = null;
+
+export function clearUserProfileCache() {
+  cachedProfile = null;
+  inflightProfile = null;
+}
+
+async function fetchUserProfileImpl() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('*')
+    .select('id, role, store_id, full_name, email, phone, created_at')
     .eq('id', user.id)
     .single();
 
   if (error || !profile) return null;
 
+  const storeSelect = 'id, name, address, phone, gstin, dl_no';
+
   // If super_admin, read the selected store from cookie
   if (profile.role === 'super_admin') {
     const match = typeof document !== 'undefined' ? document.cookie.match(/(^| )pillops_selected_store_id=([^;]+)/) : null;
     const selectedStoreId = match ? match[2] : null;
-    
+
     if (selectedStoreId) {
-      const { data: store } = await supabase.from('stores').select('*').eq('id', selectedStoreId).single();
+      const { data: store } = await supabase.from('stores').select(storeSelect).eq('id', selectedStoreId).single();
       return { ...profile, store_id: selectedStoreId, store, user };
     }
-    
-    return { ...profile, user };
+
+    return { ...profile, user, store: null };
   }
 
-  // Fetch store info
   const { data: store } = await supabase
     .from('stores')
-    .select('*')
+    .select(storeSelect)
     .eq('id', profile.store_id)
     .single();
 
   return { ...profile, store, user };
+}
+
+export async function fetchUserProfile(options?: { force?: boolean }) {
+  if (!options?.force && cachedProfile && Date.now() - cachedProfile.at < PROFILE_CACHE_TTL_MS) {
+    return cachedProfile.value;
+  }
+
+  if (!options?.force && inflightProfile) {
+    return inflightProfile;
+  }
+
+  inflightProfile = fetchUserProfileImpl()
+    .then((result) => {
+      cachedProfile = { value: result, at: Date.now() };
+      return result;
+    })
+    .finally(() => {
+      inflightProfile = null;
+    });
+
+  return inflightProfile;
 }
 
 // ─── Store Staff (read only — admin ops stay server-side) ──

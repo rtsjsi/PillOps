@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchUserProfile, fetchDashboardStats, fetchRecentPurchases } from '@/lib/queries';
+import { fetchDashboardStats, fetchRecentPurchases } from '@/lib/queries';
 import { StatCard } from '@/components/ui/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Package,
   AlertTriangle,
@@ -18,49 +19,85 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import GlobalLoading from '@/app/loading';
+import { useUserProfile } from '@/contexts/user-profile-context';
+
+function StatCardSkeleton() {
+  return <Skeleton className="h-[88px] w-full rounded-xl" />;
+}
+
+function ListCardSkeleton({ title }: { title: string }) {
+  return (
+    <Card className="border-border shadow-sm bg-card flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+        <CardTitle className="text-lg font-bold text-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   const router = useRouter();
+  const { profile, loading: profileLoading } = useUserProfile();
   const [stats, setStats] = useState<any>(null);
   const [recentPurchases, setRecentPurchases] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const profile = await fetchUserProfile();
-        if (!profile?.store_id) {
-          if (profile?.role === 'super_admin') {
-            setErrorMsg('Please select a pharmacy from the top bar to view its dashboard.');
-          } else {
-            setErrorMsg('Unable to determine your store. Please contact support.');
-          }
-          setLoading(false);
-          return;
-        }
+    if (profileLoading) return;
 
-        const [dashStats, purchasesData] = await Promise.all([
-          fetchDashboardStats(profile.store_id),
-          fetchRecentPurchases(5),
-        ]);
+    if (!profile?.store_id) {
+      if (profile?.role === 'super_admin') {
+        setErrorMsg('Please select a pharmacy from the top bar to view its dashboard.');
+      } else if (profile) {
+        setErrorMsg('Unable to determine your store. Please contact support.');
+      }
+      setDataLoading(false);
+      return;
+    }
 
+    let cancelled = false;
+    setDataLoading(true);
+    setErrorMsg(null);
+
+    Promise.all([
+      fetchDashboardStats(profile.store_id),
+      fetchRecentPurchases(5),
+    ])
+      .then(([dashStats, purchasesData]) => {
+        if (cancelled) return;
         setStats(dashStats);
         setRecentPurchases(purchasesData);
-      } catch (err: any) {
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
         console.error('Dashboard load failed:', err);
         setErrorMsg(err.message || 'Unknown error occurred');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+      })
+      .finally(() => {
+        if (!cancelled) setDataLoading(false);
+      });
 
-  if (loading) return <GlobalLoading />;
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, profileLoading]);
 
-  if (errorMsg) {
+  if (!profileLoading && errorMsg) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-card rounded-2xl border border-border">
         <AlertTriangle size={64} className="text-destructive mb-6" />
@@ -70,6 +107,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const showSkeletons = profileLoading || dataLoading;
 
   return (
     <div className="flex flex-col gap-4 animate-page-in">
@@ -92,106 +131,126 @@ export default function Dashboard() {
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          label="Today's Sales"
-          value={formatCurrency(stats?.todaySales || 0)}
-          trend={{ value: 8.5, isUp: true }}
-          icon={TrendingUp}
-        />
-        <StatCard
-          label="Total Medicines"
-          value={stats?.totalMedicines || 0}
-          icon={Package}
-          iconClassName="bg-blue-500/10 text-blue-500 dark:text-blue-400"
-        />
-        <StatCard
-          label="Low Stock Items"
-          value={stats?.lowStockCount || 0}
-          icon={AlertTriangle}
-          iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-500"
-        />
-        <StatCard
-          label="Expiring Soon"
-          value={stats?.expiringCount || 0}
-          icon={Clock}
-          iconClassName="bg-destructive/10 text-destructive"
-        />
+        {showSkeletons ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Today's Sales"
+              value={formatCurrency(stats?.todaySales || 0)}
+              trend={{ value: 8.5, isUp: true }}
+              icon={TrendingUp}
+            />
+            <StatCard
+              label="Total Medicines"
+              value={stats?.totalMedicines || 0}
+              icon={Package}
+              iconClassName="bg-blue-500/10 text-blue-500 dark:text-blue-400"
+            />
+            <StatCard
+              label="Low Stock Items"
+              value={stats?.lowStockCount || 0}
+              icon={AlertTriangle}
+              iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-500"
+            />
+            <StatCard
+              label="Expiring Soon"
+              value={stats?.expiringCount || 0}
+              icon={Clock}
+              iconClassName="bg-destructive/10 text-destructive"
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-8">
-        <Card className="border-border shadow-sm bg-card flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
-            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Truck size={18} className="text-muted-foreground" />
-              Recent Purchases
-            </CardTitle>
-            <Link href="/purchases" className="text-xs font-bold text-primary hover:underline">View All</Link>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
-            {recentPurchases.map((inv) => (
-              <Link
-                key={inv.id}
-                href={`/purchases/review?invoiceId=${inv.id}`}
-                className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
-                    {(inv.distributorName?.charAt(0) || 'P').toUpperCase()}
+        {showSkeletons ? (
+          <>
+            <ListCardSkeleton title="Recent Purchases" />
+            <ListCardSkeleton title="Recent Sales" />
+          </>
+        ) : (
+          <>
+            <Card className="border-border shadow-sm bg-card flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Truck size={18} className="text-muted-foreground" />
+                  Recent Purchases
+                </CardTitle>
+                <Link href="/purchases" className="text-xs font-bold text-primary hover:underline">View All</Link>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
+                {recentPurchases.map((inv) => (
+                  <Link
+                    key={inv.id}
+                    href={`/purchases/review?invoiceId=${inv.id}`}
+                    className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
+                        {(inv.distributorName?.charAt(0) || 'P').toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{inv.distributorName || 'Unknown Distributor'}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                          {inv.invoiceNumber ? `# ${inv.invoiceNumber}` : 'No Invoice #'}{inv.invoiceDate ? ` · ${formatDate(inv.invoiceDate)}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
+                    </div>
+                  </Link>
+                ))}
+                {recentPurchases.length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                    <Truck size={28} className="opacity-20" />
+                    <p className="text-sm font-medium">No purchases recorded yet.</p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{inv.distributorName || 'Unknown Distributor'}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                      {inv.invoiceNumber ? `# ${inv.invoiceNumber}` : 'No Invoice #'}{inv.invoiceDate ? ` · ${formatDate(inv.invoiceDate)}` : ''}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-3">
-                  <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
-                </div>
-              </Link>
-            ))}
-            {recentPurchases.length === 0 && (
-              <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
-                <Truck size={28} className="opacity-20" />
-                <p className="text-sm font-medium">No purchases recorded yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
 
-        <Card className="border-border shadow-sm bg-card flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
-            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Receipt size={18} className="text-muted-foreground" />
-              Recent Sales
-            </CardTitle>
-            <Link href="/pos" className="text-xs font-bold text-primary hover:underline">New Sale</Link>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
-            {stats?.recentInvoices?.slice(0, 5).map((inv: any) => (
-              <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
-                    {inv.customerName?.charAt(0)?.toUpperCase() || 'W'}
+            <Card className="border-border shadow-sm bg-card flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Receipt size={18} className="text-muted-foreground" />
+                  Recent Sales
+                </CardTitle>
+                <Link href="/pos" className="text-xs font-bold text-primary hover:underline">New Sale</Link>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 flex flex-col divide-y divide-border/50">
+                {stats?.recentInvoices?.slice(0, 5).map((inv: any) => (
+                  <Link key={inv.id} href={`/invoice/${inv.id}`} className="p-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-7 w-7 rounded-full bg-muted border border-border text-muted-foreground flex items-center justify-center font-bold text-[10px] shrink-0">
+                        {inv.customerName?.charAt(0)?.toUpperCase() || 'W'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{inv.customerName || 'Walk-in Customer'}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{inv.invoiceNumber}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
+                    </div>
+                  </Link>
+                ))}
+                {(!stats?.recentInvoices || stats.recentInvoices.length === 0) && (
+                  <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
+                    <Receipt size={28} className="opacity-20" />
+                    <p className="text-sm font-medium">No sales recorded yet.</p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{inv.customerName || 'Walk-in Customer'}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{inv.invoiceNumber}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-3">
-                  <p className="text-sm font-bold text-primary">{formatCurrency(inv.total)}</p>
-                </div>
-              </Link>
-            ))}
-            {(!stats?.recentInvoices || stats.recentInvoices.length === 0) && (
-              <div className="p-8 text-center text-muted-foreground flex-1 flex flex-col justify-center items-center gap-2">
-                <Receipt size={28} className="opacity-20" />
-                <p className="text-sm font-medium">No sales recorded yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
