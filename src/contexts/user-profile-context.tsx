@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { clearUserProfileCache, fetchUserProfile } from '@/lib/queries';
+import { createClient } from '@/utils/supabase/client';
 
 type UserProfile = Awaited<ReturnType<typeof fetchUserProfile>>;
 
@@ -39,13 +40,33 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
     let cancelled = false;
     setLoading(true);
 
-    loadProfile().finally(() => {
+    loadProfile(true).finally(() => {
       if (!cancelled) setLoading(false);
     });
 
     return () => {
       cancelled = true;
     };
+  }, [isAuthPage, loadProfile]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        clearUserProfileCache();
+        setProfile(null);
+        return;
+      }
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        clearUserProfileCache();
+        if (!isAuthPage) {
+          loadProfile(true);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [isAuthPage, loadProfile]);
 
   const refresh = useCallback(async () => {
