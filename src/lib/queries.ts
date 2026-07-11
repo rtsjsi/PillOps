@@ -338,7 +338,7 @@ export async function fetchPurchasesList(options?: {
     .from('purchase_invoices')
     .select(`
       id, status, distributor_name, invoice_number, invoice_date, total, subtotal, gst_amount, discount_amount, created_at,
-      items:purchase_invoice_items(id, medicine_name, batch_number, quantity, total_amount, extracted_name)
+      items:purchase_invoice_items(id, medicine_name, batch_number, quantity, total_amount)
     `)
     .order('created_at', { ascending: false });
 
