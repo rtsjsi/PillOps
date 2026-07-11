@@ -463,7 +463,7 @@ async function fetchUserProfileImpl() {
 
   const { data: profile, error } = await supabase
     .from('user_profiles')
-    .select('id, role, store_id, full_name, email, phone, created_at')
+    .select('id, role, store_id, full_name, created_at')
     .eq('id', user.id)
     .single();
 
