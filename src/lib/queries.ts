@@ -504,7 +504,13 @@ export async function fetchUserProfile(options?: { force?: boolean }) {
 
   inflightProfile = fetchUserProfileImpl()
     .then((result) => {
-      cachedProfile = { value: result, at: Date.now() };
+      // Never cache null — it usually means auth wasn't ready yet and would
+      // block store recognition for up to 60s after a fresh login.
+      if (result) {
+        cachedProfile = { value: result, at: Date.now() };
+      } else {
+        cachedProfile = null;
+      }
       return result;
     })
     .finally(() => {

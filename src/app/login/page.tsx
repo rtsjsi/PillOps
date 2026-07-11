@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { clearUserProfileCache } from '@/lib/queries';
 import { useRouter } from 'next/navigation';
 import { Pill, Lock, Mail, Loader2, ArrowRight, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       document.cookie = 'pillops_selected_store_id=; path=/; max-age=0';
+      clearUserProfileCache();
       router.push('/dashboard');
       router.refresh();
     }
