@@ -110,7 +110,7 @@ export async function fetchInventoryList(storeId: string, params: InventoryListP
   const { data, error } = await supabase.rpc('get_inventory_list', {
     p_store_id: storeId,
     p_search: params.search?.trim() || null,
-    p_category: params.category && params.category !== 'All' ? params.category : null,
+    p_category: params.category && params.category !== 'All' && params.category.trim() !== '' ? params.category : null,
     p_expiry_filter: params.expiryFilter || null,
     p_offset: params.offset ?? 0,
     p_limit: params.limit ?? 50,
