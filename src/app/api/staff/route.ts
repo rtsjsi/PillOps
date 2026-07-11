@@ -43,13 +43,12 @@ export async function GET() {
       .order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
 
-    const { data: authData, error: authError } = await adminClient.auth.admin.listUsers();
-    if (authError) throw new Error(authError.message);
-
-    const staff = (profiles ?? []).map((p) => {
-      const authUser = authData.users.find((u) => u.id === p.id);
-      return { ...p, email: authUser?.email ?? '' };
-    });
+    const staff = await Promise.all(
+      (profiles ?? []).map(async (p) => {
+        const { data: authUser } = await adminClient.auth.admin.getUserById(p.id);
+        return { ...p, email: authUser?.user?.email ?? '' };
+      })
+    );
 
     return NextResponse.json(staff);
   } catch (e: any) {
