@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchInventoryList, fetchInventorySummary } from '@/lib/queries';
+import { fetchInventoryList } from '@/lib/queries';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useDebounce } from '@/hooks/use-debounce';
 import { SearchBar } from '@/components/ui/searchBar';
@@ -41,41 +41,21 @@ export default function Inventory() {
   const storeId = profile?.store_id;
   const storeName = profile?.store?.name || 'My Pharmacy';
 
-  const [summary, setSummary] = useState<any>(null);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingList, setLoadingList] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [expiryFilter, setExpiryFilter] = useState<string | null>(null);
-
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, selectedCategory, expiryFilter]);
+  }, [debouncedSearch]);
 
-  useEffect(() => {
-    if (profileLoading || !storeId) {
-      if (!profileLoading && !storeId) setLoadingSummary(false);
-      return;
-    }
 
-    let cancelled = false;
-    setLoadingSummary(true);
-
-    fetchInventorySummary(storeId)
-      .then((data) => { if (!cancelled) setSummary(data); })
-      .catch((err: any) => { if (!cancelled) setErrorMsg(err.message); })
-      .finally(() => { if (!cancelled) setLoadingSummary(false); });
-
-    return () => { cancelled = true; };
-  }, [storeId, profileLoading]);
 
   useEffect(() => {
     if (profileLoading || !storeId) {
@@ -89,8 +69,6 @@ export default function Inventory() {
 
     fetchInventoryList(storeId, {
       search: debouncedSearch,
-      category: selectedCategory,
-      expiryFilter,
       offset: page * PAGE_SIZE,
       limit: PAGE_SIZE,
     })
@@ -110,19 +88,9 @@ export default function Inventory() {
       });
 
     return () => { cancelled = true; };
-  }, [storeId, profileLoading, debouncedSearch, selectedCategory, expiryFilter, page]);
-
-  const categories = useMemo(() => {
-    const fromSummary = summary?.categories ?? [];
-    return ['All', ...fromSummary];
-  }, [summary]);
+  }, [storeId, profileLoading, debouncedSearch, page]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const stats = {
-    expired: summary?.expired ?? 0,
-    critical: summary?.critical ?? 0,
-    warning: summary?.warning ?? 0,
-  };
 
   const handleExport = useCallback(async () => {
     if (!storeId) return;
@@ -130,8 +98,6 @@ export default function Inventory() {
     try {
       const { items } = await fetchInventoryList(storeId, {
         search: debouncedSearch,
-        category: selectedCategory,
-        expiryFilter,
         offset: 0,
         limit: 200,
       });
@@ -145,20 +111,18 @@ export default function Inventory() {
     } finally {
       setExporting(false);
     }
-  }, [storeId, debouncedSearch, selectedCategory, expiryFilter]);
+  }, [storeId, debouncedSearch]);
 
   const [exportPdfData, setExportPdfData] = useState<any[]>([]);
   const preparePdfExport = useCallback(async () => {
     if (!storeId || exportPdfData.length > 0) return;
     const { items } = await fetchInventoryList(storeId, {
       search: debouncedSearch,
-      category: selectedCategory,
-      expiryFilter,
       offset: 0,
       limit: 200,
     });
     setExportPdfData(items.map((m) => ({ ...m, totalQty: m.totalStock })));
-  }, [storeId, debouncedSearch, selectedCategory, expiryFilter, exportPdfData.length]);
+  }, [storeId, debouncedSearch, exportPdfData.length]);
 
   if (!profileLoading && !storeId) {
     return (
@@ -176,64 +140,6 @@ export default function Inventory() {
         </Button>
       </header>
 
-      <div className="-mx-4 px-4 py-2 border-b border-border mb-2 bg-background">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2">
-          {loadingSummary ? (
-            <>
-              <Skeleton className="h-8 w-24 rounded-lg" />
-              <Skeleton className="h-8 w-32 rounded-lg" />
-              <Skeleton className="h-8 w-28 rounded-lg" />
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setExpiryFilter(expiryFilter === 'expired' ? null : 'expired')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
-                  expiryFilter === 'expired' ? 'bg-red-500 text-white border-red-600 shadow-lg shadow-red-500/20' : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
-                )}
-              >
-                <XCircle size={16} />
-                {stats.expired} Expired
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpiryFilter(expiryFilter === 'critical' ? null : 'critical')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
-                  expiryFilter === 'critical' ? 'bg-orange-500 text-white border-orange-600 shadow-lg shadow-orange-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20'
-                )}
-              >
-                <AlertTriangle size={16} />
-                {stats.critical} Critical (7d)
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpiryFilter(expiryFilter === 'warning' ? null : 'warning')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
-                  expiryFilter === 'warning' ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20'
-                )}
-              >
-                <Clock size={16} />
-                {stats.warning} Warning (30d)
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpiryFilter(null)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all shrink-0 font-bold text-xs',
-                  !expiryFilter ? 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
-                )}
-              >
-                <ShieldCheck size={16} />
-                All Safe
-              </button>
-            </>
-          )}
-        </div>
-      </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
@@ -266,19 +172,7 @@ export default function Inventory() {
         </DropdownMenu>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {categories.map((cat) => (
-          <Button
-            key={cat}
-            variant={selectedCategory === cat ? 'default' : 'outline'}
-            size="sm"
-            className="rounded-full whitespace-nowrap px-6"
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </Button>
-        ))}
-      </div>
+
 
       <div className="flex flex-col gap-4">
         {errorMsg && (
