@@ -9,7 +9,6 @@ import { SearchBar } from '@/components/ui/searchBar';
 import { formatCurrency } from '@/lib/utils';
 import { History, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -50,21 +49,12 @@ export default function POSLanding() {
     return () => { cancelled = true; };
   }, [debouncedSearch]);
 
-  useKeyboardShortcuts([
-    {
-      key: 'F2',
-      action: () => router.push('/pos/new'),
-      description: 'New Sale',
-    },
-  ]);
+
 
   return (
     <div className="container py-4 flex flex-col gap-4">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
-            <span><kbd className="font-mono bg-background px-1.5 py-0.5 rounded border border-border">F2</kbd> New Sale</span>
-          </div>
           <Button render={<Link href="/pos/new" />} size="lg" className="font-bold">
             <Plus size={18} className="mr-2" />
             New Sale

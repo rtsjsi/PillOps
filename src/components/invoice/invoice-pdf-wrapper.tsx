@@ -6,7 +6,7 @@ import { Printer, Loader2, Download, AlertCircle } from 'lucide-react';
 import { fetchInvoiceById, fetchStoreSettings } from '@/lib/queries';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { numberToWords } from '@/lib/utils';
-import { PDFDownloadLink, pdf, type DocumentProps } from '@react-pdf/renderer';
+import { pdf, type DocumentProps } from '@react-pdf/renderer';
 import { InvoicePDF } from './invoice-pdf';
 
 type InvoicePDFMode = 'download' | 'print' | 'both';
@@ -68,75 +68,65 @@ export function InvoicePDFWrapper({
 }: InvoicePDFWrapperProps) {
   const { profile } = useUserProfile();
   const [mounted, setMounted] = React.useState(false);
-  const [data, setData] = React.useState<{ invoice: any; storeInfo: any } | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
-  const [printing, setPrinting] = React.useState(false);
+  const [loadingAction, setLoadingAction] = React.useState<'print' | 'download' | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
-    if (!invoiceId) {
-      setLoading(false);
-      return;
-    }
+  }, []);
 
-    const id = invoiceId;
-
-    async function load() {
-      try {
-        const inv = await fetchInvoiceById(id);
-        const store = profile?.store ?? await fetchStoreSettings(profile?.store_id ?? undefined);
-        if (!inv || !store) throw new Error('Failed to load data');
-        setData({ invoice: inv, storeInfo: store });
-      } catch (err) {
-        console.error('Failed to load invoice for PDF:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [invoiceId, profile]);
-
-  const loadingLabel = compact ? '...' : 'Preparing PDF...';
-
-  if (!invoiceId) {
+  if (!invoiceId || !mounted) {
     return (
       <Button variant={variant} size={size} className={className} disabled>
-        <Download size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
-        {!compact && 'Download PDF Bill'}
+        {mode === 'print' ? (
+          <>
+            <Printer size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
+            {!compact && 'Print PDF'}
+          </>
+        ) : mode === 'download' ? (
+          <>
+            <Download size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
+            {!compact && 'Download PDF Bill'}
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button variant={variant} size={size} className={className} disabled>
+              <Printer size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
+              {!compact && 'Print PDF'}
+            </Button>
+            <Button variant={variant} size={size} className={className} disabled>
+              <Download size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
+              {!compact && 'Download PDF Bill'}
+            </Button>
+          </div>
+        )}
       </Button>
     );
   }
 
-  if (!mounted || loading) {
-    return (
-      <Button variant={variant} size={size} className={className} disabled>
-        <Loader2 className={`h-4 w-4 animate-spin ${compact ? '' : 'mr-2'}`} />
-        {!compact && loadingLabel}
-      </Button>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <Button variant="destructive" size={size} className={className} disabled>
-        <AlertCircle className={`h-4 w-4 ${compact ? '' : 'mr-2'}`} />
-        {!compact && 'Failed to load'}
-      </Button>
-    );
-  }
-
-  const { doc, invoiceNumber } = buildInvoiceDoc(data.invoice, data.storeInfo);
-
-  const handlePrint = async () => {
-    setPrinting(true);
+  const handleAction = async (action: 'print' | 'download') => {
+    setLoadingAction(action);
     try {
-      await printInvoicePdf(doc);
+      const inv = await fetchInvoiceById(invoiceId);
+      const store = profile?.store ?? await fetchStoreSettings(profile?.store_id ?? undefined);
+      if (!inv || !store) throw new Error('Failed to load data');
+      
+      const { doc, invoiceNumber } = buildInvoiceDoc(inv, store);
+
+      if (action === 'print') {
+        await printInvoicePdf(doc);
+      } else {
+        const blob = await pdf(doc).toBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice_${invoiceNumber}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
-      console.error('Failed to print invoice PDF:', err);
+      console.error(`Failed to ${action} invoice PDF:`, err);
     } finally {
-      setPrinting(false);
+      setLoadingAction(null);
     }
   };
 
@@ -145,10 +135,10 @@ export function InvoicePDFWrapper({
       variant={variant}
       size={size}
       className={className}
-      disabled={printing}
-      onClick={handlePrint}
+      disabled={loadingAction !== null}
+      onClick={() => handleAction('print')}
     >
-      {printing ? (
+      {loadingAction === 'print' ? (
         <>
           <Loader2 className={`h-4 w-4 animate-spin ${compact ? '' : 'mr-2'}`} />
           {!compact && 'Printing...'}
@@ -162,42 +152,36 @@ export function InvoicePDFWrapper({
     </Button>
   );
 
-  if (mode === 'print') {
-    return printButton;
-  }
-
-  const downloadLink = (
-    <PDFDownloadLink
-      document={doc}
-      fileName={`Invoice_${invoiceNumber}.pdf`}
-      className={mode === 'both' ? 'no-underline' : 'no-underline w-full'}
+  const downloadButton = (
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      disabled={loadingAction !== null}
+      onClick={() => handleAction('download')}
     >
-      {({ loading: pdfLoading }: { loading: boolean }) => (
-        <Button variant={variant} size={size} className={className} disabled={pdfLoading}>
-          {pdfLoading ? (
-            <>
-              <Loader2 className={`h-4 w-4 animate-spin ${compact ? '' : 'mr-2'}`} />
-              {!compact && 'Generating...'}
-            </>
-          ) : (
-            <>
-              <Download size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
-              {compact ? 'PDF' : 'Download PDF Bill'}
-            </>
-          )}
-        </Button>
+      {loadingAction === 'download' ? (
+        <>
+          <Loader2 className={`h-4 w-4 animate-spin ${compact ? '' : 'mr-2'}`} />
+          {!compact && 'Generating...'}
+        </>
+      ) : (
+        <>
+          <Download size={compact ? 14 : 16} className={compact ? 'mr-1' : 'mr-2'} />
+          {compact ? 'PDF' : 'Download PDF Bill'}
+        </>
       )}
-    </PDFDownloadLink>
+    </Button>
   );
 
+  if (mode === 'print') return printButton;
   if (mode === 'both') {
     return (
       <div className="flex items-center gap-2">
         {printButton}
-        {downloadLink}
+        {downloadButton}
       </div>
     );
   }
-
-  return downloadLink;
+  return downloadButton;
 }

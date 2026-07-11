@@ -8,7 +8,7 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Save, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+
 import { useDistinctValues } from '@/hooks/use-distinct-values';
 import { toast } from 'sonner';
 import {
@@ -322,10 +322,7 @@ function ManualPurchaseEntryContent() {
     }
   };
 
-  useKeyboardShortcuts([
-    { key: 'n', ctrl: true, shift: true, action: addItem, allowInInput: true },
-    { key: 'Enter', ctrl: true, action: () => handleSave('completed'), allowInInput: true },
-  ]);
+
 
   if (isLoading) {
     return (
